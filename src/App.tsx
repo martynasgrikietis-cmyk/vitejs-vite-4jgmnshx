@@ -507,7 +507,64 @@ function ClientsTab({ exercises }) {
                 <button onClick={()=>setProgFormOpen(true)} style={{...css.btnTeal,flex:1,justifyContent:"center",display:"flex",alignItems:"center",gap:6}}>📈 Pridėti pažangą</button>
                 <button onClick={()=>openEdit(view)} style={{...css.btnG,flex:1,justifyContent:"center",display:"flex",alignItems:"center",gap:6}}>✏️ Redaguoti programą</button>
                 <button onClick={()=>{
-                  alert("PDF funkcija bus pridėta netrukus!");
+                  const c=view,prog=view.program||{},pn=view.program_name||"",pl=progressList;
+                  const bv=calcBMI(c.weight,c.height),bn=bv?parseFloat(bv.toFixed(1)):null,bc=bn?bmiCat(bn):null;
+                  const nut=calcNut(c.weight,c.height,c.age,c.gender,ACTIVITY_LEVELS[c.activity_index??2]?.factor||1.55);
+                  const days=DAYS.filter(d=>(c.training_days||[]).includes(d));
+                  const today=new Date().toLocaleDateString("lt-LT");
+                  const win=window.open("","_blank");
+                  if(!win){alert("Leiskite iššokančius langus šiame puslapyje!");return;}
+                  let h="";
+                  h+=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${pn}-${c.name}</title>`;
+                  h+=`<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">`;
+                  h+=`<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,Arial,sans-serif;background:#fff;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}.hdr{background:#0f1117;padding:20px 32px;display:flex;align-items:center;gap:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.logo{width:46px;height:46px;background:#c9a84c;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#0f1117}.ht{font-size:20px;font-weight:800;color:#c9a84c}.hs{font-size:10px;color:#888;letter-spacing:3px;text-transform:uppercase;margin-top:2px}.hr{margin-left:auto;text-align:right;color:#fff}.sec{margin:20px 32px;border:1.5px solid #e0e0e8;border-radius:12px;overflow:hidden}.sh{background:#0f1117;color:#fff;padding:11px 20px;font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;-webkit-print-color-adjust:exact;print-color-adjust:exact}.ig{display:flex;flex-wrap:wrap;gap:10px;padding:16px 20px}.ib{background:#f5f5fa;border:1.5px solid #e0e0e8;border-radius:9px;padding:10px 16px;min-width:90px}.il{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}.iv{font-size:15px;font-weight:700}.er{display:flex;gap:14px;padding:14px 18px;border-top:1px solid #f0f0f5;align-items:flex-start;page-break-inside:avoid}.en{width:28px;height:28px;background:#f0f0f5;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#555;flex-shrink:0;margin-top:4px}.ei{width:130px;height:100px;object-fit:cover;border-radius:9px;flex-shrink:0;border:1.5px solid #e8e8f0}.ep{width:130px;height:100px;background:#f0f0f5;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:28px}.en2{font-size:15px;font-weight:700;margin-bottom:4px}.em{font-size:12px;color:#4ea8a0;font-weight:600;margin-bottom:8px}.ss{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}.sb{border-radius:7px;padding:5px 12px;display:inline-flex;flex-direction:column;align-items:center;border:1.5px solid}.sl{font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px}.sv{font-size:15px;font-weight:800}.ed{font-size:11px;color:#777;font-style:italic;line-height:1.5}.ft{text-align:center;padding:20px;color:#aaa;font-size:11px;border-top:1px solid #eee;margin-top:16px}.pb{position:fixed;top:16px;right:16px;padding:12px 24px;background:#c9a84c;color:#000;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;z-index:999}@media print{.pb{display:none}}</style></head><body>`;
+                  h+=`<button class="pb" onclick="window.print()">🖨️ Išsaugoti kaip PDF</button>`;
+                  h+=`<div class="hdr"><div class="logo">M</div><div><div class="ht">Coach Martynas</div><div class="hs">Sporto programa</div></div><div class="hr"><div style="font-size:14px;font-weight:700">${pn||"Sporto programa"}</div><div style="font-size:11px;color:#888;margin-top:2px">${today}</div></div></div>`;
+                  h+=`<div class="sec"><div class="sh">👤 Kliento informacija</div><div class="ig">`;
+                  if(c.name) h+=`<div class="ib"><div class="il">Vardas</div><div class="iv">${c.name}</div></div>`;
+                  if(c.age) h+=`<div class="ib"><div class="il">Amžius</div><div class="iv">${c.age} m.</div></div>`;
+                  if(c.weight) h+=`<div class="ib"><div class="il">Svoris</div><div class="iv">${c.weight} kg</div></div>`;
+                  if(c.height) h+=`<div class="ib"><div class="il">Ūgis</div><div class="iv">${c.height} cm</div></div>`;
+                  if(c.gender) h+=`<div class="ib"><div class="il">Lytis</div><div class="iv">${c.gender}</div></div>`;
+                  if(bn) h+=`<div class="ib" style="background:${bc.color}18;border-color:${bc.color}55"><div class="il">KMI</div><div class="iv" style="color:${bc.color}">${bn} — ${bc.label}</div></div>`;
+                  if(c.goal) h+=`<div class="ib" style="background:#c9a84c18;border-color:#c9a84c55"><div class="il">Tikslas</div><div class="iv" style="color:#c9a84c">${c.goal}</div></div>`;
+                  if(c.level) h+=`<div class="ib" style="background:#4ea8a018;border-color:#4ea8a055"><div class="il">Lygis</div><div class="iv" style="color:#4ea8a0">${c.level}</div></div>`;
+                  h+=`</div>${c.notes?`<div style="padding:0 20px 14px;font-size:12px;color:#666;font-style:italic">📝 ${c.notes}</div>`:""}</div>`;
+                  if(nut){
+                    h+=`<div class="sec"><div class="sh">🍽️ Mitybos rekomendacijos</div><div class="ig">`;
+                    h+=`<div class="ib" style="background:#c9a84c18;border-color:#c9a84c55"><div class="il">TDEE</div><div class="iv" style="color:#c9a84c">${nut.tdee} kcal</div></div>`;
+                    h+=`<div class="ib" style="background:#c0474a18;border-color:#c0474a55"><div class="il">Svorio metimas</div><div class="iv" style="color:#c0474a">${nut.lose} kcal</div></div>`;
+                    h+=`<div class="ib" style="background:#f8717118;border-color:#f8717155"><div class="il">Baltymai (met.)</div><div class="iv" style="color:#f87171">${nut.protLose} g</div></div>`;
+                    h+=`<div class="ib" style="background:#4ade8018;border-color:#4ade8055"><div class="il">Raumenų auginimas</div><div class="iv" style="color:#4ade80">${nut.gain} kcal</div></div>`;
+                    h+=`<div class="ib" style="background:#4ea8a018;border-color:#4ea8a055"><div class="il">Baltymai (aug.)</div><div class="iv" style="color:#4ea8a0">${nut.protGain} g</div></div>`;
+                    h+=`</div></div>`;
+                  }
+                  days.forEach(day=>{
+                    const exs=prog[day]||[];
+                    h+=`<div class="sec"><div class="sh">${day} — ${exs.length} pratimas(-ai)</div>`;
+                    if(!exs.length){h+=`<div style="padding:14px 20px;color:#aaa;font-size:13px">Pratimų nėra</div>`;}
+                    else exs.forEach((ex,i)=>{
+                      const imgs=(ex.imgs||[]).filter(Boolean);
+                      h+=`<div class="er"><div class="en">${i+1}</div>`;
+                      h+=imgs[0]?`<img src="${imgs[0]}" class="ei"/>`:`<div class="ep">📷</div>`;
+                      if(imgs[1]) h+=`<img src="${imgs[1]}" style="width:90px;height:70px;object-fit:cover;border-radius:8px;border:1.5px solid #e8e8f0;flex-shrink:0"/>`;
+                      h+=`<div style="flex:1"><div class="en2">${ex.name}</div><div class="em">${ex.muscle||""} · ${ex.equipment||""}</div><div class="ss">`;
+                      if(ex.customSets) h+=`<span class="sb" style="background:#c9a84c18;border-color:#c9a84c55"><span class="sl">Serijos</span><span class="sv" style="color:#c9a84c">${ex.customSets}</span></span>`;
+                      if(ex.customReps) h+=`<span class="sb" style="background:#f5f5fa;border-color:#ddd"><span class="sl">Kartojimai</span><span class="sv" style="color:#333">${ex.customReps}</span></span>`;
+                      if(ex.customWeight) h+=`<span class="sb" style="background:#4ea8a018;border-color:#4ea8a055"><span class="sl">Svoris</span><span class="sv" style="color:#4ea8a0">${ex.customWeight}</span></span>`;
+                      if(ex.customRest) h+=`<span class="sb" style="background:#a78bfa18;border-color:#a78bfa55"><span class="sl">Poilsis</span><span class="sv" style="color:#a78bfa">${ex.customRest}</span></span>`;
+                      h+=`</div>${ex.description?`<div class="ed">${ex.description}</div>`:""}</div></div>`;
+                    });
+                    h+=`</div>`;
+                  });
+                  if(pl&&pl.length>0){
+                    h+=`<div class="sec"><div class="sh">📈 Pažangos istorija</div><div style="padding:14px 20px"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:#f5f5fa"><th style="padding:8px 12px;text-align:left;border-bottom:1.5px solid #e0e0e8;font-size:11px;color:#888;text-transform:uppercase">Data</th><th style="padding:8px 12px;text-align:left;border-bottom:1.5px solid #e0e0e8;font-size:11px;color:#888;text-transform:uppercase">Svoris</th><th style="padding:8px 12px;text-align:left;border-bottom:1.5px solid #e0e0e8;font-size:11px;color:#888;text-transform:uppercase">Krūtinė</th><th style="padding:8px 12px;text-align:left;border-bottom:1.5px solid #e0e0e8;font-size:11px;color:#888;text-transform:uppercase">Juosmuo</th><th style="padding:8px 12px;text-align:left;border-bottom:1.5px solid #e0e0e8;font-size:11px;color:#888;text-transform:uppercase">Klubai</th><th style="padding:8px 12px;text-align:left;border-bottom:1.5px solid #e0e0e8;font-size:11px;color:#888;text-transform:uppercase">Pastabos</th></tr></thead><tbody>`;
+                    pl.forEach((p,i)=>{h+=`<tr style="background:${i%2?"#fafafa":"#fff"}"><td style="padding:8px 12px;border-bottom:1px solid #f0f0f5">${new Date(p.date).toLocaleDateString("lt-LT")}</td><td style="padding:8px 12px;border-bottom:1px solid #f0f0f5;font-weight:700;color:#c9a84c">${p.weight?p.weight+" kg":"—"}</td><td style="padding:8px 12px;border-bottom:1px solid #f0f0f5">${p.chest?p.chest+" cm":"—"}</td><td style="padding:8px 12px;border-bottom:1px solid #f0f0f5">${p.waist?p.waist+" cm":"—"}</td><td style="padding:8px 12px;border-bottom:1px solid #f0f0f5">${p.hips?p.hips+" cm":"—"}</td><td style="padding:8px 12px;border-bottom:1px solid #f0f0f5;font-style:italic;color:#666">${p.notes||"—"}</td></tr>`;});
+                    h+=`</tbody></table></div></div>`;
+                  }
+                  h+=`<div class="ft">© Coach Martynas · ${today}</div></body></html>`;
+                  win.document.write(h);
+                  win.document.close();
                 }} style={{padding:"10px 20px",background:"#4ea8a0",color:"#fff",border:"none",borderRadius:8,fontFamily:"inherit",fontWeight:700,fontSize:13,cursor:"pointer",flex:1}}>🖨️ Spausdinti PDF</button>
               </div>
             </div>
