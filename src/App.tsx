@@ -741,7 +741,7 @@ function ClientsTab({ exercises }) {
                   win.document.write(`<div class="footer">© Coach Martynas · Asmeninė sporto programa · ${today}</div></body></html>`);
                   win.document.close();
                   setTimeout(()=>win.print(),800);
-                }} style={{...css.btnPrint,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>🖨️ Spausdinti / PDF</button>
+                }} style={{...css.btnPrint,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>🖨️ Spausdinti / PDFprint-patch.txt
               </div>
             </div>
             <div style={{overflowY:"auto",padding:22,flex:1}}>
