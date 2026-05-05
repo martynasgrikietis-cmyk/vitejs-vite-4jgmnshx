@@ -33,6 +33,19 @@ const sb = {
 // ── Simple password login ─────────────────────────────────
 const APP_PASSWORD = "coach2024"; // Change this to your own password!
 
+
+// ── Print styles ──────────────────────────────────────────
+const PRINT_STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  @media print {
+    body { margin:0; background:white !important; font-family:'Inter',sans-serif !important; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+    .no-print { display:none !important; }
+    .print-root { display:block !important; }
+    * { box-sizing:border-box; }
+  }
+  @media screen { .print-root { display:none !important; } }
+`;
+
 // ── Constants ─────────────────────────────────────────────
 const ALL_MUSCLES  = ["Krūtinė","Nugara","Kojos","Pečiai","Bicepsas","Tricepsas","Pilvas"];
 const GOALS        = ["Raumenų auginimas","Riebalų deginimas","Jėgos ugdymas","Ištvermė","Reabilitacija","Sveikata"];
@@ -151,6 +164,157 @@ function MultiImgUploader({ imgs, onChange }) {
         <button onClick={addUrl} style={{...css.btnTeal,padding:"8px 14px",fontSize:16,fontWeight:800}}>+</button>
       </div>
       <div style={{fontSize:11,color:C.muted,marginTop:6}}>💡 Pirmoji nuotrauka — viršelis. ← → perkelia, × ištrina.</div>
+    </div>
+  );
+}
+
+
+// ── PRINT / PDF VIEW ─────────────────────────────────────
+function PrintView({ client: c, program, programName, progressList }) {
+  if (!c) return null;
+  const bmiVal = calcBMI(c.weight, c.height);
+  const bmiNum = bmiVal ? parseFloat(bmiVal.toFixed(1)) : null;
+  const nut    = calcNut(c.weight, c.height, c.age, c.gender, ACTIVITY_LEVELS[c.activity_index ?? 2]?.factor || 1.55);
+  const trainingDays = DAYS.filter(d => (c.training_days || []).includes(d));
+  const today  = new Date().toLocaleDateString("lt-LT");
+
+  const s = {
+    page:     { fontFamily:"'Inter',sans-serif", background:"white", color:"#111", minHeight:"100vh" },
+    header:   { background:"#0f1117", padding:"20px 32px", display:"flex", alignItems:"center", gap:16, WebkitPrintColorAdjust:"exact", printColorAdjust:"exact" },
+    logoBox:  { width:46, height:46, background:"#c9a84c", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, fontWeight:800, color:"#0f1117", flexShrink:0 },
+    section:  { margin:"20px 32px", border:"1.5px solid #e0e0e8", borderRadius:12, overflow:"hidden" },
+    sHead:    { background:"#0f1117", color:"white", padding:"11px 20px", fontWeight:700, fontSize:13, letterSpacing:"0.12em", textTransform:"uppercase", WebkitPrintColorAdjust:"exact", printColorAdjust:"exact" },
+    infoGrid: { display:"flex", flexWrap:"wrap", gap:12, padding:"16px 20px" },
+    infoBox:  (col) => ({ background: col ? col+"12" : "#f5f5fa", border:`1.5px solid ${col ? col+"44" : "#e0e0e8"}`, borderRadius:9, padding:"10px 16px", minWidth:100 }),
+    exRow:    { display:"flex", gap:14, padding:"14px 18px", borderTop:"1px solid #f0f0f5", alignItems:"flex-start", pageBreakInside:"avoid" },
+    exImg:    { width:130, height:100, objectFit:"cover", borderRadius:9, flexShrink:0, border:"1.5px solid #e8e8f0" },
+    exImgPh:  { width:130, height:100, background:"#f0f0f5", borderRadius:9, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", fontSize:28 },
+    statBox:  (col) => ({ background: col ? col+"15" : "#f5f5fa", border:`1.5px solid ${col ? col+"44" : "#e0e0e8"}`, borderRadius:7, padding:"5px 12px", display:"inline-flex", flexDirection:"column", alignItems:"center", minWidth:68, marginRight:8 }),
+    footer:   { textAlign:"center", padding:"20px 32px", color:"#aaa", fontSize:11, borderTop:"1px solid #eee", marginTop:16 },
+  };
+
+  return (
+    <div className="print-root" style={s.page}>
+      {/* HEADER */}
+      <div style={s.header}>
+        <div style={s.logoBox}>M</div>
+        <div>
+          <div style={{fontSize:20, fontWeight:800, color:"#c9a84c", letterSpacing:"0.02em"}}>Coach Martynas</div>
+          <div style={{fontSize:10, color:"#888", letterSpacing:"0.22em", textTransform:"uppercase", marginTop:2}}>Asmeninė sporto programa</div>
+        </div>
+        <div style={{marginLeft:"auto", textAlign:"right"}}>
+          <div style={{fontSize:14, fontWeight:700, color:"white"}}>{programName || "Sporto programa"}</div>
+          <div style={{fontSize:11, color:"#888", marginTop:2}}>Sukurta: {today}</div>
+        </div>
+      </div>
+
+      {/* CLIENT INFO */}
+      <div style={s.section}>
+        <div style={s.sHead}>👤 Kliento informacija</div>
+        <div style={s.infoGrid}>
+          <div style={s.infoBox()}>
+            <div style={{fontSize:10, color:"#888", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:3}}>Vardas</div>
+            <div style={{fontSize:15, fontWeight:700, color:"#111"}}>{c.name || "—"}</div>
+          </div>
+          {c.age    && <div style={s.infoBox()}><div style={{fontSize:10,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Amžius</div><div style={{fontSize:15,fontWeight:700,color:"#111"}}>{c.age} m.</div></div>}
+          {c.weight && <div style={s.infoBox()}><div style={{fontSize:10,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Svoris</div><div style={{fontSize:15,fontWeight:700,color:"#111"}}>{c.weight} kg</div></div>}
+          {c.height && <div style={s.infoBox()}><div style={{fontSize:10,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Ūgis</div><div style={{fontSize:15,fontWeight:700,color:"#111"}}>{c.height} cm</div></div>}
+          {c.gender && <div style={s.infoBox()}><div style={{fontSize:10,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Lytis</div><div style={{fontSize:15,fontWeight:700,color:"#111"}}>{c.gender}</div></div>}
+          {bmiNum   && <div style={s.infoBox(bmiCat(bmiNum).color)}><div style={{fontSize:10,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>KMI</div><div style={{fontSize:15,fontWeight:700,color:bmiCat(bmiNum).color}}>{bmiNum} — {bmiCat(bmiNum).label}</div></div>}
+          {c.goal   && <div style={s.infoBox("#c9a84c")}><div style={{fontSize:10,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Tikslas</div><div style={{fontSize:14,fontWeight:700,color:"#c9a84c"}}>{c.goal}</div></div>}
+          {c.level  && <div style={s.infoBox("#4ea8a0")}><div style={{fontSize:10,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Lygis</div><div style={{fontSize:14,fontWeight:700,color:"#4ea8a0"}}>{c.level}</div></div>}
+        </div>
+        {c.notes && <div style={{padding:"0 20px 14px", fontSize:12, color:"#666", fontStyle:"italic"}}>📝 {c.notes}</div>}
+      </div>
+
+      {/* NUTRITION */}
+      {nut && (
+        <div style={s.section}>
+          <div style={s.sHead}>🍽️ Mitybos rekomendacijos (Mifflin-St Jeor formulė)</div>
+          <div style={s.infoGrid}>
+            <div style={s.infoBox("#c9a84c")}><div style={{fontSize:10,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>TDEE (palaikymas)</div><div style={{fontSize:18,fontWeight:800,color:"#c9a84c"}}>{nut.tdee}<span style={{fontSize:11,color:"#888",marginLeft:3}}>kcal</span></div></div>
+            <div style={s.infoBox("#c0474a")}><div style={{fontSize:10,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>🔻 Svorio metimas</div><div style={{fontSize:18,fontWeight:800,color:"#c0474a"}}>{nut.lose}<span style={{fontSize:11,color:"#888",marginLeft:3}}>kcal</span></div></div>
+            <div style={s.infoBox("#f87171")}><div style={{fontSize:10,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Baltymai (metimas)</div><div style={{fontSize:18,fontWeight:800,color:"#f87171"}}>{nut.protLose}<span style={{fontSize:11,color:"#888",marginLeft:3}}>g</span></div></div>
+            <div style={s.infoBox("#4ade80")}><div style={{fontSize:10,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>🔺 Raumenų auginimas</div><div style={{fontSize:18,fontWeight:800,color:"#4ade80"}}>{nut.gain}<span style={{fontSize:11,color:"#888",marginLeft:3}}>kcal</span></div></div>
+            <div style={s.infoBox("#4ea8a0")}><div style={{fontSize:10,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Baltymai (auginimas)</div><div style={{fontSize:18,fontWeight:800,color:"#4ea8a0"}}>{nut.protGain}<span style={{fontSize:11,color:"#888",marginLeft:3}}>g</span></div></div>
+          </div>
+        </div>
+      )}
+
+      {/* TRAINING PROGRAM */}
+      {trainingDays.map((day, di) => {
+        const exs = (program || {})[day] || [];
+        return (
+          <div key={day} style={{...s.section, pageBreakInside: exs.length <= 4 ? "avoid" : "auto"}}>
+            <div style={s.sHead}>{day.toUpperCase()} — {exs.length} pratimas(-ai)</div>
+            {exs.length === 0
+              ? <div style={{padding:"16px 20px", color:"#aaa", fontSize:13}}>Pratimų nėra</div>
+              : exs.map((ex, i) => {
+                  const imgs = (ex.imgs || []).filter(Boolean);
+                  return (
+                    <div key={i} style={s.exRow}>
+                      {/* Number */}
+                      <div style={{width:28,height:28,background:"#f0f0f5",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13,color:"#555",flexShrink:0,marginTop:4}}>{i+1}</div>
+                      {/* Photos */}
+                      <div style={{display:"flex",gap:8,flexShrink:0}}>
+                        {imgs.length === 0
+                          ? <div style={s.exImgPh}>📷</div>
+                          : imgs.slice(0, 2).map((src, ii) => (
+                              <img key={ii} src={src} alt={ex.name} style={{...s.exImg, width: ii === 0 ? 130 : 90, height: ii === 0 ? 100 : 70}} />
+                            ))
+                        }
+                      </div>
+                      {/* Info */}
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:15,fontWeight:700,color:"#111",marginBottom:4}}>{ex.name}</div>
+                        <div style={{fontSize:12,color:"#4ea8a0",fontWeight:600,marginBottom:8}}>{ex.muscle} · {ex.equipment}</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:6}}>
+                          {ex.customSets && <span style={{...s.statBox("#c9a84c")}}><span style={{fontSize:9,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em"}}>Serijos</span><span style={{fontSize:15,fontWeight:800,color:"#c9a84c"}}>{ex.customSets}</span></span>}
+                          {ex.customReps && <span style={{...s.statBox("#555")}}><span style={{fontSize:9,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em"}}>Kartojimai</span><span style={{fontSize:15,fontWeight:800,color:"#333"}}>{ex.customReps}</span></span>}
+                          {ex.customWeight && <span style={{...s.statBox("#4ea8a0")}}><span style={{fontSize:9,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em"}}>Svoris</span><span style={{fontSize:15,fontWeight:800,color:"#4ea8a0"}}>{ex.customWeight}</span></span>}
+                          {ex.customRest && <span style={{...s.statBox("#a78bfa")}}><span style={{fontSize:9,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em"}}>Poilsis</span><span style={{fontSize:14,fontWeight:800,color:"#a78bfa"}}>{ex.customRest}</span></span>}
+                        </div>
+                        {ex.description && <div style={{fontSize:11,color:"#777",fontStyle:"italic",lineHeight:1.5,maxWidth:400}}>{ex.description}</div>}
+                      </div>
+                    </div>
+                  );
+                })
+            }
+          </div>
+        );
+      })}
+
+      {/* PROGRESS */}
+      {progressList && progressList.length > 0 && (
+        <div style={s.section}>
+          <div style={s.sHead}>📈 Pažangos istorija</div>
+          <div style={{padding:"14px 20px"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+              <thead>
+                <tr style={{background:"#f5f5fa"}}>
+                  {["Data","Svoris","Krūtinė","Juosmuo","Klubai","Pastabos"].map(h=>(
+                    <th key={h} style={{padding:"8px 12px",textAlign:"left",fontSize:11,color:"#888",letterSpacing:"0.08em",textTransform:"uppercase",fontWeight:600,borderBottom:"1.5px solid #e0e0e8"}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {progressList.map((p,i)=>(
+                  <tr key={p.id} style={{borderBottom:"1px solid #f0f0f5",background:i%2===0?"white":"#fafafa"}}>
+                    <td style={{padding:"8px 12px",color:"#555"}}>{new Date(p.date).toLocaleDateString("lt-LT")}</td>
+                    <td style={{padding:"8px 12px",fontWeight:700,color:"#c9a84c"}}>{p.weight ? p.weight+" kg" : "—"}</td>
+                    <td style={{padding:"8px 12px",color:"#333"}}>{p.chest ? p.chest+" cm" : "—"}</td>
+                    <td style={{padding:"8px 12px",color:"#333"}}>{p.waist ? p.waist+" cm" : "—"}</td>
+                    <td style={{padding:"8px 12px",color:"#333"}}>{p.hips ? p.hips+" cm" : "—"}</td>
+                    <td style={{padding:"8px 12px",color:"#666",fontStyle:"italic"}}>{p.notes || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <div style={s.footer}>© Coach Martynas · Asmeninė sporto programa · {today}</div>
     </div>
   );
 }
@@ -491,13 +655,20 @@ function ClientsTab({ exercises }) {
       {/* ── CLIENT DETAIL VIEW ── */}
       {view&&(
         <div style={css.overlay}>
-          <div style={css.modal(760)}>
-            <div style={{padding:"17px 22px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:12}}>
-              <div style={{width:38,height:38,background:C.gold,borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:800,color:C.bg,flexShrink:0}}>{(view.name||"?")[0].toUpperCase()}</div>
-              <div style={{fontWeight:700,fontSize:16,color:C.text}}>{view.name}</div>
-              <button onClick={()=>setProgFormOpen(true)} style={{...css.btnTeal,marginLeft:"auto"}}>+ Pažanga</button>
-              <button onClick={()=>openEdit(view)} style={css.btnG}>✏️ Redaguoti</button>
-              <button onClick={()=>setView(null)} style={{width:29,height:29,background:C.faint,border:`1px solid ${C.border}`,borderRadius:7,color:C.muted,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+          <div style={{...css.modal(860)}}>
+            <div style={{padding:"16px 22px",borderBottom:`1px solid ${C.border}`}}>
+              {/* Top row: name + close */}
+              <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
+                <div style={{width:38,height:38,background:C.gold,borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:800,color:C.bg,flexShrink:0}}>{(view.name||"?")[0].toUpperCase()}</div>
+                <div style={{fontWeight:700,fontSize:16,color:C.text}}>{view.name}</div>
+                <button onClick={()=>setView(null)} style={{marginLeft:"auto",width:29,height:29,background:C.faint,border:`1px solid ${C.border}`,borderRadius:7,color:C.muted,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+              </div>
+              {/* Bottom row: action buttons */}
+              <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                <button onClick={()=>setProgFormOpen(true)} style={{...css.btnTeal,flex:1,justifyContent:"center",display:"flex",alignItems:"center",gap:6}}>📈 Pridėti pažangą</button>
+                <button onClick={()=>openEdit(view)} style={{...css.btnG,flex:1,justifyContent:"center",display:"flex",alignItems:"center",gap:6}}>✏️ Redaguoti programą</button>
+                <button onClick={()=>{if(window.__setPrintData){window.__setPrintData({client:view,program:view.program||{},programName:view.program_name||"",progressList});setTimeout(()=>window.print(),400);}}} style={{...css.btnPrint,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>🖨️ Spausdinti / PDF</button>
+              </div>
             </div>
             <div style={{overflowY:"auto",padding:22,flex:1}}>
               {/* Client info */}
@@ -856,11 +1027,19 @@ export default function App() {
     sb.get("exercises","?order=name").then(data=>{ setExercises(data); setExLoading(false); }).catch(()=>setExLoading(false));
   },[loggedIn]);
 
+  // printData is set by ClientsTab via a shared ref trick - we use window
+  const [printData,setPrintData] = useState(null);
+
+  // expose setPrintData globally so ClientsTab can call it
+  useEffect(()=>{ window.__setPrintData = setPrintData; },[]);
+
   if(!loggedIn) return <LoginScreen onLogin={handleLogin} />;
 
   return (
     <div style={css.page}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');*{box-sizing:border-box;}body{margin:0;}`}</style>
+      <style>{PRINT_STYLES}</style>
+      <PrintView client={printData?.client} program={printData?.program} programName={printData?.programName} progressList={printData?.progressList} />
 
       {/* HEADER */}
       <div style={css.header}>
