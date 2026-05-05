@@ -38,10 +38,12 @@ const APP_PASSWORD = "coach2024"; // Change this to your own password!
 const PRINT_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
   @media print {
-    body { margin:0; background:white !important; font-family:'Inter',sans-serif !important; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
-    .no-print { display:none !important; }
-    .print-root { display:block !important; }
-    * { box-sizing:border-box; }
+    * { box-sizing:border-box !important; }
+    body { margin:0 !important; padding:0 !important; background:white !important; font-family:'Inter',Arial,sans-serif !important; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; color:#111 !important; }
+    body * { visibility: hidden; }
+    .print-root, .print-root * { visibility: visible !important; }
+    .print-root { position:absolute !important; left:0 !important; top:0 !important; width:100% !important; background:white !important; }
+    .no-print { display:none !important; visibility:hidden !important; }
   }
   @media screen { .print-root { display:none !important; } }
 `;
@@ -124,6 +126,7 @@ function ImgGallery({ imgs, height=145 }) {
           {list.map((_,i)=><div key={i} onClick={e=>{e.stopPropagation();setCur(i);}} style={{width:6,height:6,borderRadius:"50%",background:i===cur?"white":"rgba(255,255,255,0.4)",cursor:"pointer"}} />)}
         </div>
       </>}
+      </div>{/* end no-print */}
     </div>
   );
 }
@@ -1041,6 +1044,7 @@ export default function App() {
       <style>{PRINT_STYLES}</style>
       <PrintView client={printData?.client} program={printData?.program} programName={printData?.programName} progressList={printData?.progressList} />
 
+      <div className="no-print">
       {/* HEADER */}
       <div style={css.header}>
         <div style={css.logo}>M</div>
@@ -1060,6 +1064,7 @@ export default function App() {
         {tab==="exercises" && <ExercisesTab />}
         {tab==="clients"   && <ClientsTab exercises={exercises} />}
       </div>
+      </div>{/* end no-print */}
     </div>
   );
 }
