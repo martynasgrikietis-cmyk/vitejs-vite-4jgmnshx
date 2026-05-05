@@ -670,7 +670,78 @@ function ClientsTab({ exercises }) {
               <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
                 <button onClick={()=>setProgFormOpen(true)} style={{...css.btnTeal,flex:1,justifyContent:"center",display:"flex",alignItems:"center",gap:6}}>📈 Pridėti pažangą</button>
                 <button onClick={()=>openEdit(view)} style={{...css.btnG,flex:1,justifyContent:"center",display:"flex",alignItems:"center",gap:6}}>✏️ Redaguoti programą</button>
-                <button onClick={()=>{if(window.__setPrintData){window.__setPrintData({client:view,program:view.program||{},programName:view.program_name||"",progressList});setTimeout(()=>window.print(),400);}}} style={{...css.btnPrint,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>🖨️ Spausdinti / PDF</button>
+                <button onClick={()=>{
+                  const c=view; const prog=view.program||{}; const pn=view.program_name||""; const pl=progressList;
+                  const bv=calcBMI(c.weight,c.height); const bn=bv?parseFloat(bv.toFixed(1)):null;
+                  const bc=bn?bmiCat(bn):null;
+                  const nut=calcNut(c.weight,c.height,c.age,c.gender,ACTIVITY_LEVELS[c.activity_index??2]?.factor||1.55);
+                  const days=DAYS.filter(d=>(c.training_days||[]).includes(d));
+                  const today=new Date().toLocaleDateString("lt-LT");
+                  const win=window.open("","_blank","width=900,height=700");
+                  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${pn||"Programa"} - ${c.name}</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Inter',Arial,sans-serif;background:white;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}.hdr{background:#0f1117;padding:20px 32px;display:flex;align-items:center;gap:16px}.logo{width:46px;height:46px;background:#c9a84c;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#0f1117}.hdr-title{font-size:20px;font-weight:800;color:#c9a84c}.hdr-sub{font-size:10px;color:#888;letter-spacing:3px;text-transform:uppercase;margin-top:2px}.hdr-right{margin-left:auto;text-align:right}.hdr-right .prog{font-size:14px;font-weight:700;color:white}.hdr-right .date{font-size:11px;color:#888;margin-top:2px}.sec{margin:20px 32px;border:1.5px solid #e0e0e8;border-radius:12px;overflow:hidden}.sec-head{background:#0f1117;color:white;padding:11px 20px;font-weight:700;font-size:13px;letter-spacing:2px;text-transform:uppercase}.info-grid{display:flex;flex-wrap:wrap;gap:10px;padding:16px 20px}.info-box{background:#f5f5fa;border:1.5px solid #e0e0e8;border-radius:9px;padding:10px 16px;min-width:90px}.info-lbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}.info-val{font-size:15px;font-weight:700;color:#111}.nut-grid{display:flex;flex-wrap:wrap;gap:10px;padding:16px 20px}.nut-box{border-radius:9px;padding:12px 16px;min-width:110px;border:1.5px solid}.ex-row{display:flex;gap:14px;padding:14px 18px;border-top:1px solid #f0f0f5;align-items:flex-start;page-break-inside:avoid}.ex-num{width:28px;height:28px;background:#f0f0f5;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#555;flex-shrink:0;margin-top:4px}.ex-img{width:130px;height:100px;object-fit:cover;border-radius:9px;flex-shrink:0;border:1.5px solid #e8e8f0}.ex-ph{width:130px;height:100px;background:#f0f0f5;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:28px}.ex-name{font-size:15px;font-weight:700;color:#111;margin-bottom:4px}.ex-muscle{font-size:12px;color:#4ea8a0;font-weight:600;margin-bottom:8px}.stats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}.stat-box{border-radius:7px;padding:5px 12px;display:inline-flex;flex-direction:column;align-items:center;border:1.5px solid}.stat-lbl{font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px}.stat-val{font-size:15px;font-weight:800}.ex-desc{font-size:11px;color:#777;font-style:italic;line-height:1.5;max-width:400px}.prog-table{width:100%;border-collapse:collapse;font-size:13px}.prog-table th{padding:8px 12px;text-align:left;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;border-bottom:1.5px solid #e0e0e8;background:#f5f5fa}.prog-table td{padding:8px 12px;border-bottom:1px solid #f0f0f5}.footer{text-align:center;padding:20px 32px;color:#aaa;font-size:11px;border-top:1px solid #eee;margin-top:16px}@media print{.no-print{display:none}}</style></head><body>`);
+                  // Header
+                  win.document.write(`<div class="hdr"><div class="logo">M</div><div><div class="hdr-title">Coach Martynas</div><div class="hdr-sub">Asmeninė sporto programa</div></div><div class="hdr-right"><div class="prog">${pn||"Sporto programa"}</div><div class="date">Sukurta: ${today}</div></div></div>`);
+                  // Client info
+                  win.document.write(`<div class="sec"><div class="sec-head">👤 Kliento informacija</div><div class="info-grid">`);
+                  if(c.name) win.document.write(`<div class="info-box"><div class="info-lbl">Vardas</div><div class="info-val">${c.name}</div></div>`);
+                  if(c.age) win.document.write(`<div class="info-box"><div class="info-lbl">Amžius</div><div class="info-val">${c.age} m.</div></div>`);
+                  if(c.weight) win.document.write(`<div class="info-box"><div class="info-lbl">Svoris</div><div class="info-val">${c.weight} kg</div></div>`);
+                  if(c.height) win.document.write(`<div class="info-box"><div class="info-lbl">Ūgis</div><div class="info-val">${c.height} cm</div></div>`);
+                  if(c.gender) win.document.write(`<div class="info-box"><div class="info-lbl">Lytis</div><div class="info-val">${c.gender}</div></div>`);
+                  if(bn) win.document.write(`<div class="info-box" style="background:${bc.color}12;border-color:${bc.color}44"><div class="info-lbl">KMI</div><div class="info-val" style="color:${bc.color}">${bn} — ${bc.label}</div></div>`);
+                  if(c.goal) win.document.write(`<div class="info-box" style="background:#c9a84c12;border-color:#c9a84c44"><div class="info-lbl">Tikslas</div><div class="info-val" style="color:#c9a84c">${c.goal}</div></div>`);
+                  if(c.level) win.document.write(`<div class="info-box" style="background:#4ea8a012;border-color:#4ea8a044"><div class="info-lbl">Lygis</div><div class="info-val" style="color:#4ea8a0">${c.level}</div></div>`);
+                  if(c.notes) win.document.write(`</div><div style="padding:0 20px 14px;font-size:12px;color:#666;font-style:italic">📝 ${c.notes}</div></div>`);
+                  else win.document.write(`</div></div>`);
+                  // Nutrition
+                  if(nut){
+                    win.document.write(`<div class="sec"><div class="sec-head">🍽️ Mitybos rekomendacijos</div><div class="nut-grid">`);
+                    win.document.write(`<div class="nut-box" style="background:#c9a84c12;border-color:#c9a84c44"><div class="info-lbl">TDEE (palaikymas)</div><div style="font-size:20px;font-weight:800;color:#c9a84c">${nut.tdee} <span style="font-size:12px;color:#888">kcal</span></div></div>`);
+                    win.document.write(`<div class="nut-box" style="background:#c0474a12;border-color:#c0474a44"><div class="info-lbl">🔻 Svorio metimas</div><div style="font-size:20px;font-weight:800;color:#c0474a">${nut.lose} <span style="font-size:12px;color:#888">kcal</span></div></div>`);
+                    win.document.write(`<div class="nut-box" style="background:#f8717112;border-color:#f8717144"><div class="info-lbl">Baltymai (metimas)</div><div style="font-size:20px;font-weight:800;color:#f87171">${nut.protLose} <span style="font-size:12px;color:#888">g</span></div></div>`);
+                    win.document.write(`<div class="nut-box" style="background:#4ade8012;border-color:#4ade8044"><div class="info-lbl">🔺 Raumenų auginimas</div><div style="font-size:20px;font-weight:800;color:#4ade80">${nut.gain} <span style="font-size:12px;color:#888">kcal</span></div></div>`);
+                    win.document.write(`<div class="nut-box" style="background:#4ea8a012;border-color:#4ea8a044"><div class="info-lbl">Baltymai (auginimas)</div><div style="font-size:20px;font-weight:800;color:#4ea8a0">${nut.protGain} <span style="font-size:12px;color:#888">g</span></div></div>`);
+                    win.document.write(`</div></div>`);
+                  }
+                  // Training days
+                  days.forEach(day=>{
+                    const exs=(prog[day]||[]);
+                    win.document.write(`<div class="sec"><div class="sec-head">${day.toUpperCase()} — ${exs.length} pratimas(-ai)</div>`);
+                    if(exs.length===0){win.document.write(`<div style="padding:14px 20px;color:#aaa;font-size:13px">Pratimų nėra</div>`);}
+                    else{
+                      exs.forEach((ex,i)=>{
+                        const imgs=(ex.imgs||[]).filter(Boolean);
+                        win.document.write(`<div class="ex-row"><div class="ex-num">${i+1}</div>`);
+                        if(imgs.length>0){
+                          win.document.write(`<img src="${imgs[0]}" class="ex-img" />`);
+                          if(imgs[1]) win.document.write(`<img src="${imgs[1]}" style="width:90px;height:70px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1.5px solid #e8e8f0;margin-top:4px" />`);
+                        } else {
+                          win.document.write(`<div class="ex-ph">📷</div>`);
+                        }
+                        win.document.write(`<div style="flex:1"><div class="ex-name">${ex.name}</div><div class="ex-muscle">${ex.muscle||""} · ${ex.equipment||""}</div><div class="stats">`);
+                        if(ex.customSets) win.document.write(`<span class="stat-box" style="background:#c9a84c15;border-color:#c9a84c44"><span class="stat-lbl">Serijos</span><span class="stat-val" style="color:#c9a84c">${ex.customSets}</span></span>`);
+                        if(ex.customReps) win.document.write(`<span class="stat-box" style="background:#f5f5fa;border-color:#e0e0e8"><span class="stat-lbl">Kartojimai</span><span class="stat-val" style="color:#333">${ex.customReps}</span></span>`);
+                        if(ex.customWeight) win.document.write(`<span class="stat-box" style="background:#4ea8a015;border-color:#4ea8a044"><span class="stat-lbl">Svoris</span><span class="stat-val" style="color:#4ea8a0">${ex.customWeight}</span></span>`);
+                        if(ex.customRest) win.document.write(`<span class="stat-box" style="background:#a78bfa15;border-color:#a78bfa44"><span class="stat-lbl">Poilsis</span><span class="stat-val" style="color:#a78bfa">${ex.customRest}</span></span>`);
+                        win.document.write(`</div>`);
+                        if(ex.description) win.document.write(`<div class="ex-desc">${ex.description}</div>`);
+                        win.document.write(`</div></div>`);
+                      });
+                    }
+                    win.document.write(`</div>`);
+                  });
+                  // Progress
+                  if(pl&&pl.length>0){
+                    win.document.write(`<div class="sec"><div class="sec-head">📈 Pažangos istorija</div><div style="padding:14px 20px"><table class="prog-table"><thead><tr><th>Data</th><th>Svoris</th><th>Krūtinė</th><th>Juosmuo</th><th>Klubai</th><th>Pastabos</th></tr></thead><tbody>`);
+                    pl.forEach((p,i)=>{
+                      win.document.write(`<tr style="background:${i%2===0?"white":"#fafafa"}"><td>${new Date(p.date).toLocaleDateString("lt-LT")}</td><td style="font-weight:700;color:#c9a84c">${p.weight?p.weight+" kg":"—"}</td><td>${p.chest?p.chest+" cm":"—"}</td><td>${p.waist?p.waist+" cm":"—"}</td><td>${p.hips?p.hips+" cm":"—"}</td><td style="font-style:italic;color:#666">${p.notes||"—"}</td></tr>`);
+                    });
+                    win.document.write(`</tbody></table></div></div>`);
+                  }
+                  win.document.write(`<div class="footer">© Coach Martynas · Asmeninė sporto programa · ${today}</div></body></html>`);
+                  win.document.close();
+                  setTimeout(()=>win.print(),800);
+                }} style={{...css.btnPrint,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>🖨️ Spausdinti / PDF</button>
               </div>
             </div>
             <div style={{overflowY:"auto",padding:22,flex:1}}>
