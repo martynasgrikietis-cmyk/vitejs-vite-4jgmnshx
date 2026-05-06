@@ -560,6 +560,61 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
     win.document.write(h);win.document.close();
   };
 
+  const printMealPDF=(c:any)=>{
+    const mp=c.meal_plan||{},mpn=c.meal_plan_name||"Mitybos planas";
+    const days2=DAYS.filter(d=>(c.training_days||[]).includes(d));
+    const today2=new Date().toLocaleDateString("lt-LT");
+    const win=window.open("","_blank");
+    if(!win){alert("Leiskite iššokančius langus!");return;}
+    const pstyle=`*{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,Arial,sans-serif;background:#fff;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}.hdr{background:#0a0d14;padding:18px 24px;display:flex;align-items:center;gap:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.logo{width:42px;height:42px;background:linear-gradient(135deg,#22c55e,#16a34a);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;flex-shrink:0}.ht{font-size:17px;font-weight:900;color:#22c55e}.hs{font-size:9px;color:#888;letter-spacing:3px;text-transform:uppercase;margin-top:2px}.hr{margin-left:auto;text-align:right;color:#fff}.sec{margin:12px 18px;border:1.5px solid #e0e0e8;border-radius:11px;overflow:hidden}.sh{background:#0a0d14;color:#fff;padding:9px 16px;font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;-webkit-print-color-adjust:exact;print-color-adjust:exact}.day-tot{display:flex;gap:8px;padding:8px 14px;background:#f9fafb;border-bottom:1px solid #eee;flex-wrap:wrap}.tot-badge{border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700}.mt-hdr{padding:8px 14px 4px;font-size:10px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:1px}.fr{display:flex;gap:10px;padding:6px 14px;border-top:1px solid #f5f5f5;align-items:center;page-break-inside:avoid}.fi{width:52px;height:52px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid #eee}.fp{width:52px;height:52px;background:#f0f0f5;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px}.fn{font-size:12px;font-weight:700;margin-bottom:2px}.fg{font-size:10px;color:#888}.fb{display:flex;gap:5px;margin-top:3px;flex-wrap:wrap}.fbb{border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600}.pb{position:fixed;top:10px;right:10px;padding:9px 18px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;z-index:999;box-shadow:0 2px 8px #0003}.ft{text-align:center;padding:14px;color:#aaa;font-size:10px;border-top:1px solid #eee;margin-top:10px}@media(max-width:600px){.sec{margin:8px 10px}.fr{gap:8px;padding:5px 10px}.fi,.fp{width:42px;height:42px}.pb{top:6px;right:6px;padding:7px 12px;font-size:12px}}@media print{.pb{display:none}}`;
+    let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${mpn}-${c.name}</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet"><style>${pstyle}</style></head><body>`;
+    h+=`<button class="pb" onclick="window.print()">🖨️ Išsaugoti kaip PDF</button>`;
+    h+=`<div class="hdr"><div class="logo">🥗</div><div><div class="ht">Coach Martynas</div><div class="hs">Mitybos planas</div></div><div class="hr"><div style="font-size:13px;font-weight:700">${mpn}</div><div style="font-size:10px;color:#888;margin-top:2px">${c.name} · ${today2}</div></div></div>`;
+    // Client info strip
+    h+=`<div style="display:flex;flex-wrap:wrap;gap:8px;padding:10px 18px;background:#f9fafb;border-bottom:1px solid #eee">`;
+    if(c.name)h+=`<span style="background:#f0f0f8;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600">👤 ${c.name}</span>`;
+    if(c.goal)h+=`<span style="background:#f0b42918;border:1px solid #f0b42940;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600;color:#c9a000">${c.goal}</span>`;
+    if(c.weight)h+=`<span style="background:#f0f0f8;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600">⚖️ ${c.weight} kg</span>`;
+    h+=`</div>`;
+    // Days
+    days2.forEach(day=>{
+      const dayData=mp[day]||{};
+      const allItems:any[]=Object.values(dayData).flat();
+      if(!allItems.length)return;
+      const tot=allItems.reduce((a:any,f:any)=>({kcal:a.kcal+(f.kcalActual||0),prot:a.prot+(f.protActual||0),carbs:a.carbs+(f.carbsActual||0),fat:a.fat+(f.fatActual||0)}),{kcal:0,prot:0,carbs:0,fat:0});
+      h+=`<div class="sec"><div class="sh">${day}</div>`;
+      h+=`<div class="day-tot">`;
+      h+=`<span class="tot-badge" style="background:#f0b42920;color:#c9a000">${Math.round(tot.kcal)} kcal</span>`;
+      h+=`<span class="tot-badge" style="background:#ef444420;color:#dc2626">B: ${Math.round(tot.prot)}g</span>`;
+      h+=`<span class="tot-badge" style="background:#f9731620;color:#ea6100">A: ${Math.round(tot.carbs)}g</span>`;
+      h+=`<span class="tot-badge" style="background:#a78bfa20;color:#7c3aed">R: ${Math.round(tot.fat)}g</span>`;
+      h+=`</div>`;
+      // Meal times
+      const MEAL_TIMES_ORDER=["🌅 Pusryčiai","☀️ Priešpiečiai","🍽️ Pietūs","🌤️ Užkandis","🌙 Vakarienė"];
+      MEAL_TIMES_ORDER.forEach(mt=>{
+        const items=(dayData[mt]||[]) as any[];
+        if(!items.length)return;
+        const mtKcal=items.reduce((a:any,f:any)=>a+(f.kcalActual||0),0);
+        h+=`<div class="mt-hdr">${mt} <span style="color:#888;font-weight:400;font-size:9px;margin-left:4px">${Math.round(mtKcal)} kcal</span></div>`;
+        items.forEach(f=>{
+          const img=(f.imgs||[]).filter(Boolean)[0];
+          h+=`<div class="fr">`;
+          h+=img?`<img src="${img}" class="fi"/>`:`<div class="fp">🍽️</div>`;
+          h+=`<div style="flex:1"><div class="fn">${f.name}</div><div class="fg">${f.grams}g · ${f.category||""}</div>`;
+          h+=`<div class="fb">`;
+          if(f.kcalActual)h+=`<span class="fbb" style="background:#f0b42918;color:#c9a000">${f.kcalActual} kcal</span>`;
+          if(f.protActual)h+=`<span class="fbb" style="background:#ef444418;color:#dc2626">B:${f.protActual}g</span>`;
+          if(f.carbsActual)h+=`<span class="fbb" style="background:#f9731618;color:#ea6100">A:${f.carbsActual}g</span>`;
+          if(f.fatActual)h+=`<span class="fbb" style="background:#a78bfa18;color:#7c3aed">R:${f.fatActual}g</span>`;
+          h+=`</div></div></div>`;
+        });
+      });
+      h+=`</div>`;
+    });
+    h+=`<div class="ft">© Coach Martynas · Mitybos planas · ${today2}</div></body></html>`;
+    win.document.write(h);win.document.close();
+  };
+
   const bmiVal=calcBMI(clientForm.weight,clientForm.height);
   const bmiNum=bmiVal?parseFloat(bmiVal.toFixed(1)):null;
   const nut=calcNut(clientForm.weight,clientForm.height,clientForm.age,clientForm.gender,ACTIVITY_LEVELS[clientForm.activity_index]?.factor||1.55);
@@ -606,9 +661,11 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
                     {c.goal&&<Badge label={c.goal} color={C.gold}/>}
                     {c.level&&<Badge label={c.level} color={C.teal}/>}
                   </div>
-                  <div style={{padding:"0 16px 10px",display:"flex",gap:12}}>
+                  <div style={{padding:"0 16px 10px",display:"flex",gap:12,flexWrap:"wrap" as const}}>
                     <div style={{fontSize:11,color:C.muted}}>📅 <b style={{color:C.text}}>{dayCount}</b> dienų</div>
                     <div style={{fontSize:11,color:C.muted}}>🏋️ <b style={{color:C.text}}>{exCount}</b> pratimų</div>
+                    {c.meal_plan_name&&<div style={{fontSize:11,color:C.green}}>🥗 <b style={{color:C.green}}>{c.meal_plan_name}</b></div>}
+                    {!c.meal_plan_name&&c.program_name&&<div style={{fontSize:11,color:C.muted}}>📋 <b style={{color:C.text}}>{c.program_name}</b></div>}
                   </div>
                   <div style={{padding:"10px 16px",borderTop:`1px solid ${C.border}`,display:"flex",gap:7}}>
                     <button onClick={()=>openView(c)} style={{...css.btnTeal,flex:1,justifyContent:"center"}}>👁️ Peržiūrėti</button>
@@ -638,7 +695,8 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
             <button onClick={()=>setProgFormOpen(true)} style={{...css.btnTeal,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>📈 Pažanga</button>
             <button onClick={()=>openEdit(view)} style={{...css.btnG,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,padding:"8px 12px",fontSize:12}}>✏️ Redaguoti</button>
             <button onClick={()=>openShareModal(view)} style={{...css.btnGhost,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontSize:12}}>🔗 Nuoroda</button>
-            <button onClick={()=>printPDF(view,progressList)} style={{...css.btnGhost,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontSize:12,color:C.gold,borderColor:C.goldBorder}}>🖨️ PDF</button>
+            <button onClick={()=>printPDF(view,progressList)} style={{...css.btnGhost,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontSize:12,color:C.gold,borderColor:C.goldBorder}}>🖨️ Treniruočių PDF</button>
+            {view.meal_plan_name&&<button onClick={()=>printMealPDF(view)} style={{...css.btnGhost,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontSize:12,color:C.green,borderColor:C.greenBorder}}>🥗 Mitybos PDF</button>}
           </div>
         </div>
         <div style={{overflowY:"auto",padding:18,flex:1}} className="modal-inner">
@@ -701,22 +759,54 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
               )}
             </div>);
           })}
-          {/* Meal plan summary */}
+          {/* Meal plan section */}
           {view.meal_plan_name&&<>
-            <div style={{fontSize:13,fontWeight:700,color:C.text,marginTop:16,marginBottom:10}}>🥗 {view.meal_plan_name}</div>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginTop:16,marginBottom:12}}>
+              <div style={{fontSize:13,fontWeight:700,color:C.text}}>🥗 {view.meal_plan_name}</div>
+              <button onClick={()=>printMealPDF(view)} style={{...css.btnGreen,marginLeft:"auto",fontSize:11,padding:"5px 12px"}}>🖨️ Mitybos PDF</button>
+            </div>
             {DAYS.filter(d=>(view.training_days||[]).includes(d)).map(day=>{
               const dayData=(view.meal_plan||{})[day]||{};
-              const tot=Object.values(dayData).flat().reduce((a:any,f:any)=>({kcal:a.kcal+(f.kcalActual||0),prot:a.prot+(f.protActual||0)}),{kcal:0,prot:0}) as any;
-              return(<div key={day} style={{...css.card,marginBottom:7,padding:"10px 14px"}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                  <div style={{width:4,height:4,borderRadius:"50%",background:C.green}}/>
-                  <span style={{fontWeight:700,fontSize:11,textTransform:"uppercase" as const}}>{day}</span>
-                  {tot.kcal>0&&<span style={{marginLeft:"auto",fontSize:11,color:C.gold,fontWeight:600}}>{Math.round(tot.kcal)} kcal · P:{Math.round(tot.prot)}g</span>}
+              const allFoods=Object.values(dayData).flat() as any[];
+              const tot=allFoods.reduce((a:any,f:any)=>({kcal:a.kcal+(f.kcalActual||0),prot:a.prot+(f.protActual||0),carbs:a.carbs+(f.carbsActual||0),fat:a.fat+(f.fatActual||0)}),{kcal:0,prot:0,carbs:0,fat:0});
+              if(!allFoods.length)return null;
+              return(<div key={day} style={{...css.card,marginBottom:8,padding:0,overflow:"hidden"}}>
+                <div style={{padding:"8px 14px",borderBottom:`1px solid ${C.faint}`,display:"flex",alignItems:"center",gap:8,background:C.faint}}>
+                  <div style={{width:4,height:4,borderRadius:"50%",background:C.green,flexShrink:0}}/>
+                  <span style={{fontWeight:700,fontSize:11,textTransform:"uppercase" as const,letterSpacing:"0.08em"}}>{day}</span>
+                  {(tot as any).kcal>0&&<div style={{marginLeft:"auto",display:"flex",gap:6}}>
+                    <span style={{fontSize:10,color:C.gold,fontWeight:700}}>{Math.round((tot as any).kcal)} kcal</span>
+                    <span style={{fontSize:10,color:"#f87171"}}>P:{Math.round((tot as any).prot)}g</span>
+                    <span style={{fontSize:10,color:"#fb923c"}}>C:{Math.round((tot as any).carbs)}g</span>
+                    <span style={{fontSize:10,color:C.purple}}>F:{Math.round((tot as any).fat)}g</span>
+                  </div>}
                 </div>
-                {Object.entries(dayData).map(([mt,items]:any)=>{
-                  if(!items.length)return null;
-                  return(<div key={mt} style={{fontSize:11,color:C.muted,padding:"2px 0"}}><b style={{color:C.green}}>{mt}:</b> {items.map((f:any)=>f.name).join(", ")}</div>);
-                })}
+                <div style={{padding:"8px 10px"}}>
+                  {Object.entries(dayData).map(([mt,items]:any)=>{
+                    if(!items||!items.length)return null;
+                    const mtKcal=items.reduce((a:any,f:any)=>a+(f.kcalActual||0),0);
+                    return(<div key={mt} style={{marginBottom:8}}>
+                      <div style={{fontSize:10,fontWeight:700,color:C.green,marginBottom:5,display:"flex",alignItems:"center",gap:6}}>
+                        <span>{mt}</span>
+                        {mtKcal>0&&<span style={{color:C.muted,fontWeight:500}}>{Math.round(mtKcal)} kcal</span>}
+                      </div>
+                      {items.map((f:any,i:number)=>{
+                        const fImg=(f.imgs||[]).filter(Boolean)[0];
+                        return(<div key={i} style={{display:"flex",alignItems:"center",gap:8,background:C.faint,borderRadius:7,padding:"6px 9px",marginBottom:3}}>
+                          {fImg?<img src={fImg} alt={f.name} style={{width:34,height:34,borderRadius:7,objectFit:"cover",flexShrink:0}}/>:<div style={{width:34,height:34,background:C.border,borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>🍽️</div>}
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:12,fontWeight:600,color:C.text,whiteSpace:"nowrap" as const,overflow:"hidden",textOverflow:"ellipsis"}}>{f.name}</div>
+                            <div style={{fontSize:10,color:C.muted}}>{f.grams}g</div>
+                          </div>
+                          <div style={{display:"flex",gap:5,flexShrink:0}}>
+                            <span style={{fontSize:10,color:C.gold,fontWeight:600}}>{f.kcalActual}kcal</span>
+                            <span style={{fontSize:10,color:"#f87171"}}>P:{f.protActual}g</span>
+                          </div>
+                        </div>);
+                      })}
+                    </div>);
+                  })}
+                </div>
               </div>);
             })}
           </>}
