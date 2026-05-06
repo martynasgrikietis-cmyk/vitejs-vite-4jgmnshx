@@ -80,11 +80,19 @@ export function BookingPage(){
 
   const slots = selectedDate ? getSlots(schedule, selectedDate, bookings) : [];
 
+  const SUPABASE_URL = "https://wtsksjyayilyyudvizsx.supabase.co";
+
   const submit = async()=>{
     if(!name.trim()||!phone.trim()||!selectedDate||!selectedTime){ setError("Užpildykite visus laukus."); return; }
     setSubmitting(true); setError("");
     try{
       await sb.insert("bookings",{date:selectedDate,time:selectedTime,client_name:name.trim(),client_phone:phone.trim(),goal:"",notes:"",status:"pending"});
+      // Fire notification (don't await — don't block success screen if it fails)
+      fetch(`${SUPABASE_URL}/functions/v1/notify-booking`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({date:selectedDate,time:selectedTime,client_name:name.trim(),client_phone:phone.trim()}),
+      }).catch(()=>{});
       setDone(true);
     }catch(e:any){ setError("Klaida: "+e.message); }
     finally{ setSubmitting(false); }
