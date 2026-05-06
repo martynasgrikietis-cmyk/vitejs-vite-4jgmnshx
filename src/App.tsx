@@ -69,7 +69,18 @@ function calcNut(w,h,age,gender,act){
   if(!wf||!hf) return null;
   const bmr=gender==="Moteris"?10*wf+6.25*hf-5*af-161:10*wf+6.25*hf-5*af+5;
   const tdee=Math.round(bmr*act);
-  return{ tdee, lose:Math.round(tdee-500), gain:Math.round(tdee+300), protLose:Math.round(wf*2), protGain:Math.round(wf*1.8) };
+  const lose=Math.round(tdee-500);
+  const gain=Math.round(tdee+300);
+  // Protein: 2.2g/kg cutting, 1.8g/kg bulking
+  const protLose=Math.round(wf*2.2);
+  const protGain=Math.round(wf*1.8);
+  // Fat: 25% of total calories ÷ 9 kcal/g
+  const fatLose=Math.round(lose*0.25/9);
+  const fatGain=Math.round(gain*0.25/9);
+  // Carbs: remaining calories ÷ 4 kcal/g
+  const carbLose=Math.max(0,Math.round((lose - protLose*4 - fatLose*9)/4));
+  const carbGain=Math.max(0,Math.round((gain - protGain*4 - fatGain*9)/4));
+  return{ tdee, lose, gain, protLose, protGain, fatLose, fatGain, carbLose, carbGain };
 }
 
 // ── CSS shortcuts ─────────────────────────────────────────
@@ -531,13 +542,19 @@ function ClientsTab({ exercises }) {
                   if(c.level) h+=`<div class="ib" style="background:#4ea8a018;border-color:#4ea8a055"><div class="il">Lygis</div><div class="iv" style="color:#4ea8a0">${c.level}</div></div>`;
                   h+=`</div>${c.notes?`<div style="padding:0 20px 14px;font-size:12px;color:#666;font-style:italic">📝 ${c.notes}</div>`:""}</div>`;
                   if(nut){
-                    h+=`<div class="sec"><div class="sh">🍽️ Mitybos rekomendacijos</div><div class="ig">`;
-                    h+=`<div class="ib" style="background:#c9a84c18;border-color:#c9a84c55"><div class="il">TDEE</div><div class="iv" style="color:#c9a84c">${nut.tdee} kcal</div></div>`;
-                    h+=`<div class="ib" style="background:#c0474a18;border-color:#c0474a55"><div class="il">Svorio metimas</div><div class="iv" style="color:#c0474a">${nut.lose} kcal</div></div>`;
-                    h+=`<div class="ib" style="background:#f8717118;border-color:#f8717155"><div class="il">Baltymai (met.)</div><div class="iv" style="color:#f87171">${nut.protLose} g</div></div>`;
-                    h+=`<div class="ib" style="background:#4ade8018;border-color:#4ade8055"><div class="il">Raumenų auginimas</div><div class="iv" style="color:#4ade80">${nut.gain} kcal</div></div>`;
-                    h+=`<div class="ib" style="background:#4ea8a018;border-color:#4ea8a055"><div class="il">Baltymai (aug.)</div><div class="iv" style="color:#4ea8a0">${nut.protGain} g</div></div>`;
+                    h+=`<div class="sec"><div class="sh">🍽️ Mitybos rekomendacijos</div>`;
+                    h+=`<div class="ig"><div class="ib" style="background:#c9a84c18;border-color:#c9a84c55"><div class="il">TDEE (palaikymas)</div><div class="iv" style="color:#c9a84c">${nut.tdee} kcal</div></div></div>`;
+                    h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid #eee">`;
+                    h+=`<div style="padding:14px 20px;border-right:1px solid #eee"><div style="font-size:11px;font-weight:700;color:#c0474a;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🔻 Riebalų deginimas — ${nut.lose} kcal/d.</div><div style="display:flex;gap:8px;flex-wrap:wrap">`;
+                    h+=`<div class="ib" style="background:#f8717118;border-color:#f8717155"><div class="il">Baltymai</div><div class="iv" style="color:#f87171">${nut.protLose} g</div></div>`;
+                    h+=`<div class="ib" style="background:#fbbf2418;border-color:#fbbf2455"><div class="il">Angliavandeniai</div><div class="iv" style="color:#d97706">${nut.carbLose} g</div></div>`;
+                    h+=`<div class="ib" style="background:#a78bfa18;border-color:#a78bfa55"><div class="il">Riebalai</div><div class="iv" style="color:#a78bfa">${nut.fatLose} g</div></div>`;
                     h+=`</div></div>`;
+                    h+=`<div style="padding:14px 20px"><div style="font-size:11px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🔺 Raumenų auginimas — ${nut.gain} kcal/d.</div><div style="display:flex;gap:8px;flex-wrap:wrap">`;
+                    h+=`<div class="ib" style="background:#4ade8018;border-color:#4ade8055"><div class="il">Baltymai</div><div class="iv" style="color:#4ade80">${nut.protGain} g</div></div>`;
+                    h+=`<div class="ib" style="background:#fbbf2418;border-color:#fbbf2455"><div class="il">Angliavandeniai</div><div class="iv" style="color:#d97706">${nut.carbGain} g</div></div>`;
+                    h+=`<div class="ib" style="background:#a78bfa18;border-color:#a78bfa55"><div class="il">Riebalai</div><div class="iv" style="color:#a78bfa">${nut.fatGain} g</div></div>`;
+                    h+=`</div></div></div></div>`;
                   }
                   days.forEach(day=>{
                     const exs=prog[day]||[];
@@ -745,17 +762,34 @@ function ClientsTab({ exercises }) {
                         <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12,background:C.faint,borderRadius:9,padding:"12px 14px"}}>
                           <div style={{fontSize:28,fontWeight:800,color:bmiCat(bmiNum).color}}>{bmiNum}</div>
                           <div style={{background:bmiCat(bmiNum).color+"22",border:`1px solid ${bmiCat(bmiNum).color}44`,borderRadius:7,padding:"4px 12px",color:bmiCat(bmiNum).color,fontWeight:700,fontSize:12}}>{bmiCat(bmiNum).label}</div>
+                          {nut&&<div style={{marginLeft:"auto",background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:7,padding:"4px 12px",color:C.gold,fontWeight:700,fontSize:12}}>TDEE: {nut.tdee} kcal</div>}
                         </div>
-                        {nut&&(
-                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                            {[["TDEE",`${nut.tdee} kcal`,C.gold],["🔻 Metimas",`${nut.lose} kcal`,C.red],["Baltymai (met.)",`${nut.protLose} g`,"#f87171"],["🔺 Auginimas",`${nut.gain} kcal`,C.green],["Baltymai (aug.)",`${nut.protGain} g`,"#4ade80"]].map(([l,v,col])=>(
-                              <div key={l} style={{background:C.faint,borderRadius:8,padding:"8px 12px"}}>
-                                <div style={{fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:3}}>{l}</div>
-                                <div style={{fontSize:16,fontWeight:800,color:col}}>{v}</div>
-                              </div>
-                            ))}
+                        {nut&&(<>
+                          {/* Cutting */}
+                          <div style={{background:"#c0474a0f",border:`1px solid ${C.redBorder}`,borderRadius:10,padding:"10px 12px",marginBottom:8}}>
+                            <div style={{fontSize:10,color:C.red,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:8}}>🔻 Riebalų deginimas — {nut.lose} kcal/d.</div>
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
+                              {[["Baltymai","#f87171",`${nut.protLose} g`],["Angliavandeniai","#fbbf24",`${nut.carbLose} g`],["Riebalai","#a78bfa",`${nut.fatLose} g`]].map(([l,col,v])=>(
+                                <div key={l} style={{background:C.surface,borderRadius:7,padding:"7px 10px",textAlign:"center"}}>
+                                  <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:3}}>{l}</div>
+                                  <div style={{fontSize:15,fontWeight:800,color:col}}>{v}</div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        )}
+                          {/* Bulking */}
+                          <div style={{background:"#4ade800f",border:`1px solid #4ade8044`,borderRadius:10,padding:"10px 12px"}}>
+                            <div style={{fontSize:10,color:C.green,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:8}}>🔺 Raumenų auginimas — {nut.gain} kcal/d.</div>
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
+                              {[["Baltymai","#4ade80",`${nut.protGain} g`],["Angliavandeniai","#fbbf24",`${nut.carbGain} g`],["Riebalai","#a78bfa",`${nut.fatGain} g`]].map(([l,col,v])=>(
+                                <div key={l} style={{background:C.surface,borderRadius:7,padding:"7px 10px",textAlign:"center"}}>
+                                  <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:3}}>{l}</div>
+                                  <div style={{fontSize:15,fontWeight:800,color:col}}>{v}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </>)}
                       </div>
                     )}
                   </div>
