@@ -478,8 +478,17 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
   };
   const saveClient=async()=>{
     if(!clientForm.name.trim())return;setSaving(true);
-    const data={...clientForm,program,program_name:programName,meal_plan:mealPlan,meal_plan_name:mealPlanName};
-    try{if(editClientId)await sb.update("clients",editClientId,data);else await sb.insert("clients",data);setClientFormOpen(false);await load();}
+    // Auto-name meal plan if user added foods but left name blank
+    const hasMealContent=Object.values(mealPlan).some((day:any)=>Object.values(day||{}).some((items:any)=>items?.length>0));
+    const finalMealName=mealPlanName||(hasMealContent?`${clientForm.name} mitybos planas`:"");
+    // Auto-name program if user added exercises but left name blank
+    const hasProgramContent=Object.values(program).some((d:any)=>d?.length>0);
+    const finalProgramName=programName||(hasProgramContent?`${clientForm.name} programa`:"");
+    const data={...clientForm,program,program_name:finalProgramName,meal_plan:mealPlan,meal_plan_name:finalMealName};
+    try{if(editClientId)await sb.update("clients",editClientId,data);else await sb.insert("clients",data);setClientFormOpen(false);
+      const fresh=await sb.get("clients",`?id=eq.${editClientId||"x"}&limit=1`).catch(()=>[]);
+      if(fresh.length&&view&&fresh[0].id===view.id)setView(fresh[0]);
+      await load();}
     catch(e:any){alert("Klaida: "+e.message);}finally{setSaving(false);}
   };
   const delClient=async(id:any)=>{try{await sb.delete("clients",id);setConfirmDel(null);setView(null);await load();}catch(e:any){alert("Klaida: "+e.message);}};
@@ -696,7 +705,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
             <button onClick={()=>openEdit(view)} style={{...css.btnG,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,padding:"8px 12px",fontSize:12}}>✏️ Redaguoti</button>
             <button onClick={()=>openShareModal(view)} style={{...css.btnGhost,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontSize:12}}>🔗 Nuoroda</button>
             <button onClick={()=>printPDF(view,progressList)} style={{...css.btnGhost,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontSize:12,color:C.gold,borderColor:C.goldBorder}}>🖨️ Treniruočių PDF</button>
-            {view.meal_plan_name&&<button onClick={()=>printMealPDF(view)} style={{...css.btnGhost,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontSize:12,color:C.green,borderColor:C.greenBorder}}>🥗 Mitybos PDF</button>}
+            <button onClick={()=>view.meal_plan_name?printMealPDF(view):alert("Šis klientas neturi mitybos plano.")} style={{...css.btnGhost,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontSize:12,color:view.meal_plan_name?C.green:C.muted,borderColor:view.meal_plan_name?C.greenBorder:C.border,opacity:view.meal_plan_name?1:0.5}}>🥗 Mitybos PDF</button>
           </div>
         </div>
         <div style={{overflowY:"auto",padding:18,flex:1}} className="modal-inner">
