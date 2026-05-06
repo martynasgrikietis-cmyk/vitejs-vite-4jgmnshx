@@ -99,8 +99,8 @@ const css = {
   btnRed:  {padding:"7px 13px",background:C.redSoft,color:C.red,border:`1px solid ${C.redBorder}`,borderRadius:6,fontFamily:FONT,fontSize:12,cursor:"pointer",fontWeight:600},
   btnPrint:{padding:"10px 24px",background:C.teal,color:"#fff",border:"none",borderRadius:8,fontFamily:FONT,fontWeight:700,fontSize:13,cursor:"pointer"},
   secTitle:{fontSize:10,color:C.teal,letterSpacing:"0.18em",marginBottom:16,display:"block",fontWeight:700,textTransform:"uppercase"},
-  overlay: {position:"fixed",inset:0,background:"#00000099",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:16,backdropFilter:"blur(4px)"},
-  modal:   (w)=>({background:C.surface,borderRadius:16,border:`1px solid ${C.border}`,width:"100%",maxWidth:w||520,maxHeight:"92vh",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 24px 60px #00000055"}),
+  overlay: {position:"fixed",inset:0,background:"#00000099",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:8,backdropFilter:"blur(4px)"},
+  modal:   (w)=>({background:C.surface,borderRadius:16,border:`1px solid ${C.border}`,width:"100%",maxWidth:w||520,maxHeight:"92vh",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 24px 60px #00000055"} as any),
 };
 
 // ── Reusable UI pieces ────────────────────────────────────
@@ -176,7 +176,7 @@ function LoginScreen({ onLogin }) {
   const submit = () => { if(pw===APP_PASSWORD){onLogin();}else{setErr("Neteisingas slaptažodis. Bandykite dar kartą.");setPw("");} };
   return (
     <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:FONT}}>
-      <div style={{background:C.surface,borderRadius:20,border:`1px solid ${C.border}`,padding:"48px 40px",maxWidth:380,width:"100%",textAlign:"center",boxShadow:"0 24px 60px #00000055"}}>
+      <div style={{background:C.surface,borderRadius:20,border:`1px solid ${C.border}`,padding:"32px 24px",maxWidth:380,width:"100%",textAlign:"center",boxShadow:"0 24px 60px #00000055"}}>
         <div style={{width:64,height:64,background:C.gold,borderRadius:16,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,fontWeight:800,color:C.bg,margin:"0 auto 20px"}}>M</div>
         <div style={{fontSize:24,fontWeight:800,color:C.gold,marginBottom:4}}>Coach Martynas</div>
         <div style={{fontSize:12,color:C.muted,letterSpacing:"0.2em",textTransform:"uppercase",marginBottom:32}}>Sporto programų sistema</div>
@@ -248,8 +248,8 @@ function ExercisesTab() {
         <button onClick={openNew} style={{...css.btnG,marginLeft:"auto"}}>+ Naujas pratimas</button>
       </div>
       <div style={{display:"flex",gap:10,marginBottom:20,flexWrap:"wrap",alignItems:"center"}}>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Ieškoti..." style={{...css.input,width:220}} />
-        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Ieškoti..." className="search-bar" style={{...css.input,width:220}} />
+        <div className="tag-row" style={{display:"flex",gap:6,flexWrap:"wrap"}}>
           {["Visos",...ALL_MUSCLES].map(m=><Tag key={m} c={C.gold} label={m} active={muscle===m} onClick={()=>setMuscle(m)} />)}
         </div>
         <button onClick={load} style={{...css.btnGhost,marginLeft:"auto"}}>↺ Atnaujinti</button>
@@ -257,7 +257,7 @@ function ExercisesTab() {
 
       <Err msg={error} />
       {loading ? <Spinner /> : (
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(215px,1fr))",gap:16}}>
+        <div className="ex-grid" style={{}}>
           {filtered.map(ex=>(
             <div key={ex.id} style={{background:C.surface,borderRadius:12,border:`1px solid ${C.border}`,overflow:"hidden",display:"flex",flexDirection:"column"}}>
               <div style={{position:"relative"}}>
@@ -285,14 +285,14 @@ function ExercisesTab() {
       {formOpen&&(
         <div style={css.overlay}>
           <div style={css.modal(560)}>
-            <div style={{padding:"17px 22px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center"}}>
+            <div style={{padding:"17px 22px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center"}} className="modal-pad">
               <div style={{fontWeight:700,fontSize:15,color:C.gold}}>{editId?"✏️ Redaguoti pratimą":"➕ Naujas pratimas"}</div>
               <button onClick={()=>setFormOpen(false)} style={{marginLeft:"auto",width:29,height:29,background:C.faint,border:`1px solid ${C.border}`,borderRadius:7,color:C.muted,cursor:"pointer",fontSize:16}}>×</button>
             </div>
-            <div style={{overflowY:"auto",padding:22,display:"flex",flexDirection:"column",gap:16}}>
+            <div style={{overflowY:"auto",padding:22,display:"flex",flexDirection:"column",gap:16}} className="modal-inner">
               <MultiImgUploader imgs={form.imgs||[]} onChange={fn=>setForm(p=>({...p,imgs:typeof fn==="function"?fn(p.imgs||[]):fn}))} />
               <div><span style={css.label}>Pavadinimas *</span><input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} style={css.input} placeholder="Pratimo pavadinimas" /></div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              <div className="ex-form-grid" style={{}}>
                 <div><span style={css.label}>Raumenų grupė</span><select value={form.muscle} onChange={e=>setForm(p=>({...p,muscle:e.target.value}))} style={css.select}>{ALL_MUSCLES.map(m=><option key={m}>{m}</option>)}</select></div>
                 <div><span style={css.label}>Inventorius</span><input value={form.equipment} onChange={e=>setForm(p=>({...p,equipment:e.target.value}))} style={css.input} placeholder="Štanga, Hanteliai..." /></div>
                 <div><span style={css.label}>Serijos</span><input value={form.sets} onChange={e=>setForm(p=>({...p,sets:e.target.value}))} style={css.input} placeholder="3-4" /></div>
@@ -464,7 +464,7 @@ function ClientsTab({ exercises }) {
             <button onClick={openNew} style={css.btnG}>+ Pridėti klientą</button>
           </div>
         ):(
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:16}}>
+          <div className="cl-grid" style={{}}>
             {filtered.map(c=>{
               const bmi=calcBMI(c.weight,c.height);
               const bmiN=bmi?parseFloat(bmi.toFixed(1)):null;
@@ -514,7 +514,7 @@ function ClientsTab({ exercises }) {
                 <button onClick={()=>setView(null)} style={{marginLeft:"auto",width:29,height:29,background:C.faint,border:`1px solid ${C.border}`,borderRadius:7,color:C.muted,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
               </div>
               {/* Bottom row: action buttons */}
-              <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+              <div className="view-actions">
                 <button onClick={()=>setProgFormOpen(true)} style={{...css.btnTeal,flex:1,justifyContent:"center",display:"flex",alignItems:"center",gap:6}}>📈 Pridėti pažangą</button>
                 <button onClick={()=>openEdit(view)} style={{...css.btnG,flex:1,justifyContent:"center",display:"flex",alignItems:"center",gap:6}}>✏️ Redaguoti programą</button>
                 <button onClick={()=>{
@@ -526,9 +526,10 @@ function ClientsTab({ exercises }) {
                   const win=window.open("","_blank");
                   if(!win){alert("Leiskite iššokančius langus šiame puslapyje!");return;}
                   let h="";
-                  h+=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${pn}-${c.name}</title>`;
+                  h+=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${pn}-${c.name}</title>`;
                   h+=`<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">`;
-                  h+=`<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,Arial,sans-serif;background:#fff;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}.hdr{background:#0f1117;padding:20px 32px;display:flex;align-items:center;gap:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.logo{width:46px;height:46px;background:#c9a84c;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#0f1117}.ht{font-size:20px;font-weight:800;color:#c9a84c}.hs{font-size:10px;color:#888;letter-spacing:3px;text-transform:uppercase;margin-top:2px}.hr{margin-left:auto;text-align:right;color:#fff}.sec{margin:20px 32px;border:1.5px solid #e0e0e8;border-radius:12px;overflow:hidden}.sh{background:#0f1117;color:#fff;padding:11px 20px;font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;-webkit-print-color-adjust:exact;print-color-adjust:exact}.ig{display:flex;flex-wrap:wrap;gap:10px;padding:16px 20px}.ib{background:#f5f5fa;border:1.5px solid #e0e0e8;border-radius:9px;padding:10px 16px;min-width:90px}.il{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}.iv{font-size:15px;font-weight:700}.er{display:flex;gap:14px;padding:14px 18px;border-top:1px solid #f0f0f5;align-items:flex-start;page-break-inside:avoid}.en{width:28px;height:28px;background:#f0f0f5;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#555;flex-shrink:0;margin-top:4px}.ei{width:130px;height:100px;object-fit:cover;border-radius:9px;flex-shrink:0;border:1.5px solid #e8e8f0}.ep{width:130px;height:100px;background:#f0f0f5;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:28px}.en2{font-size:15px;font-weight:700;margin-bottom:4px}.em{font-size:12px;color:#4ea8a0;font-weight:600;margin-bottom:8px}.ss{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}.sb{border-radius:7px;padding:5px 12px;display:inline-flex;flex-direction:column;align-items:center;border:1.5px solid}.sl{font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px}.sv{font-size:15px;font-weight:800}.ed{font-size:11px;color:#777;font-style:italic;line-height:1.5}.ft{text-align:center;padding:20px;color:#aaa;font-size:11px;border-top:1px solid #eee;margin-top:16px}.pb{position:fixed;top:16px;right:16px;padding:12px 24px;background:#c9a84c;color:#000;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;z-index:999}@media print{.pb{display:none}}</style></head><body>`;
+                  h+=`<style>*{box-sizing:border-box;margin:0;padding:0}  body{font-family:Inter,Arial,sans-serif;background:#fff;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}  /* ── Header ── */  .hdr{background:#0f1117;padding:20px 32px;display:flex;align-items:center;gap:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}  .logo{width:46px;height:46px;background:#c9a84c;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#0f1117;flex-shrink:0}  .ht{font-size:20px;font-weight:800;color:#c9a84c}  .hs{font-size:10px;color:#888;letter-spacing:3px;text-transform:uppercase;margin-top:2px}  .hr{margin-left:auto;text-align:right;color:#fff}  /* ── Sections ── */  .sec{margin:16px 24px;border:1.5px solid #e0e0e8;border-radius:12px;overflow:hidden}  .sh{background:#0f1117;color:#fff;padding:11px 20px;font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;-webkit-print-color-adjust:exact;print-color-adjust:exact}  /* ── Info badges ── */  .ig{display:flex;flex-wrap:wrap;gap:8px;padding:14px 16px}  .ib{background:#f5f5fa;border:1.5px solid #e0e0e8;border-radius:9px;padding:8px 14px;min-width:80px}  .il{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}  .iv{font-size:14px;font-weight:700}  /* ── Exercise row ── */  .er{display:flex;gap:12px;padding:12px 16px;border-top:1px solid #f0f0f5;align-items:flex-start;page-break-inside:avoid}  .en{width:26px;height:26px;background:#f0f0f5;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:#555;flex-shrink:0;margin-top:3px}  .ei{width:110px;height:85px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1.5px solid #e8e8f0}  .ep{width:110px;height:85px;background:#f0f0f5;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px}  .en2{font-size:14px;font-weight:700;margin-bottom:3px}  .em{font-size:11px;color:#4ea8a0;font-weight:600;margin-bottom:7px}  .ss{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:5px}  .sb{border-radius:7px;padding:4px 10px;display:inline-flex;flex-direction:column;align-items:center;border:1.5px solid}  .sl{font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px}  .sv{font-size:14px;font-weight:800}  .ed{font-size:11px;color:#777;font-style:italic;line-height:1.5}  /* ── Nutrition two-col ── */  .nut-two-col{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #eee}  /* ── Progress table ── */  .prog-table{width:100%;border-collapse:collapse;font-size:13px}  .prog-table th{padding:8px 10px;text-align:left;border-bottom:1.5px solid #e0e0e8;font-size:10px;color:#888;text-transform:uppercase;background:#f5f5fa}  .prog-table td{padding:8px 10px;border-bottom:1px solid #f0f0f5}  /* ── Hide cols on small ── */  .hide-sm{display:table-cell}  /* ── Print button ── */  .pb{position:fixed;top:12px;right:12px;padding:10px 20px;background:#c9a84c;color:#000;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;z-index:999;box-shadow:0 2px 8px #0003}  .ft{text-align:center;padding:16px;color:#aaa;font-size:11px;border-top:1px solid #eee;margin-top:12px}  /* ── Tablet (≤768px) ── */  @media(max-width:768px){   .hdr{padding:14px 16px;gap:10px}   .ht{font-size:16px}   .hs{display:none}   .hr div:first-child{font-size:12px}   .sec{margin:10px 12px;border-radius:8px}   .sh{padding:9px 14px;font-size:11px;letter-spacing:1px}   .ig{padding:10px 12px;gap:6px}   .ib{padding:7px 11px;min-width:70px}   .iv{font-size:13px}   .er{gap:10px;padding:10px 12px}   .ei{width:80px;height:65px}   .ep{width:80px;height:65px;font-size:20px}   .en2{font-size:13px}   .nut-two-col{grid-template-columns:1fr}   .nut-two-col>div{border-right:none!important;border-bottom:1px solid #eee}   .pb{top:8px;right:8px;padding:8px 14px;font-size:13px}   .hide-sm{display:none}  }  /* ── Mobile (≤480px) ── */  @media(max-width:480px){   .hdr{padding:10px 12px}   .logo{width:36px;height:36px;font-size:17px}   .ht{font-size:14px}   .hr{display:none}   .sec{margin:8px 8px;border-radius:6px}   .ig{padding:8px 10px;gap:5px}   .ib{padding:6px 9px;min-width:60px}   .il{font-size:9px}   .iv{font-size:12px}   .er{flex-wrap:wrap;gap:8px;padding:10px 10px}   .ei{width:100%;height:160px;border-radius:8px}   .ep{width:100%;height:100px}   .ss{gap:4px}   .sb{padding:3px 8px}   .sv{font-size:13px}   .prog-table{font-size:11px}   .prog-table th,.prog-table td{padding:6px 7px}   .pb{font-size:12px;padding:7px 12px}  }  @media print{   .pb{display:none}   .sec{margin:12px 16px}   body{font-size:12px}  }</style>`;
+                  h+=`</head><body>`;
                   h+=`<button class="pb" onclick="window.print()">🖨️ Išsaugoti kaip PDF</button>`;
                   h+=`<div class="hdr"><div class="logo">M</div><div><div class="ht">Coach Martynas</div><div class="hs">Sporto programa</div></div><div class="hr"><div style="font-size:14px;font-weight:700">${pn||"Sporto programa"}</div><div style="font-size:11px;color:#888;margin-top:2px">${today}</div></div></div>`;
                   h+=`<div class="sec"><div class="sh">👤 Kliento informacija</div><div class="ig">`;
@@ -544,7 +545,7 @@ function ClientsTab({ exercises }) {
                   if(nut){
                     h+=`<div class="sec"><div class="sh">🍽️ Mitybos rekomendacijos</div>`;
                     h+=`<div class="ig"><div class="ib" style="background:#c9a84c18;border-color:#c9a84c55"><div class="il">TDEE (palaikymas)</div><div class="iv" style="color:#c9a84c">${nut.tdee} kcal</div></div></div>`;
-                    h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid #eee">`;
+                    h+=`<div class="nut-two-col" style="border-top:1px solid #eee">`;
                     h+=`<div style="padding:14px 20px;border-right:1px solid #eee"><div style="font-size:11px;font-weight:700;color:#c0474a;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🔻 Riebalų deginimas — ${nut.lose} kcal/d.</div><div style="display:flex;gap:8px;flex-wrap:wrap">`;
                     h+=`<div class="ib" style="background:#f8717118;border-color:#f8717155"><div class="il">Baltymai</div><div class="iv" style="color:#f87171">${nut.protLose} g</div></div>`;
                     h+=`<div class="ib" style="background:#fbbf2418;border-color:#fbbf2455"><div class="il">Angliavandeniai</div><div class="iv" style="color:#d97706">${nut.carbLose} g</div></div>`;
@@ -575,8 +576,8 @@ function ClientsTab({ exercises }) {
                     h+=`</div>`;
                   });
                   if(pl&&pl.length>0){
-                    h+=`<div class="sec"><div class="sh">📈 Pažangos istorija</div><div style="padding:14px 20px"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:#f5f5fa"><th style="padding:8px 12px;text-align:left;border-bottom:1.5px solid #e0e0e8;font-size:11px;color:#888;text-transform:uppercase">Data</th><th style="padding:8px 12px;text-align:left;border-bottom:1.5px solid #e0e0e8;font-size:11px;color:#888;text-transform:uppercase">Svoris</th><th style="padding:8px 12px;text-align:left;border-bottom:1.5px solid #e0e0e8;font-size:11px;color:#888;text-transform:uppercase">Krūtinė</th><th style="padding:8px 12px;text-align:left;border-bottom:1.5px solid #e0e0e8;font-size:11px;color:#888;text-transform:uppercase">Juosmuo</th><th style="padding:8px 12px;text-align:left;border-bottom:1.5px solid #e0e0e8;font-size:11px;color:#888;text-transform:uppercase">Klubai</th><th style="padding:8px 12px;text-align:left;border-bottom:1.5px solid #e0e0e8;font-size:11px;color:#888;text-transform:uppercase">Pastabos</th></tr></thead><tbody>`;
-                    pl.forEach((p,i)=>{h+=`<tr style="background:${i%2?"#fafafa":"#fff"}"><td style="padding:8px 12px;border-bottom:1px solid #f0f0f5">${new Date(p.date).toLocaleDateString("lt-LT")}</td><td style="padding:8px 12px;border-bottom:1px solid #f0f0f5;font-weight:700;color:#c9a84c">${p.weight?p.weight+" kg":"—"}</td><td style="padding:8px 12px;border-bottom:1px solid #f0f0f5">${p.chest?p.chest+" cm":"—"}</td><td style="padding:8px 12px;border-bottom:1px solid #f0f0f5">${p.waist?p.waist+" cm":"—"}</td><td style="padding:8px 12px;border-bottom:1px solid #f0f0f5">${p.hips?p.hips+" cm":"—"}</td><td style="padding:8px 12px;border-bottom:1px solid #f0f0f5;font-style:italic;color:#666">${p.notes||"—"}</td></tr>`;});
+                    h+=`<div class="sec"><div class="sh">📈 Pažangos istorija</div><div style="padding:12px 16px;overflow-x:auto"><table class="prog-table"><thead><tr><th>Data</th><th>Svoris</th><th class="hide-sm">Krūtinė</th><th class="hide-sm">Juosmuo</th><th class="hide-sm">Klubai</th><th>Pastabos</th></tr></thead><tbody>`;
+                    pl.forEach((p,i)=>{h+=`<tr style="background:${i%2?"#fafafa":"#fff"}"><td>${new Date(p.date).toLocaleDateString("lt-LT")}</td><td style="font-weight:700;color:#c9a84c">${p.weight?p.weight+" kg":"—"}</td><td class="hide-sm">${p.chest?p.chest+" cm":"—"}</td><td class="hide-sm">${p.waist?p.waist+" cm":"—"}</td><td class="hide-sm">${p.hips?p.hips+" cm":"—"}</td><td style="font-style:italic;color:#666">${p.notes||"—"}</td></tr>`;});
                     h+=`</tbody></table></div></div>`;
                   }
                   h+=`<div class="ft">© Coach Martynas · ${today}</div></body></html>`;
@@ -585,7 +586,7 @@ function ClientsTab({ exercises }) {
                 }} style={{padding:"10px 20px",background:"#4ea8a0",color:"#fff",border:"none",borderRadius:8,fontFamily:"inherit",fontWeight:700,fontSize:13,cursor:"pointer",flex:1}}>🖨️ Spausdinti PDF</button>
               </div>
             </div>
-            <div style={{overflowY:"auto",padding:22,flex:1}}>
+            <div style={{overflowY:"auto",padding:22,flex:1}} className="modal-inner">
               {/* Client info */}
               <div style={{...css.card,marginBottom:16}}>
                 <span style={css.secTitle}>Kliento duomenys</span>
@@ -695,7 +696,7 @@ function ClientsTab({ exercises }) {
           <div style={{...css.modal(860),maxHeight:"95vh"}}>
             <div style={{padding:"17px 22px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center"}}>
               <div style={{fontWeight:700,fontSize:15,color:C.gold}}>{editClientId?"✏️ Redaguoti klientą":"➕ Naujas klientas"}</div>
-              <div style={{display:"flex",gap:6,marginLeft:"auto"}}>
+              <div className="step-nav" style={{marginLeft:"auto"}}>
                 {[["1","Info"],["2","Programa"],["3","Peržiūra"]].map(([n,l])=>(
                   <button key={n} style={{...css.navBtn(step===+n),padding:"6px 14px",fontSize:12}} onClick={()=>setStep(+n)}><b>{n}.</b> {l}</button>
                 ))}
@@ -706,7 +707,7 @@ function ClientsTab({ exercises }) {
 
               {/* STEP 1 — Client info */}
               {step===1&&(
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18}}>
+                <div className="client-form-grid" style={{}}>
                   <div style={{display:"flex",flexDirection:"column",gap:14}}>
                     <div>
                       <span style={css.label}>Lytis</span>
@@ -750,7 +751,7 @@ function ClientsTab({ exercises }) {
                   <div style={{display:"flex",flexDirection:"column",gap:14}}>
                     <div style={css.card}>
                       <span style={css.secTitle}>Treniruočių dienos</span>
-                      <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                      <div className="day-btn-grid" style={{display:"flex",flexWrap:"wrap",gap:8}}>
                         {DAYS.map(d=>(
                           <button key={d} onClick={()=>toggleDay(d)} style={{padding:"7px 14px",borderRadius:8,border:clientForm.training_days.includes(d)?`1px solid ${C.gold}`:`1px solid ${C.border}`,background:clientForm.training_days.includes(d)?C.goldSoft:"transparent",color:clientForm.training_days.includes(d)?C.gold:C.muted,fontFamily:FONT,fontSize:12,cursor:"pointer",fontWeight:600}}>{d.slice(0,3)}</button>
                         ))}
@@ -768,7 +769,7 @@ function ClientsTab({ exercises }) {
                           {/* Cutting */}
                           <div style={{background:"#c0474a0f",border:`1px solid ${C.redBorder}`,borderRadius:10,padding:"10px 12px",marginBottom:8}}>
                             <div style={{fontSize:10,color:C.red,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:8}}>🔻 Riebalų deginimas — {nut.lose} kcal/d.</div>
-                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
+                            <div className="macro-grid" style={{}}>
                               {[["Baltymai","#f87171",`${nut.protLose} g`],["Angliavandeniai","#fbbf24",`${nut.carbLose} g`],["Riebalai","#a78bfa",`${nut.fatLose} g`]].map(([l,col,v])=>(
                                 <div key={l} style={{background:C.surface,borderRadius:7,padding:"7px 10px",textAlign:"center"}}>
                                   <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:3}}>{l}</div>
@@ -780,7 +781,7 @@ function ClientsTab({ exercises }) {
                           {/* Bulking */}
                           <div style={{background:"#4ade800f",border:`1px solid #4ade8044`,borderRadius:10,padding:"10px 12px"}}>
                             <div style={{fontSize:10,color:C.green,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:8}}>🔺 Raumenų auginimas — {nut.gain} kcal/d.</div>
-                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
+                            <div className="macro-grid" style={{}}>
                               {[["Baltymai","#4ade80",`${nut.protGain} g`],["Angliavandeniai","#fbbf24",`${nut.carbGain} g`],["Riebalai","#a78bfa",`${nut.fatGain} g`]].map(([l,col,v])=>(
                                 <div key={l} style={{background:C.surface,borderRadius:7,padding:"7px 10px",textAlign:"center"}}>
                                   <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:3}}>{l}</div>
@@ -889,7 +890,7 @@ function ClientsTab({ exercises }) {
               </div>
             </div>
             <div style={{overflowY:"auto",padding:12,flex:1}}>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(155px,1fr))",gap:10}}>
+              <div className="pick-grid" style={{}}>
                 {pickList.map(ex=>(
                   <div key={ex.id} onClick={()=>setPickedEx(ex)} style={{background:C.bg,borderRadius:10,border:pickedEx?.id===ex.id?`2px solid ${C.gold}`:`1px solid ${C.border}`,cursor:"pointer",overflow:"hidden",position:"relative"}}>
                     <ImgGallery imgs={ex.imgs} height={90} />
@@ -904,7 +905,7 @@ function ClientsTab({ exercises }) {
               </div>
             </div>
             {pickedEx&&(
-              <div style={{padding:"12px 20px",borderTop:`1px solid ${C.border}`,background:C.faint,display:"flex",alignItems:"flex-end",gap:10,flexWrap:"wrap"}}>
+              <div className="pick-row">
                 <div style={{flex:1,minWidth:100}}>
                   <div style={{fontSize:13,fontWeight:700,color:C.text}}>{pickedEx.name}</div>
                   <div style={{fontSize:11,color:C.teal,marginTop:2}}>{pickedEx.muscle}</div>
@@ -963,23 +964,83 @@ export default function App() {
 
   return (
     <div style={css.page}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');*{box-sizing:border-box;}body{margin:0;}`}</style>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        *{box-sizing:border-box;} body{margin:0;}
+        input,select,textarea{font-size:16px!important;}
+        .ex-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:16px;}
+        .cl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+        .client-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+        .macro-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
+        .ex-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+        .step-nav{display:flex;gap:6px;}
+        .pick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;}
+        .pick-row{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;padding:12px 20px;border-top:1px solid #252d3d;background:#1e2535;}
+        .view-actions{display:flex;gap:10px;flex-wrap:wrap;}
+        .view-actions button{flex:1;min-width:120px;}
+        @media(max-width:640px){
+          .ex-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+          .cl-grid{grid-template-columns:1fr;}
+          .client-form-grid{grid-template-columns:1fr;}
+          .ex-form-grid{grid-template-columns:1fr 1fr;}
+          .macro-grid{grid-template-columns:1fr 1fr 1fr;gap:4px;}
+          .pick-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;}
+          .pick-row{gap:8px;padding:10px 12px;}
+          .pick-row>div{min-width:calc(50% - 4px);}
+          .pick-row>button{width:100%;margin-top:4px;}
+          .step-nav button{padding:5px 8px!important;font-size:11px!important;}
+          .view-actions button{min-width:unset;font-size:12px;}
+          .logout-label{display:none;}
+          .header-pad{padding:10px 14px!important;}
+          .content-pad{padding:16px 12px!important;}
+          .modal-pad{padding:14px 16px!important;}
+          .modal-inner{padding:16px!important;}
+          .card-pad{padding:16px!important;}
+          .hide-mobile{display:none!important;}
+          .nut-two-col{display:block!important;}
+          .nut-two-col>div{border-right:none!important;border-bottom:1px solid #eee;}
+          /* Modal full-screen on mobile */
+          .modal-fullscreen{border-radius:0!important;max-height:100vh!important;height:100vh;}
+          .modal-pad{padding:12px 14px!important;}
+          .modal-inner{padding:14px!important;}
+          .card-pad{padding:14px!important;}
+          /* Header compact */
+          .header-pad{padding:10px 14px!important;}
+          .content-pad{padding:16px 12px!important;}
+          /* Subtitle hide on very small */
+          .header-subtitle{display:none;}
+          /* Search full width on mobile */
+          .search-bar{width:100%!important;}
+          /* filter tags scroll horizontally */
+          .tag-row{overflow-x:auto;flex-wrap:nowrap!important;padding-bottom:4px;}
+          .tag-row::-webkit-scrollbar{height:3px;}
+          .tag-row::-webkit-scrollbar-thumb{background:#252d3d;border-radius:2px;}
+          /* Training day buttons wrap nicer */
+          .day-btn-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px!important;}
+        }
+        @media(min-width:641px) and (max-width:960px){
+          .cl-grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));}
+          .client-form-grid{grid-template-columns:1fr;}
+          .pick-grid{grid-template-columns:repeat(auto-fill,minmax(135px,1fr));}
+        }
+        @media(hover:none){button{min-height:40px;}}
+      `}</style>
       {/* HEADER */}
-      <div style={css.header}>
+      <div style={css.header} className="header-pad">
         <div style={css.logo}>M</div>
         <div>
           <div style={{fontWeight:800,fontSize:16,color:C.gold}}>Coach Martynas</div>
-          <div style={{fontSize:10,color:C.muted,letterSpacing:"0.2em",textTransform:"uppercase",marginTop:1}}>Sporto programų sistema</div>
+          <div style={{fontSize:10,color:C.muted,letterSpacing:"0.2em",textTransform:"uppercase",marginTop:1}} className="header-subtitle">Sporto programų sistema</div>
         </div>
         <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
           <button style={css.navBtn(tab==="exercises")} onClick={()=>setTab("exercises")}>🏋️ Pratimai</button>
           <button style={css.navBtn(tab==="clients")}   onClick={()=>setTab("clients")}>👥 Klientai</button>
-          <button onClick={handleLogout} style={{...css.btnGhost,fontSize:11,padding:"6px 12px",marginLeft:8}}>🚪 Atsijungti</button>
+          <button onClick={handleLogout} style={{...css.btnGhost,fontSize:11,padding:"6px 12px",marginLeft:8}}><span className="logout-label">🚪 </span>Atsijungti</button>
         </div>
       </div>
 
       {/* CONTENT */}
-      <div style={{maxWidth:1100,margin:"0 auto",padding:"28px 20px"}}>
+      <div className="content-pad" style={{maxWidth:1100,margin:"0 auto",padding:"28px 20px"}}>
         {tab==="exercises" && <ExercisesTab />}
         {tab==="clients"   && <ClientsTab exercises={exercises} />}
       </div>
