@@ -906,33 +906,21 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
 }
 
 // ── MAIN APP ──────────────────────────────────────────────
-// Detect share page BEFORE the main App component (avoids hooks-after-conditional-return)
-const _params=new URLSearchParams(window.location.search);
-const _shareToken=_params.get("share");
-const _shareType=_params.get("type")||"training";
-
-export default function App(){
-  // If share link → render SharePage directly (no hooks needed)
-  if(_shareToken)return <SharePage token={_shareToken} type={_shareType}/>;
-
-  const [loggedIn,setLoggedIn]=useState(()=>sessionStorage.getItem("cm_auth")==="1");
+// MainApp: shown when logged in
+function MainApp(){
   const [tab,setTab]=useState("dashboard");
   const [autoOpen,setAutoOpen]=useState(false);
   const [exercises,setExercises]=useState<any[]>([]);
   const [foods,setFoods]=useState<any[]>([]);
 
-  const handleLogin=()=>{sessionStorage.setItem("cm_auth","1");setLoggedIn(true);};
-  const handleLogout=()=>{sessionStorage.removeItem("cm_auth");setLoggedIn(false);};
+  const handleLogout=()=>{sessionStorage.removeItem("cm_auth");window.location.reload();};
 
   useEffect(()=>{
-    if(!loggedIn)return;
     sb.get("exercises","?order=name").then(d=>setExercises(d)).catch(()=>{});
     sb.get("foods","?order=name").then(d=>setFoods(d)).catch(()=>{});
-  },[loggedIn]);
+  },[]);
 
   const navigate=(t:string,open=false)=>{setTab(t);setAutoOpen(open);setTimeout(()=>setAutoOpen(false),100);};
-
-  if(!loggedIn)return<LoginScreen onLogin={handleLogin}/>;
 
   const NAV=[
     {id:"dashboard",icon:"🏠",label:"Pradžia"},
@@ -970,3 +958,25 @@ export default function App(){
     </div>
   );
 }
+
+// ── APP ROUTER ────────────────────────────────────────────
+// Reads URL params fresh on every render — works correctly on Netlify SPA
+function AppRouter(){
+  const params=new URLSearchParams(window.location.search);
+  const shareToken=params.get("share");
+  const shareType=params.get("type")||"training";
+  if(shareToken)return <SharePage token={shareToken} type={shareType}/>;
+
+  const loggedIn=sessionStorage.getItem("cm_auth")==="1";
+  if(!loggedIn)return <LoginGate/>;
+  return <MainApp/>;
+}
+
+// ── LOGIN GATE ────────────────────────────────────────────
+function LoginGate(){
+  const [loggedIn,setLoggedIn]=useState(false);
+  if(loggedIn)return <MainApp/>;
+  return <LoginScreen onLogin={()=>setLoggedIn(true)}/>;
+}
+
+export default AppRouter;
