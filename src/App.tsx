@@ -2,6 +2,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { sb, C, FONT, RESPONSIVE_CSS, css, ALL_MUSCLES, GOALS, LEVELS, DAYS, REST_OPTIONS, ACTIVITY_LEVELS, APP_PASSWORD, calcBMI, bmiCat, calcNut, genToken, Tag, Badge, Spinner, Err, NutriBadge, ImgGallery, MultiImgUploader } from "./shared";
 import { FoodsTab, MealPlanBuilder, MealSharePage } from "./MealPlan";
+import { CalendarTab, BookingPage } from "./Calendar";
 
 const emptyExForm  = {name:"",muscle:"Krūtinė",equipment:"",sets:"3",reps:"10-12",description:"",imgs:[] as string[]};
 const emptyClient  = {name:"",age:"",weight:"",height:"",gender:"Vyras",goal:"",level:"",notes:"",training_days:[] as string[],activity_index:2};
@@ -1055,6 +1056,7 @@ function MainApp(){
     {id:"clients",icon:"👥",label:"Klientai"},
     {id:"exercises",icon:"🏋️",label:"Pratimai"},
     {id:"foods",icon:"🥗",label:"Mityba"},
+    {id:"calendar",icon:"📅",label:"Kalendorius"},
   ];
 
   return(
@@ -1082,6 +1084,7 @@ function MainApp(){
         {tab==="exercises"  && <ExercisesTab key={tab+autoOpen} autoOpen={autoOpen}/>}
         {tab==="foods"      && <FoodsTab key={tab+autoOpen} autoOpen={autoOpen} onFoodsLoaded={setFoods}/>}
         {tab==="clients"    && <ClientsTab key={tab+autoOpen} exercises={exercises} foods={foods} autoOpen={autoOpen}/>}
+        {tab==="calendar"   && <CalendarTab/>}
       </div>
     </div>
   );
@@ -1093,6 +1096,8 @@ function AppRouter(){
   const params=new URLSearchParams(window.location.search);
   const shareToken=params.get("share");
   const shareType=params.get("type")||"training";
+  // Public booking page — no token needed
+  if(shareType==="booking"&&!shareToken)return <BookingPage/>;
   if(shareToken)return <SharePage token={shareToken} type={shareType}/>;
 
   const loggedIn=sessionStorage.getItem("cm_auth")==="1";
