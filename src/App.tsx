@@ -450,6 +450,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
   const [mealPlan,setMealPlan]=useState<any>({});
   const [mealPlanName,setMealPlanName]=useState("");
   const [step,setStep]=useState(1);
+  const [planType,setPlanType]=useState<"both"|"training"|"meal">("both");
   const [pickDay,setPickDay]=useState<any>(null);
   const [pickSearch,setPickSearch]=useState("");
   const [pickMuscle,setPickMuscle]=useState("Visos");
@@ -466,12 +467,13 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
   useEffect(()=>{load();},[load]);
   const loadProgress=async(cid:any)=>{setProgLoading(true);try{setProgressList(await sb.get("progress",`?client_id=eq.${cid}&order=date.desc`));}catch(e){console.error(e);}finally{setProgLoading(false);};};
   const openView=(c:any)=>{setView(c);loadProgress(c.id);};
-  const openNew=()=>{setEditClientId(null);setClientForm({...emptyClient});setProgram({});setProgramName("");setMealPlan({});setMealPlanName("");setStep(1);setClientFormOpen(true);};
+  const openNew=()=>{setEditClientId(null);setClientForm({...emptyClient});setProgram({});setProgramName("");setMealPlan({});setMealPlanName("");setStep(1);setPlanType("both");setClientFormOpen(true);};
   const openEdit=(c:any)=>{
     setEditClientId(c.id);
     setClientForm({name:c.name||"",age:c.age||"",weight:c.weight||"",height:c.height||"",gender:c.gender||"Vyras",goal:c.goal||"",level:c.level||"",notes:c.notes||"",training_days:c.training_days||[],activity_index:c.activity_index??2});
     setProgram(c.program||{});setProgramName(c.program_name||"");
     setMealPlan(c.meal_plan||{});setMealPlanName(c.meal_plan_name||"");
+    setPlanType(c.meal_plan_name&&c.program_name?"both":c.meal_plan_name?"meal":"training");
     setStep(1);setClientFormOpen(true);setView(null);
   };
   const saveClient=async()=>{
@@ -748,7 +750,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
         <div style={{padding:"13px 18px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center"}}>
           <div style={{fontWeight:700,fontSize:14,color:C.gold}}>{editClientId?"✏️ Redaguoti klientą":"➕ Naujas klientas"}</div>
           <div className="step-nav" style={{marginLeft:"auto"}}>
-            {[["1","Info"],["2","Treniruotės"],["3","Mityba"],["4","Peržiūra"]].map(([n,l])=>(
+            {(planType==="both"?[["1","Info"],["2","Treniruotės"],["3","Mityba"],["4","Peržiūra"]]:planType==="training"?[["1","Info"],["2","Treniruotės"],["3","Peržiūra"]]:[["1","Info"],["2","Mityba"],["3","Peržiūra"]]).map(([n,l])=>(
               <button key={n} style={{...css.navBtn(step===+n),padding:"5px 11px",fontSize:11}} onClick={()=>setStep(+n)}><b>{n}.</b> {l}</button>
             ))}
             <button onClick={()=>setClientFormOpen(false)} style={{width:27,height:27,background:C.faint,border:`1px solid ${C.border}`,borderRadius:7,color:C.muted,cursor:"pointer",fontSize:14,marginLeft:5}}>×</button>
@@ -756,7 +758,20 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
         </div>
         <div style={{overflowY:"auto",padding:18,flex:1}}>
           {/* Step 1 — Info */}
-          {step===1&&(<div className="cf-grid" style={{}}>
+          {step===1&&(<div>
+            {/* Plan type selector */}
+            <div style={{marginBottom:18}}>
+              <span style={css.label}>Kurti planą</span>
+              <div style={{display:"flex",gap:10,flexWrap:"wrap" as const}}>
+                {([["both","🏋️ + 🥗 Abu planus","Treniruočių ir mitybos planas",C.gold],["training","🏋️ Tik treniruotes","Tik treniruočių programa",C.teal],["meal","🥗 Tik mitybą","Tik mitybos planas",C.green]] as any[]).map(([val,icon,desc,col])=>(
+                  <button key={val} onClick={()=>{setPlanType(val as any);setStep(1);}} style={{flex:1,minWidth:140,padding:"12px 14px",borderRadius:10,border:planType===val?`2px solid ${col}`:`1px solid ${C.border}`,background:planType===val?col+"18":"transparent",color:planType===val?col:C.muted,fontFamily:FONT,fontSize:12,cursor:"pointer",fontWeight:planType===val?700:500,textAlign:"left" as const,transition:"all .15s"}}>
+                    <div style={{fontSize:16,marginBottom:4}}>{icon}</div>
+                    <div style={{fontWeight:700,marginBottom:2,color:planType===val?col:C.text}}>{desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="cf-grid" style={{}}>
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
               <div><span style={css.label}>Lytis</span><div style={{display:"flex",gap:8}}>{["Vyras","Moteris"].map(g=>(<button key={g} onClick={()=>setClientForm(p=>({...p,gender:g}))} style={{flex:1,padding:"8px",borderRadius:8,border:clientForm.gender===g?`1px solid ${C.gold}`:`1px solid ${C.border}`,background:clientForm.gender===g?C.goldSoft:"transparent",color:clientForm.gender===g?C.gold:C.muted,fontFamily:FONT,fontSize:12,cursor:"pointer",fontWeight:600}}>{g==="Vyras"?"👨 Vyras":"👩 Moteris"}</button>))}</div></div>
               {[["Vardas ir pavardė *","name","text"],["Amžius","age","number"],["Svoris (kg)","weight","number"],["Ūgis (cm)","height","number"]].map(([lb,k,t])=>(<div key={k}><span style={css.label}>{lb}</span><input type={t} value={(clientForm as any)[k]} onChange={e=>setClientForm(p=>({...p,[k]:e.target.value}))} style={css.input} placeholder={lb as string}/></div>))}
@@ -795,10 +810,15 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
                 </>)}
               </div>)}
             </div>
+            </div>
           </div>)}
 
-          {/* Step 2 — Training */}
-          {step===2&&(<div>
+          {/* Step 2 — Training (both/training) OR Meal (meal only) */}
+          {step===2&&planType==="meal"&&(<div>
+            <div style={{marginBottom:14}}><span style={css.label}>Mitybos plano pavadinimas</span><input value={mealPlanName} onChange={e=>setMealPlanName(e.target.value)} placeholder="pvz. Tomo mitybos planas" style={{...css.input,maxWidth:380}}/></div>
+            <MealPlanBuilder days={trainingDays.length>0?trainingDays:DAYS.slice(0,5)} mealPlan={mealPlan} setMealPlan={setMealPlan} foods={foods}/>
+          </div>)}
+          {step===2&&planType!=="meal"&&(<div>
             <div style={{marginBottom:14}}><span style={css.label}>Programos pavadinimas</span><input value={programName} onChange={e=>setProgramName(e.target.value)} placeholder="pvz. Tomo 3 dienų programa" style={{...css.input,maxWidth:380}}/></div>
             {trainingDays.length===0?<div style={{...css.card,textAlign:"center",color:C.muted,padding:36}}>Grįžkite į 1 žingsnį ir pasirinkite treniruočių dienas.</div>:trainingDays.map(day=>(<div key={day} style={{...css.card,marginBottom:12}}>
               <div style={{display:"flex",alignItems:"center",marginBottom:10,gap:8}}>
@@ -819,14 +839,14 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
             </div>))}
           </div>)}
 
-          {/* Step 3 — Meal plan */}
-          {step===3&&(<div>
+          {/* Step 3 — Meal plan for "both" only */}
+          {step===3&&planType==="both"&&(<div>
             <div style={{marginBottom:14}}><span style={css.label}>Mitybos plano pavadinimas</span><input value={mealPlanName} onChange={e=>setMealPlanName(e.target.value)} placeholder="pvz. Tomo mitybos planas" style={{...css.input,maxWidth:380}}/></div>
             <MealPlanBuilder days={trainingDays} mealPlan={mealPlan} setMealPlan={setMealPlan} foods={foods}/>
           </div>)}
 
-          {/* Step 4 — Preview */}
-          {step===4&&(<div>
+          {/* Step 4 (both) / Step 3 (training/meal) — Preview */}
+          {((step===4&&planType==="both")||(step===3&&planType!=="both"))&&(<div>
             <div style={{...css.card,marginBottom:14,display:"flex",gap:14,alignItems:"center"}}>
               <div style={{width:48,height:48,background:`linear-gradient(135deg,${C.gold},#e8961a)`,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,fontWeight:900,color:C.bg,flexShrink:0}}>{(clientForm.name||"?")[0].toUpperCase()}</div>
               <div>
@@ -855,8 +875,17 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
           </div>)}
         </div>
         <div style={{padding:"12px 18px",borderTop:`1px solid ${C.border}`,display:"flex",gap:8,justifyContent:"space-between"}}>
-          <div style={{display:"flex",gap:8}}>{step>1&&<button onClick={()=>setStep(s=>s-1)} style={css.btnGhost}>← Atgal</button>}{step<4&&<button onClick={()=>setStep(s=>s+1)} style={css.btnG}>Tęsti →</button>}</div>
-          {step===4&&<button onClick={saveClient} disabled={saving} style={css.btnG}>{saving?"⏳ Saugoma...":"💾 Išsaugoti klientą"}</button>}
+          {(()=>{
+            const lastStep=planType==="both"?4:3;
+            const isLast=step===lastStep;
+            return(<>
+              <div style={{display:"flex",gap:8}}>
+                {step>1&&<button onClick={()=>setStep(s=>s-1)} style={css.btnGhost}>← Atgal</button>}
+                {!isLast&&<button onClick={()=>setStep(s=>s+1)} style={css.btnG}>Tęsti →</button>}
+              </div>
+              {isLast&&<button onClick={saveClient} disabled={saving} style={css.btnG}>{saving?"⏳ Saugoma...":"💾 Išsaugoti klientą"}</button>}
+            </>);
+          })()}
         </div>
       </div></div>)}
 
