@@ -360,6 +360,77 @@ function SharePage({token,type}:{token:string,type:string}){
   );
 }
 
+// ── SHARE MODAL COMPONENT ────────────────────────────────
+function ShareModal({shareModal,setShareModal,baseUrl}:{shareModal:any,setShareModal:any,baseUrl:string}){
+  const [copied,setCopied]=useState<string|null>(null);
+  const trainingUrl=`${baseUrl}?share=${shareModal.token}&type=training`;
+  const nutritionUrl=`${baseUrl}?share=${shareModal.token}&type=nutrition`;
+
+  const copyLink=async(url:string,key:string)=>{
+    try{
+      await navigator.clipboard.writeText(url);
+      setCopied(key);
+      setTimeout(()=>setCopied(null),2000);
+    }catch{
+      // Fallback for browsers that block clipboard without https
+      const el=document.createElement("textarea");
+      el.value=url;el.style.position="fixed";el.style.opacity="0";
+      document.body.appendChild(el);el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      setCopied(key);setTimeout(()=>setCopied(null),2000);
+    }
+  };
+
+  const LinkRow=({url,color,borderColor,label,ckey,btnStyle}:any)=>(
+    <div style={{marginBottom:12}}>
+      <div style={{fontSize:11,color:C.muted,marginBottom:7,fontWeight:700,textTransform:"uppercase" as const,letterSpacing:"0.08em"}}>{label}</div>
+      <div style={{background:C.faint,borderRadius:10,padding:"10px 14px",border:`1px solid ${borderColor}`}}>
+        <div style={{fontSize:11,color,wordBreak:"break-all" as const,marginBottom:10,lineHeight:1.5}}>{url}</div>
+        <div style={{display:"flex",gap:8}}>
+          <button
+            onClick={()=>copyLink(url,ckey)}
+            style={{...btnStyle,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,transition:"all .15s"}}
+          >
+            {copied===ckey?"✅ Nukopijuota!":"📋 Kopijuoti nuorodą"}
+          </button>
+          <a
+            href={url} target="_blank" rel="noopener noreferrer"
+            style={{...css.btnGhost,display:"flex",alignItems:"center",justifyContent:"center",gap:5,textDecoration:"none",padding:"8px 14px",fontSize:12}}
+          >🔗 Atidaryti</a>
+        </div>
+      </div>
+    </div>
+  );
+
+  return(
+    <div style={css.overlay}><div style={css.modal(500)}>
+      <div style={{padding:"16px 20px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center"}}>
+        <div style={{fontWeight:700,fontSize:15,color:C.gold}}>🔗 Nuorodos klientui</div>
+        <button onClick={()=>setShareModal(null)} style={{marginLeft:"auto",width:28,height:28,background:C.faint,border:`1px solid ${C.border}`,borderRadius:7,color:C.muted,cursor:"pointer",fontSize:16}}>×</button>
+      </div>
+      <div style={{padding:"20px 22px",display:"flex",flexDirection:"column" as const,gap:4}}>
+        <div style={{background:`linear-gradient(135deg,${C.surface2},${C.faint})`,borderRadius:12,padding:"14px 16px",textAlign:"center",marginBottom:12,border:`1px solid ${C.border}`}}>
+          <div style={{width:48,height:48,background:`linear-gradient(135deg,${C.gold},#e8961a)`,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,fontWeight:900,color:C.bg,margin:"0 auto 10px"}}>{(shareModal.client.name||"?")[0].toUpperCase()}</div>
+          <div style={{fontSize:16,fontWeight:800,color:C.text}}>{shareModal.client.name}</div>
+          <div style={{fontSize:11,color:C.muted,marginTop:3}}>Abi nuorodos yra viešos — klientas jas atidaro telefone be slaptažodžio</div>
+        </div>
+
+        <LinkRow
+          url={trainingUrl} color={C.teal} borderColor={C.tealBorder}
+          label="🏋️ Treniruočių programa" ckey="training"
+          btnStyle={css.btnTeal}
+        />
+        <LinkRow
+          url={nutritionUrl} color={C.green} borderColor={C.greenBorder}
+          label="🥗 Mitybos planas" ckey="nutrition"
+          btnStyle={css.btnGreen}
+        />
+      </div>
+    </div></div>
+  );
+}
+
 // ── CLIENTS TAB ───────────────────────────────────────────
 function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[],autoOpen?:boolean}){
   const [clients,setClients]=useState<any[]>([]);
@@ -427,6 +498,66 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
     setShareModal({client:c,token});
   };
 
+  const printPDF=(c:any,pl:any[])=>{
+    const prog=c.program||{},pn=c.program_name||"";
+    const bv=calcBMI(c.weight,c.height),bn=bv?parseFloat(bv.toFixed(1)):null,bc=bn?bmiCat(bn):null;
+    const nut2=calcNut(c.weight,c.height,c.age,c.gender,ACTIVITY_LEVELS[c.activity_index??2]?.factor||1.55);
+    const days2=DAYS.filter(d=>(c.training_days||[]).includes(d));
+    const today2=new Date().toLocaleDateString("lt-LT");
+    const win=window.open("","_blank");
+    if(!win){alert("Leiskite iššokančius langus!");return;}
+    const pstyle=`*{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,Arial,sans-serif;background:#fff;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}.hdr{background:#0a0d14;padding:18px 24px;display:flex;align-items:center;gap:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.logo{width:42px;height:42px;background:linear-gradient(135deg,#f0b429,#e8961a);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#0a0d14;flex-shrink:0}.ht{font-size:17px;font-weight:900;color:#f0b429}.hs{font-size:9px;color:#888;letter-spacing:3px;text-transform:uppercase;margin-top:2px}.hr{margin-left:auto;text-align:right;color:#fff}.sec{margin:12px 18px;border:1.5px solid #e0e0e8;border-radius:11px;overflow:hidden}.sh{background:#0a0d14;color:#fff;padding:9px 16px;font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;-webkit-print-color-adjust:exact;print-color-adjust:exact}.ig{display:flex;flex-wrap:wrap;gap:7px;padding:11px 14px}.ib{background:#f5f5fa;border:1.5px solid #e0e0e8;border-radius:8px;padding:7px 11px;min-width:70px}.il{font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px}.iv{font-size:13px;font-weight:700}.er{display:flex;gap:10px;padding:10px 12px;border-top:1px solid #f0f0f5;align-items:flex-start;page-break-inside:avoid}.en{width:22px;height:22px;background:#f0f0f5;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#555;flex-shrink:0;margin-top:2px}.ei{width:90px;height:72px;object-fit:cover;border-radius:7px;flex-shrink:0;border:1.5px solid #e8e8f0}.ep{width:90px;height:72px;background:#f0f0f5;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px}.en2{font-size:12px;font-weight:700;margin-bottom:2px}.em{font-size:10px;color:#38bdf8;font-weight:600;margin-bottom:5px}.ss{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:3px}.sb{border-radius:6px;padding:3px 7px;display:inline-flex;flex-direction:column;align-items:center;border:1.5px solid}.sl{font-size:8px;color:#888;text-transform:uppercase;letter-spacing:1px}.sv{font-size:12px;font-weight:800}.ed{font-size:10px;color:#777;font-style:italic;line-height:1.5}.nut2{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #eee}.prog-t{width:100%;border-collapse:collapse;font-size:12px}.prog-t th{padding:7px 10px;text-align:left;border-bottom:1.5px solid #e0e0e8;font-size:10px;color:#888;text-transform:uppercase;background:#f5f5fa}.prog-t td{padding:7px 10px;border-bottom:1px solid #f0f0f5}.hd{display:none}.pb{position:fixed;top:10px;right:10px;padding:9px 18px;background:#f0b429;color:#000;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;z-index:999;box-shadow:0 2px 8px #0003}.ft{text-align:center;padding:14px;color:#aaa;font-size:10px;border-top:1px solid #eee;margin-top:10px}@media(max-width:768px){.sec{margin:8px 10px}.sh{padding:8px 12px;font-size:10px}.ig{padding:8px 10px;gap:5px}.ib{padding:5px 8px;min-width:55px}.iv{font-size:11px}.er{gap:8px;padding:8px 10px}.ei{width:75px;height:58px}.ep{width:75px;height:58px;font-size:17px}.en2{font-size:11px}.nut2{grid-template-columns:1fr}.nut2>div{border-right:none!important;border-bottom:1px solid #eee}.hd{display:none}}@media(max-width:480px){.er{flex-wrap:wrap}.ei,.ep{width:100%;height:140px}.prog-t{font-size:10px}.prog-t th,.prog-t td{padding:5px 6px}.hd{display:none}}@media print{.pb{display:none}body{font-size:11px}}`;
+    let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${pn||"Programa"}-${c.name}</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet"><style>${pstyle}</style></head><body>`;
+    h+=`<button class="pb" onclick="window.print()">🖨️ Išsaugoti kaip PDF</button>`;
+    h+=`<div class="hdr"><div class="logo">M</div><div><div class="ht">Coach Martynas</div><div class="hs">Sporto programa</div></div><div class="hr"><div style="font-size:13px;font-weight:700">${pn||"Sporto programa"}</div><div style="font-size:10px;color:#888;margin-top:2px">${today2}</div></div></div>`;
+    h+=`<div class="sec"><div class="sh">👤 Kliento informacija</div><div class="ig">`;
+    if(c.name)h+=`<div class="ib"><div class="il">Vardas</div><div class="iv">${c.name}</div></div>`;
+    if(c.age)h+=`<div class="ib"><div class="il">Amžius</div><div class="iv">${c.age} m.</div></div>`;
+    if(c.weight)h+=`<div class="ib"><div class="il">Svoris</div><div class="iv">${c.weight} kg</div></div>`;
+    if(c.height)h+=`<div class="ib"><div class="il">Ūgis</div><div class="iv">${c.height} cm</div></div>`;
+    if(c.gender)h+=`<div class="ib"><div class="il">Lytis</div><div class="iv">${c.gender}</div></div>`;
+    if(bn)h+=`<div class="ib" style="background:${bc!.color}18;border-color:${bc!.color}55"><div class="il">KMI</div><div class="iv" style="color:${bc!.color}">${bn} — ${bc!.label}</div></div>`;
+    if(c.goal)h+=`<div class="ib" style="background:#f0b42918;border-color:#f0b42940"><div class="il">Tikslas</div><div class="iv" style="color:#f0b429">${c.goal}</div></div>`;
+    if(c.level)h+=`<div class="ib" style="background:#38bdf818;border-color:#38bdf840"><div class="il">Lygis</div><div class="iv" style="color:#38bdf8">${c.level}</div></div>`;
+    h+=`</div>${c.notes?`<div style="padding:0 14px 10px;font-size:11px;color:#666;font-style:italic">📝 ${c.notes}</div>`:""}</div>`;
+    if(nut2){
+      h+=`<div class="sec"><div class="sh">🍽️ Mitybos rekomendacijos</div><div class="ig"><div class="ib" style="background:#f0b42918;border-color:#f0b42940"><div class="il">TDEE</div><div class="iv" style="color:#f0b429">${nut2.tdee} kcal</div></div></div>`;
+      h+=`<div class="nut2" style="border-top:1px solid #eee"><div style="padding:12px 14px;border-right:1px solid #eee"><div style="font-size:10px;font-weight:700;color:#ef4444;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🔻 Riebalų deginimas — ${nut2.lose} kcal/d.</div><div style="display:flex;gap:5px;flex-wrap:wrap">`;
+      h+=`<div class="ib" style="background:#ef444418;border-color:#ef444440"><div class="il">Baltymai</div><div class="iv" style="color:#f87171">${nut2.protLose}g</div></div>`;
+      h+=`<div class="ib" style="background:#f9731618;border-color:#f9731640"><div class="il">Angliavandeniai</div><div class="iv" style="color:#fb923c">${nut2.carbLose}g</div></div>`;
+      h+=`<div class="ib" style="background:#a78bfa18;border-color:#a78bfa40"><div class="il">Riebalai</div><div class="iv" style="color:#a78bfa">${nut2.fatLose}g</div></div>`;
+      h+=`</div></div><div style="padding:12px 14px"><div style="font-size:10px;font-weight:700;color:#22c55e;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🔺 Raumenų auginimas — ${nut2.gain} kcal/d.</div><div style="display:flex;gap:5px;flex-wrap:wrap">`;
+      h+=`<div class="ib" style="background:#22c55e18;border-color:#22c55e40"><div class="il">Baltymai</div><div class="iv" style="color:#22c55e">${nut2.protGain}g</div></div>`;
+      h+=`<div class="ib" style="background:#f9731618;border-color:#f9731640"><div class="il">Angliavandeniai</div><div class="iv" style="color:#fb923c">${nut2.carbGain}g</div></div>`;
+      h+=`<div class="ib" style="background:#a78bfa18;border-color:#a78bfa40"><div class="il">Riebalai</div><div class="iv" style="color:#a78bfa">${nut2.fatGain}g</div></div>`;
+      h+=`</div></div></div></div>`;
+    }
+    days2.forEach(day2=>{
+      const exs=prog[day2]||[];
+      h+=`<div class="sec"><div class="sh">${day2} — ${exs.length} pratimas(-ai)</div>`;
+      if(!exs.length)h+=`<div style="padding:10px 14px;color:#aaa;font-size:12px">Pratimų nėra</div>`;
+      else exs.forEach((ex:any,i:number)=>{
+        const imgs=(ex.imgs||[]).filter(Boolean);
+        h+=`<div class="er"><div class="en">${i+1}</div>`;
+        h+=imgs[0]?`<img src="${imgs[0]}" class="ei"/>`:`<div class="ep">📷</div>`;
+        h+=`<div style="flex:1"><div class="en2">${ex.name}</div><div class="em">${ex.muscle||""} · ${ex.equipment||""}</div><div class="ss">`;
+        if(ex.customSets)h+=`<span class="sb" style="background:#f0b42918;border-color:#f0b42940"><span class="sl">Serijos</span><span class="sv" style="color:#f0b429">${ex.customSets}</span></span>`;
+        if(ex.customReps)h+=`<span class="sb" style="background:#f5f5fa;border-color:#ddd"><span class="sl">Kartojimai</span><span class="sv" style="color:#333">${ex.customReps}</span></span>`;
+        if(ex.customWeight)h+=`<span class="sb" style="background:#38bdf818;border-color:#38bdf840"><span class="sl">Svoris</span><span class="sv" style="color:#38bdf8">${ex.customWeight}</span></span>`;
+        if(ex.customRest)h+=`<span class="sb" style="background:#a78bfa18;border-color:#a78bfa40"><span class="sl">Poilsis</span><span class="sv" style="color:#a78bfa">${ex.customRest}</span></span>`;
+        h+=`</div>${ex.description?`<div class="ed">${ex.description}</div>`:""}</div></div>`;
+      });
+      h+=`</div>`;
+    });
+    if(pl&&pl.length>0){
+      h+=`<div class="sec"><div class="sh">📈 Pažangos istorija</div><div style="padding:10px 14px;overflow-x:auto"><table class="prog-t"><thead><tr><th>Data</th><th>Svoris</th><th class="hd">Krūtinė</th><th class="hd">Juosmuo</th><th class="hd">Klubai</th><th>Pastabos</th></tr></thead><tbody>`;
+      pl.forEach((p:any,i:number)=>{h+=`<tr style="background:${i%2?"#fafafa":"#fff"}"><td>${new Date(p.date).toLocaleDateString("lt-LT")}</td><td style="font-weight:700;color:#f0b429">${p.weight?p.weight+" kg":"—"}</td><td class="hd">${p.chest?p.chest+" cm":"—"}</td><td class="hd">${p.waist?p.waist+" cm":"—"}</td><td class="hd">${p.hips?p.hips+" cm":"—"}</td><td style="font-style:italic;color:#666">${p.notes||"—"}</td></tr>`;});
+      h+=`</tbody></table></div></div>`;
+    }
+    h+=`<div class="ft">© Coach Martynas · ${today2}</div></body></html>`;
+    win.document.write(h);win.document.close();
+  };
+
   const bmiVal=calcBMI(clientForm.weight,clientForm.height);
   const bmiNum=bmiVal?parseFloat(bmiVal.toFixed(1)):null;
   const nut=calcNut(clientForm.weight,clientForm.height,clientForm.age,clientForm.gender,ACTIVITY_LEVELS[clientForm.activity_index]?.factor||1.55);
@@ -491,35 +622,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
       )}
 
       {/* Share modal */}
-      {shareModal&&(<div style={css.overlay}><div style={css.modal(480)}>
-        <div style={{padding:"16px 20px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center"}}>
-          <div style={{fontWeight:700,fontSize:15,color:C.gold}}>🔗 Nuorodos klientui</div>
-          <button onClick={()=>setShareModal(null)} style={{marginLeft:"auto",width:28,height:28,background:C.faint,border:`1px solid ${C.border}`,borderRadius:7,color:C.muted,cursor:"pointer",fontSize:16}}>×</button>
-        </div>
-        <div style={{padding:22,display:"flex",flexDirection:"column",gap:16}}>
-          <div style={{background:C.faint,borderRadius:10,padding:"14px 16px",textAlign:"center"}}>
-            <div style={{fontSize:11,color:C.muted,marginBottom:4,textTransform:"uppercase" as const,letterSpacing:"0.08em",fontWeight:600}}>Klientas</div>
-            <div style={{fontSize:18,fontWeight:800,color:C.text}}>{shareModal.client.name}</div>
-          </div>
-          <div>
-            <div style={{fontSize:11,color:C.muted,marginBottom:8,fontWeight:700,textTransform:"uppercase" as const,letterSpacing:"0.08em"}}>🏋️ Treniruočių programa</div>
-            <div style={{background:C.faint,borderRadius:9,padding:"10px 14px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-              <span style={{flex:1,fontSize:11,color:C.teal,wordBreak:"break-all" as const}}>{baseUrl}?share={shareModal.token}&type=training</span>
-              <button onClick={()=>navigator.clipboard?.writeText(`${baseUrl}?share=${shareModal.token}&type=training`)} style={{...css.btnTeal,padding:"5px 10px",fontSize:11,flexShrink:0}}>📋 Kopijuoti</button>
-            </div>
-          </div>
-          <div>
-            <div style={{fontSize:11,color:C.muted,marginBottom:8,fontWeight:700,textTransform:"uppercase" as const,letterSpacing:"0.08em"}}>🥗 Mitybos planas</div>
-            <div style={{background:C.faint,borderRadius:9,padding:"10px 14px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-              <span style={{flex:1,fontSize:11,color:C.green,wordBreak:"break-all" as const}}>{baseUrl}?share={shareModal.token}&type=nutrition</span>
-              <button onClick={()=>navigator.clipboard?.writeText(`${baseUrl}?share=${shareModal.token}&type=nutrition`)} style={{...css.btnGreen,padding:"5px 10px",fontSize:11,flexShrink:0}}>📋 Kopijuoti</button>
-            </div>
-          </div>
-          <div style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:9,padding:"10px 14px",fontSize:12,color:C.gold}}>
-            💡 Nuorodos yra viešos — klientas gali jas atidaryti telefone be slaptažodžio.
-          </div>
-        </div>
-      </div></div>)}
+      {shareModal&&(<ShareModal shareModal={shareModal} setShareModal={setShareModal} baseUrl={baseUrl}/>)}
 
       {/* Client detail view */}
       {view&&(<div style={css.overlay}><div style={{...css.modal(880)}}>
@@ -533,6 +636,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
             <button onClick={()=>setProgFormOpen(true)} style={{...css.btnTeal,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>📈 Pažanga</button>
             <button onClick={()=>openEdit(view)} style={{...css.btnG,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,padding:"8px 12px",fontSize:12}}>✏️ Redaguoti</button>
             <button onClick={()=>openShareModal(view)} style={{...css.btnGhost,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontSize:12}}>🔗 Nuoroda</button>
+            <button onClick={()=>printPDF(view,progressList)} style={{...css.btnGhost,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontSize:12,color:C.gold,borderColor:C.goldBorder}}>🖨️ PDF</button>
           </div>
         </div>
         <div style={{overflowY:"auto",padding:18,flex:1}} className="modal-inner">
@@ -802,11 +906,14 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
 }
 
 // ── MAIN APP ──────────────────────────────────────────────
+// Detect share page BEFORE the main App component (avoids hooks-after-conditional-return)
+const _params=new URLSearchParams(window.location.search);
+const _shareToken=_params.get("share");
+const _shareType=_params.get("type")||"training";
+
 export default function App(){
-  const params=new URLSearchParams(window.location.search);
-  const shareToken=params.get("share");
-  const shareType=params.get("type")||"training";
-  if(shareToken)return <SharePage token={shareToken} type={shareType}/>;
+  // If share link → render SharePage directly (no hooks needed)
+  if(_shareToken)return <SharePage token={_shareToken} type={_shareType}/>;
 
   const [loggedIn,setLoggedIn]=useState(()=>sessionStorage.getItem("cm_auth")==="1");
   const [tab,setTab]=useState("dashboard");
