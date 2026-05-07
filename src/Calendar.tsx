@@ -108,7 +108,7 @@ export function BookingPage(){
   if(done) return(
     <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:FONT,padding:20}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');*{box-sizing:border-box;}body{margin:0;}@keyframes spin{to{transform:rotate(360deg)}}@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}.fu{animation:fadeUp .4s ease both;}`}</style>
-      <div className="fu" style={{background:C.surface,borderRadius:24,border:`1px solid ${C.greenBorder}`,padding:"40px 32px",maxWidth:400,width:"100%",textAlign:"center",boxShadow:"0 40px 100px #00000066"}}>
+      <div className="fu" style={{background:C.surface,borderRadius:24,border:`1px solid ${C.greenBorder}`,boxShadow:"0 8px 40px #00000014",padding:"40px 32px",maxWidth:400,width:"100%",textAlign:"center",boxShadow:"0 8px 40px #00000014"}}>
         <div style={{fontSize:56,marginBottom:16}}>✅</div>
         <div style={{fontSize:22,fontWeight:900,color:C.green,marginBottom:8}}>Rezervacija patvirtinta!</div>
         <div style={{fontSize:14,color:C.muted,marginBottom:20}}>Jūsų treniruotė užregistruota</div>
@@ -127,8 +127,8 @@ export function BookingPage(){
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');*{box-sizing:border-box;}body{margin:0;}@keyframes spin{to{transform:rotate(360deg)}}@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}.fu{animation:fadeUp .4s ease both;}.fu1{animation:fadeUp .4s .08s ease both;}.fu2{animation:fadeUp .4s .16s ease both;}.slot-btn:hover{border-color:#f0b429!important;background:#f0b42918!important;color:#f0b429!important;}`}</style>
 
       {/* Hero */}
-      <div style={{background:`linear-gradient(180deg,#0f1623 0%,${C.bg} 100%)`,padding:"36px 20px 28px",textAlign:"center",borderBottom:`1px solid ${C.border}`,position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:500,height:200,background:`radial-gradient(ellipse at 50% 0%,${C.gold}22 0%,transparent 70%)`,pointerEvents:"none"}}/>
+      <div style={{background:`linear-gradient(180deg,#F0F0F0 0%,${C.bg} 100%)`,padding:"36px 20px 28px",textAlign:"center",borderBottom:`1px solid ${C.border}`,position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:500,height:200,background:`radial-gradient(ellipse at 50% 0%,${C.gold}12 0%,transparent 70%)`,pointerEvents:"none"}}/>
         <div style={{width:68,height:68,background:`linear-gradient(135deg,${C.gold},#e8961a)`,borderRadius:20,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:900,color:C.bg,margin:"0 auto 16px",boxShadow:`0 8px 28px ${C.gold}44`,letterSpacing:"-0.05em"}} className="fu">DNA</div>
         <div style={{fontSize:24,fontWeight:900,color:C.text,marginBottom:4,letterSpacing:"-0.02em"}} className="fu1">DNA Trainer</div>
         <div style={{fontSize:13,color:C.muted,marginBottom:4}} className="fu1">Asmeninė treniruotė — 60 min.</div>
