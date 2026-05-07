@@ -39,12 +39,9 @@ function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
       sb.get("exercises","?select=id"),
       sb.get("foods","?select=id").catch(()=>[] as any[]),
       sb.get("bookings",`?coach_id=eq.${getCoachId()}&date=gte.${todayISO}&status=neq.cancelled&order=date.asc,time.asc&limit=10`).catch(()=>[] as any[]),
-    ]).then(async([clients,exs,fds,bookings])=>{
+    ]).then(([clients,exs,fds,bookings])=>{
       setRecent(clients);
-      // Fallback: if no bookings found with coach_id, fetch all (existing data without coach_id)
-      const finalBookings = bookings.length > 0 ? bookings :
-        await sb.get("bookings",`?date=gte.${todayISO}&status=neq.cancelled&order=date.asc,time.asc&limit=10`).catch(()=>[] as any[]);
-      setUpcomingBookings(finalBookings);
+      setUpcomingBookings(bookings);
       setStats({clients:clients.length,exercises:exs.length,foods:fds.length,mealplans:clients.filter((c:any)=>c.meal_plan_name).length});
       setLoading(false);
     }).catch(()=>setLoading(false));
@@ -1176,7 +1173,8 @@ function AppRouter(){
   const params=new URLSearchParams(window.location.search);
   const shareToken=params.get("share");
   const shareType=params.get("type")||"training";
-  if(shareType==="booking"&&!shareToken)return <BookingPage/>;
+  const bookingCoachId=params.get("coach");
+  if(shareType==="booking"&&!shareToken)return <BookingPage coachId={bookingCoachId}/>;
   if(shareToken)return <SharePage token={shareToken} type={shareType}/>;
 
   const session=getSession();
