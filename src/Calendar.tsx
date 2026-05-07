@@ -117,7 +117,7 @@ export function BookingPage(){
           <div style={{fontSize:18,fontWeight:800,color:C.text}}>{new Date(selectedDate+"T12:00:00").toLocaleDateString("lt-LT",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
           <div style={{fontSize:24,fontWeight:900,color:C.gold,marginTop:4}}>{selectedTime}</div>
         </div>
-        <div style={{fontSize:13,color:C.muted}}>Coach Martynas susisieks su jumis patvirtindamas rezervaciją.</div>
+        <div style={{fontSize:13,color:C.muted}}>DNA Trainer susisieks su jumis patvirtindamas rezervaciją.</div>
       </div>
     </div>
   );
@@ -129,8 +129,8 @@ export function BookingPage(){
       {/* Hero */}
       <div style={{background:`linear-gradient(180deg,#0f1623 0%,${C.bg} 100%)`,padding:"36px 20px 28px",textAlign:"center",borderBottom:`1px solid ${C.border}`,position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:500,height:200,background:`radial-gradient(ellipse at 50% 0%,${C.gold}22 0%,transparent 70%)`,pointerEvents:"none"}}/>
-        <div style={{width:68,height:68,background:`linear-gradient(135deg,${C.gold},#e8961a)`,borderRadius:20,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,fontWeight:900,color:C.bg,margin:"0 auto 16px",boxShadow:`0 8px 28px ${C.gold}44`}} className="fu">M</div>
-        <div style={{fontSize:24,fontWeight:900,color:C.text,marginBottom:4,letterSpacing:"-0.02em"}} className="fu1">Coach Martynas</div>
+        <div style={{width:68,height:68,background:`linear-gradient(135deg,${C.gold},#e8961a)`,borderRadius:20,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:900,color:C.bg,margin:"0 auto 16px",boxShadow:`0 8px 28px ${C.gold}44`,letterSpacing:"-0.05em"}} className="fu">DNA</div>
+        <div style={{fontSize:24,fontWeight:900,color:C.text,marginBottom:4,letterSpacing:"-0.02em"}} className="fu1">DNA Trainer</div>
         <div style={{fontSize:13,color:C.muted,marginBottom:4}} className="fu1">Asmeninė treniruotė — 60 min.</div>
         <div style={{fontSize:12,color:C.gold,fontWeight:600}} className="fu2">📅 Pasirinkite laiką ir užsiregistruokite</div>
       </div>
@@ -211,14 +211,14 @@ export function BookingPage(){
               <button onClick={submit} disabled={submitting} style={{...css.btnG,width:"100%",padding:"14px",fontSize:15,borderRadius:12,opacity:name&&phone?1:0.5}}>
                 {submitting?"⏳ Registruojama...":"✅ Rezervuoti treniruotę"}
               </button>
-              <div style={{fontSize:11,color:C.muted,textAlign:"center" as const}}>Coach Martynas susisieks su jumis patvirtinimui.</div>
+              <div style={{fontSize:11,color:C.muted,textAlign:"center" as const}}>DNA Trainer susisieks su jumis patvirtinimui.</div>
             </div>
           </div>
         )}
 
         <div style={{textAlign:"center" as const,color:C.muted,fontSize:11,marginTop:32,paddingTop:16,borderTop:`1px solid ${C.border}`}}>
-          <div style={{fontWeight:700,color:C.gold,marginBottom:4}}>Coach Martynas</div>
-          <div>Asmeninės treniruotės · Sporto sistema</div>
+          <div style={{fontWeight:700,color:C.gold,marginBottom:4}}>DNA Trainer</div>
+          <div>Asmeninės treniruotės · DNA Trainer</div>
         </div>
       </div>
     </div>
