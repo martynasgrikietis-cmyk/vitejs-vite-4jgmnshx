@@ -1,6 +1,7 @@
 // ── App.tsx — Dashboard, Exercises, Clients, Share page ──
 import { useState, useCallback, useEffect } from "react";
-import { sb, C, FONT, RESPONSIVE_CSS, css, ALL_MUSCLES, GOALS, LEVELS, DAYS, REST_OPTIONS, ACTIVITY_LEVELS, APP_PASSWORD, calcBMI, bmiCat, calcNut, genToken, Tag, Badge, Spinner, Err, NutriBadge, ImgGallery, MultiImgUploader } from "./shared";
+import { sb, C, FONT, RESPONSIVE_CSS, css, ALL_MUSCLES, GOALS, LEVELS, DAYS, REST_OPTIONS, ACTIVITY_LEVELS, calcBMI, bmiCat, calcNut, genToken, getCoachId, getIsAdmin, Tag, Badge, Spinner, Err, NutriBadge, ImgGallery, MultiImgUploader } from "./shared";
+import { LoginScreen, AuthProvider, UsersTab, useAuth, getSession, clearSession } from "./auth";
 import { FoodsTab, MealPlanBuilder, MealSharePage } from "./MealPlan";
 import { CalendarTab, BookingPage } from "./Calendar";
 import { CSVImportModal, ExerciseLibraryModal } from "./ExerciseImport";
@@ -21,29 +22,7 @@ function getYouTubeEmbed(url:string):string|null{
 const emptyExForm  = {name:"",muscle:"Krūtinė",equipment:"",sets:"3",reps:"10-12",description:"",video_url:"",imgs:[] as string[]};
 const emptyClient  = {name:"",age:"",weight:"",height:"",gender:"Vyras",goal:"",level:"",notes:"",training_days:[] as string[],activity_index:2};
 
-// ── LOGIN ─────────────────────────────────────────────────
-function LoginScreen({onLogin}:{onLogin:()=>void}){
-  const [pw,setPw]=useState("");
-  const [err,setErr]=useState("");
-  const submit=()=>{if(pw===APP_PASSWORD){onLogin();}else{setErr("Neteisingas slaptažodis.");setPw("");}};
-  return(
-    <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:FONT,padding:16}}>
-      <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse 80% 50% at 50% 0%,#D4860A08 0%,transparent 70%)",pointerEvents:"none"}}/>
-      <div style={{background:C.surface,borderRadius:24,border:`1px solid ${C.border}`,padding:"40px 32px",maxWidth:380,width:"100%",textAlign:"center",boxShadow:"0 8px 40px #00000014",position:"relative"}}>
-        <div style={{width:72,height:72,background:`linear-gradient(135deg,${C.gold},#B06A08)`,borderRadius:20,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:900,color:C.bg,margin:"0 auto 20px",boxShadow:`0 8px 24px ${C.gold}44`,letterSpacing:"-0.05em"}}>DNA</div>
-        <div style={{fontSize:26,fontWeight:900,color:C.text,marginBottom:4,letterSpacing:"-0.03em"}}>DNA Trainer</div>
-        <div style={{fontSize:11,color:C.muted,letterSpacing:"0.2em",textTransform:"uppercase",marginBottom:32}}>Sporto & Mitybos programa</div>
-        <Err msg={err}/>
-        <div style={{marginBottom:16}}>
-          <span style={css.label}>Slaptažodis</span>
-          <input type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} style={{...css.input,textAlign:"center",fontSize:20,letterSpacing:6}} placeholder="••••••••" autoFocus/>
-        </div>
-        <button onClick={submit} style={{...css.btnG,width:"100%",padding:"13px",fontSize:14,borderRadius:12}}>🔓 Prisijungti</button>
-        <div style={{fontSize:11,color:C.muted,marginTop:16}}>Tik jūs turite prieigą prie šios sistemos.</div>
-      </div>
-    </div>
-  );
-}
+// LoginScreen is now in auth.tsx
 
 // ── DASHBOARD ─────────────────────────────────────────────
 function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
@@ -53,7 +32,7 @@ function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
 
   useEffect(()=>{
     Promise.all([
-      sb.get("clients","?order=created_at.desc"),
+      sb.get("clients",`?coach_id=eq.${getCoachId()}&order=created_at.desc`),
       sb.get("exercises","?select=id"),
       sb.get("foods","?select=id").catch(()=>[] as any[]),
     ]).then(([clients,exs,fds])=>{
@@ -505,7 +484,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
   const [confirmDel,setConfirmDel]=useState<any>(null);
   const [shareModal,setShareModal]=useState<any>(null);
 
-  const load=useCallback(async()=>{setLoading(true);setError("");try{setClients(await sb.get("clients","?order=name"));}catch(e:any){setError("Klaida: "+e.message);}finally{setLoading(false);};},[]);
+  const load=useCallback(async()=>{setLoading(true);setError("");try{setClients(await sb.get("clients",`?coach_id=eq.${getCoachId()}&order=name`));}catch(e:any){setError("Klaida: "+e.message);}finally{setLoading(false);};},[]);
   useEffect(()=>{load();},[load]);
   const loadProgress=async(cid:any)=>{setProgLoading(true);try{setProgressList(await sb.get("progress",`?client_id=eq.${cid}&order=date.desc`));}catch(e){console.error(e);}finally{setProgLoading(false);};};
   const openView=(c:any)=>{setView(c);loadProgress(c.id);};
@@ -526,7 +505,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
     // Auto-name program if user added exercises but left name blank
     const hasProgramContent=Object.values(program).some((d:any)=>d?.length>0);
     const finalProgramName=programName||(hasProgramContent?`${clientForm.name} programa`:"");
-    const data={...clientForm,program,program_name:finalProgramName,meal_plan:mealPlan,meal_plan_name:finalMealName};
+    const data={...clientForm,program,program_name:finalProgramName,meal_plan:mealPlan,meal_plan_name:finalMealName,coach_id:getCoachId()};
     try{if(editClientId)await sb.update("clients",editClientId,data);else await sb.insert("clients",data);setClientFormOpen(false);
       const fresh=await sb.get("clients",`?id=eq.${editClientId||"x"}&limit=1`).catch(()=>[]);
       if(fresh.length&&view&&fresh[0].id===view.id)setView(fresh[0]);
@@ -1080,12 +1059,13 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
 // ── MAIN APP ──────────────────────────────────────────────
 // MainApp: shown when logged in
 function MainApp(){
+  const {coach,isAdmin,logout} = useAuth();
   const [tab,setTab]=useState("dashboard");
   const [autoOpen,setAutoOpen]=useState(false);
   const [exercises,setExercises]=useState<any[]>([]);
   const [foods,setFoods]=useState<any[]>([]);
 
-  const handleLogout=()=>{sessionStorage.removeItem("cm_auth");window.location.reload();};
+  const handleLogout=()=>{logout();};
 
   useEffect(()=>{
     sb.get("exercises","?order=name").then(d=>setExercises(d)).catch(()=>{});
@@ -1100,6 +1080,7 @@ function MainApp(){
     {id:"exercises",icon:"🏋️",label:"Pratimai"},
     {id:"foods",icon:"🥗",label:"Mityba"},
     {id:"calendar",icon:"📅",label:"Kalendorius"},
+    ...(isAdmin?[{id:"users",icon:"⚙️",label:"Vartotojai"}]:[]),
   ];
 
   return(
@@ -1117,7 +1098,12 @@ function MainApp(){
               <span>{n.icon}</span> <span className="logout-label">{n.label}</span>
             </button>
           ))}
-          <button onClick={handleLogout} style={{...css.btnGhost,fontSize:11,padding:"6px 10px",marginLeft:4}}>
+          <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:4,padding:"5px 10px",background:C.faint,borderRadius:8,border:`1px solid ${C.border}`}}>
+            <div style={{width:26,height:26,background:`linear-gradient(135deg,${C.gold},#B06A08)`,borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:900,color:"#fff",flexShrink:0}}>{(coach?.full_name||"?")[0].toUpperCase()}</div>
+            <span className="logout-label" style={{fontSize:11,fontWeight:600,color:C.text}}>{coach?.full_name}</span>
+            {isAdmin&&<span style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:10,padding:"1px 6px",fontSize:9,color:C.gold,fontWeight:700}}>ADMIN</span>}
+          </div>
+          <button onClick={handleLogout} style={{...css.btnGhost,fontSize:11,padding:"6px 10px",marginLeft:2}}>
             <span className="logout-label">🚪 </span>Atsijungti
           </button>
         </div>
@@ -1128,31 +1114,38 @@ function MainApp(){
         {tab==="foods"      && <FoodsTab key={tab+autoOpen} autoOpen={autoOpen} onFoodsLoaded={setFoods}/>}
         {tab==="clients"    && <ClientsTab key={tab+autoOpen} exercises={exercises} foods={foods} autoOpen={autoOpen}/>}
         {tab==="calendar"   && <CalendarTab/>}
+        {tab==="users"      && isAdmin && <UsersTab/>}
       </div>
     </div>
   );
 }
 
 // ── APP ROUTER ────────────────────────────────────────────
-// Reads URL params fresh on every render — works correctly on Netlify SPA
 function AppRouter(){
   const params=new URLSearchParams(window.location.search);
   const shareToken=params.get("share");
   const shareType=params.get("type")||"training";
-  // Public booking page — no token needed
   if(shareType==="booking"&&!shareToken)return <BookingPage/>;
   if(shareToken)return <SharePage token={shareToken} type={shareType}/>;
 
-  const loggedIn=sessionStorage.getItem("cm_auth")==="1";
-  if(!loggedIn)return <LoginGate/>;
-  return <MainApp/>;
+  const session=getSession();
+  if(!session)return <LoginGate/>;
+  return(
+    <AuthProvider onLogout={()=>window.location.reload()}>
+      <MainApp/>
+    </AuthProvider>
+  );
 }
 
 // ── LOGIN GATE ────────────────────────────────────────────
 function LoginGate(){
-  const [loggedIn,setLoggedIn]=useState(false);
-  if(loggedIn)return <MainApp/>;
-  return <LoginScreen onLogin={()=>setLoggedIn(true)}/>;
+  const [coach,setCoach]=useState<any>(null);
+  if(coach)return(
+    <AuthProvider onLogout={()=>window.location.reload()}>
+      <MainApp/>
+    </AuthProvider>
+  );
+  return <LoginScreen onLogin={(c)=>setCoach(c)}/>;
 }
 
 export default AppRouter;
