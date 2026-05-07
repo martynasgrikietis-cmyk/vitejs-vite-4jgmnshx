@@ -1,6 +1,6 @@
 // ── Calendar.tsx — Coach calendar, schedule settings, booking page ──
 import { useState, useEffect, useCallback } from "react";
-import { sb, C, FONT, css, Spinner } from "./shared";
+import { sb, C, FONT, css, Spinner, getCoachId } from "./shared";
 
 // ── Helpers ───────────────────────────────────────────────
 const DAY_NAMES = ["Sekmadienis","Pirmadienis","Antradienis","Trečiadienis","Ketvirtadienis","Penktadienis","Šeštadienis"];
@@ -86,6 +86,7 @@ export function BookingPage(){
     if(!name.trim()||!phone.trim()||!selectedDate||!selectedTime){ setError("Užpildykite visus laukus."); return; }
     setSubmitting(true); setError("");
     try{
+      // coach_id stored separately per coach; bookings are global slots but we need to filter
       await sb.insert("bookings",{date:selectedDate,time:selectedTime,client_name:name.trim(),client_phone:phone.trim(),goal:"",notes:"",status:"pending"});
       // Fire notification (don't await — don't block success screen if it fails)
       fetch(`${SUPABASE_URL}/functions/v1/notify-booking`,{
@@ -246,8 +247,8 @@ export function CalendarTab(){
     setLoading(true);
     try{
       const [sch,bk] = await Promise.all([
-        sb.get("schedule","?limit=1").catch(()=>[]),
-        sb.get("bookings","?order=date,time").catch(()=>[]),
+        sb.get("schedule",`?coach_id=eq.${getCoachId()}&limit=1`).catch(()=>[]),
+        sb.get("bookings",`?coach_id=eq.${getCoachId()}&order=date,time`).catch(()=>[]),
       ]);
       if(sch.length){ setSchedule({...DEFAULT_SCHEDULE,...sch[0]}); setSchedForm({...DEFAULT_SCHEDULE,...sch[0]}); setScheduleId(sch[0].id); }
       setBookings(bk);
@@ -259,7 +260,7 @@ export function CalendarTab(){
     setSaving(true);
     try{
       if(scheduleId) await sb.update("schedule",scheduleId,schedForm);
-      else{ const r=await sb.insert("schedule",schedForm); setScheduleId(r[0]?.id||null); }
+      else{ const r=await sb.insert("schedule",{...schedForm,coach_id:getCoachId()}); setScheduleId(r[0]?.id||null); }
       setSchedule(schedForm); setView("week");
     }catch(e:any){ alert("Klaida: "+e.message); }
     finally{ setSaving(false); }
