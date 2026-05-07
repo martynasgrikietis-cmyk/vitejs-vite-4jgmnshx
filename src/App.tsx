@@ -3,8 +3,22 @@ import { useState, useCallback, useEffect } from "react";
 import { sb, C, FONT, RESPONSIVE_CSS, css, ALL_MUSCLES, GOALS, LEVELS, DAYS, REST_OPTIONS, ACTIVITY_LEVELS, APP_PASSWORD, calcBMI, bmiCat, calcNut, genToken, Tag, Badge, Spinner, Err, NutriBadge, ImgGallery, MultiImgUploader } from "./shared";
 import { FoodsTab, MealPlanBuilder, MealSharePage } from "./MealPlan";
 import { CalendarTab, BookingPage } from "./Calendar";
+import { CSVImportModal, ExerciseLibraryModal } from "./ExerciseImport";
 
-const emptyExForm  = {name:"",muscle:"Krūtinė",equipment:"",sets:"3",reps:"10-12",description:"",imgs:[] as string[]};
+// Extract YouTube video ID from any YouTube URL format
+function getYouTubeEmbed(url:string):string|null{
+  if(!url)return null;
+  const patterns=[
+    /youtube\.com\/watch\?v=([^&]+)/,
+    /youtu\.be\/([^?]+)/,
+    /youtube\.com\/embed\/([^?]+)/,
+    /youtube\.com\/shorts\/([^?]+)/,
+  ];
+  for(const p of patterns){ const m=url.match(p); if(m)return `https://www.youtube.com/embed/${m[1]}?rel=0`; }
+  return null; // non-YouTube video link — open directly
+}
+
+const emptyExForm  = {name:"",muscle:"Krūtinė",equipment:"",sets:"3",reps:"10-12",description:"",video_url:"",imgs:[] as string[]};
 const emptyClient  = {name:"",age:"",weight:"",height:"",gender:"Vyras",goal:"",level:"",notes:"",training_days:[] as string[],activity_index:2};
 
 // ── LOGIN ─────────────────────────────────────────────────
@@ -152,6 +166,8 @@ function ExercisesTab({autoOpen=false}:{autoOpen?:boolean}){
   const [form,setForm]=useState({...emptyExForm});
   const [saving,setSaving]=useState(false);
   const [confirmDel,setConfirmDel]=useState<any>(null);
+  const [showCSV,setShowCSV]=useState(false);
+  const [showLibrary,setShowLibrary]=useState(false);
 
   const load=useCallback(async()=>{
     setLoading(true);setError("");
@@ -162,7 +178,7 @@ function ExercisesTab({autoOpen=false}:{autoOpen?:boolean}){
   useEffect(()=>{load();},[load]);
 
   const openNew=()=>{setEditId(null);setForm({...emptyExForm});setFormOpen(true);};
-  const openEdit=(ex:any)=>{setEditId(ex.id);setForm({name:ex.name,muscle:ex.muscle||"Krūtinė",equipment:ex.equipment||"",sets:ex.sets||"3",reps:ex.reps||"10-12",description:ex.description||"",imgs:ex.imgs||[]});setFormOpen(true);};
+  const openEdit=(ex:any)=>{setEditId(ex.id);setForm({name:ex.name,muscle:ex.muscle||"Krūtinė",equipment:ex.equipment||"",sets:ex.sets||"3",reps:ex.reps||"10-12",description:ex.description||"",video_url:ex.video_url||"",imgs:ex.imgs||[]});setFormOpen(true);};
   const save=async()=>{
     if(!form.name.trim())return;setSaving(true);
     try{if(editId)await sb.update("exercises",editId,form);else await sb.insert("exercises",form);setFormOpen(false);await load();}
@@ -175,7 +191,11 @@ function ExercisesTab({autoOpen=false}:{autoOpen?:boolean}){
     <div>
       <div style={{display:"flex",alignItems:"flex-end",marginBottom:18,flexWrap:"wrap",gap:12}}>
         <div><div style={{fontSize:22,fontWeight:900,color:C.text,letterSpacing:"-0.02em"}}>Pratimų biblioteka</div><div style={{color:C.muted,fontSize:13,marginTop:2}}>{exercises.length} pratimų iš viso</div></div>
-        <button onClick={openNew} style={{...css.btnG,marginLeft:"auto"}}>+ Naujas pratimas</button>
+        <div style={{display:"flex",gap:8,marginLeft:"auto",flexWrap:"wrap" as const}}>
+          <button onClick={()=>setShowLibrary(true)} style={{...css.btnGhost,fontSize:12}}>📚 Biblioteka</button>
+          <button onClick={()=>setShowCSV(true)} style={{...css.btnGhost,fontSize:12}}>📊 CSV import</button>
+          <button onClick={openNew} style={css.btnG}>+ Naujas pratimas</button>
+        </div>
       </div>
       <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Ieškoti..." className="sbar" style={{...css.input,width:200}}/>
@@ -197,6 +217,7 @@ function ExercisesTab({autoOpen=false}:{autoOpen?:boolean}){
                 <div style={{fontSize:12,color:C.muted}}>{ex.equipment}</div>
                 <div style={{fontSize:12,color:C.gold,fontWeight:600}}>{ex.sets} ser. · {ex.reps} kart.</div>
                 {ex.description&&<div style={{fontSize:11,color:C.muted,fontStyle:"italic"}}>{ex.description}</div>}
+                {ex.video_url&&<a href={ex.video_url} target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",gap:5,marginTop:4,background:"#ef444418",border:"1px solid #ef444440",borderRadius:7,padding:"3px 10px",fontSize:11,fontWeight:700,color:"#f87171",textDecoration:"none"}}>▶ Žiūrėti video</a>}
                 <div style={{display:"flex",gap:7,marginTop:"auto",paddingTop:8}}>
                   <button style={css.btnTeal} onClick={()=>openEdit(ex)}>✏️ Redaguoti</button>
                   <button style={css.btnRed} onClick={()=>setConfirmDel(ex)}>🗑️</button>
@@ -222,12 +243,19 @@ function ExercisesTab({autoOpen=false}:{autoOpen?:boolean}){
             <div><span style={css.label}>Kartojimai</span><input value={form.reps} onChange={e=>setForm(p=>({...p,reps:e.target.value}))} style={css.input} placeholder="10-12"/></div>
           </div>
           <div><span style={css.label}>Aprašymas</span><textarea value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))} rows={3} style={{...css.input,resize:"none"}} placeholder="Technikos aprašymas..."/></div>
+          <div>
+            <span style={css.label}>🎬 Video URL (YouTube arba kitas)</span>
+            <input value={(form as any).video_url||""} onChange={e=>setForm(p=>({...p,video_url:e.target.value}))} style={css.input} placeholder="https://youtube.com/watch?v=..."/>
+            {(form as any).video_url&&<div style={{fontSize:11,color:C.green,marginTop:5}}>✅ Video nuoroda pridėta</div>}
+          </div>
         </div>
         <div style={{padding:"14px 20px",borderTop:`1px solid ${C.border}`,display:"flex",gap:10,justifyContent:"flex-end"}}>
           <button onClick={()=>setFormOpen(false)} style={css.btnGhost}>Atšaukti</button>
           <button onClick={save} disabled={saving} style={{...css.btnG,opacity:form.name.trim()?1:0.4}}>{saving?"⏳ Saugoma...":"💾 Išsaugoti"}</button>
         </div>
       </div></div>)}
+      {showCSV&&<CSVImportModal onClose={()=>setShowCSV(false)} onImported={(n)=>{setShowCSV(false);load();alert(`Importuota ${n} pratimų!`);}}/>}
+      {showLibrary&&<ExerciseLibraryModal onClose={()=>setShowLibrary(false)} onImported={(n)=>{setShowLibrary(false);load();alert(`Importuota ${n} pratimų!`);}}/>}
       {confirmDel&&(<div style={css.overlay}><div style={{background:C.surface,borderRadius:16,border:`1px solid ${C.redBorder}`,padding:28,maxWidth:340,width:"100%",textAlign:"center"}}>
         <div style={{fontSize:32,marginBottom:10}}>🗑️</div>
         <div style={{fontWeight:700,fontSize:15,marginBottom:8,color:C.text}}>Ištrinti pratimą?</div>
@@ -331,6 +359,19 @@ function SharePage({token,type}:{token:string,type:string}){
                               {ex.customRest&&<div style={{background:"#a78bfa18",border:`1px solid #a78bfa40`,borderRadius:9,padding:"8px 14px",textAlign:"center",minWidth:64}}><div style={{fontSize:9,color:C.muted,textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:2}}>Poilsis</div><div style={{fontSize:18,fontWeight:900,color:C.purple}}>{ex.customRest}</div></div>}
                             </div>
                             {ex.description&&<div style={{fontSize:12,color:C.muted,fontStyle:"italic",lineHeight:1.5}}>{ex.description}</div>}
+                            {ex.video_url&&(()=>{
+                              const embedUrl=getYouTubeEmbed(ex.video_url);
+                              return embedUrl?(
+                                <div style={{marginTop:10,borderRadius:10,overflow:"hidden",position:"relative",paddingBottom:"56.25%",height:0}}>
+                                  <iframe src={embedUrl} title={ex.name} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",border:"none"}} allowFullScreen/>
+                                </div>
+                              ):(
+                                <a href={ex.video_url} target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",gap:8,marginTop:10,background:"#ef444418",border:"1px solid #ef444440",borderRadius:10,padding:"10px 14px",textDecoration:"none"}}>
+                                  <span style={{fontSize:20}}>▶</span>
+                                  <span style={{fontSize:13,fontWeight:700,color:"#f87171"}}>Žiūrėti pratimo video</span>
+                                </a>
+                              );
+                            })()}
                           </div>
                         </div>
                       );
@@ -557,7 +598,9 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
         if(ex.customReps)h+=`<span class="sb" style="background:#f5f5fa;border-color:#ddd"><span class="sl">Kartojimai</span><span class="sv" style="color:#333">${ex.customReps}</span></span>`;
         if(ex.customWeight)h+=`<span class="sb" style="background:#38bdf818;border-color:#38bdf840"><span class="sl">Svoris</span><span class="sv" style="color:#38bdf8">${ex.customWeight}</span></span>`;
         if(ex.customRest)h+=`<span class="sb" style="background:#a78bfa18;border-color:#a78bfa40"><span class="sl">Poilsis</span><span class="sv" style="color:#a78bfa">${ex.customRest}</span></span>`;
-        h+=`</div>${ex.description?`<div class="ed">${ex.description}</div>`:""}</div></div>`;
+        h+=`</div>${ex.description?`<div class="ed">${ex.description}</div>`:""}`;
+        if(ex.video_url)h+=`<a href="${ex.video_url}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;margin-top:5px;background:#ef444418;border:1px solid #ef444440;border-radius:6px;padding:3px 9px;font-size:10px;font-weight:700;color:#f87171;text-decoration:none;">▶ Žiūrėti video</a>`;
+        h+=`</div></div>`;
       });
       h+=`</div>`;
     });
