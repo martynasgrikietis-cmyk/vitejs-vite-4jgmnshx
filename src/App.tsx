@@ -28,15 +28,23 @@ const emptyClient  = {name:"",age:"",weight:"",height:"",gender:"Vyras",goal:"",
 function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
   const [stats,setStats]=useState({clients:0,exercises:0,foods:0,mealplans:0});
   const [recent,setRecent]=useState<any[]>([]);
+  const [upcomingBookings,setUpcomingBookings]=useState<any[]>([]);
   const [loading,setLoading]=useState(true);
+
+  const todayISO=new Date().toISOString().slice(0,10);
 
   useEffect(()=>{
     Promise.all([
       sb.get("clients",`?coach_id=eq.${getCoachId()}&order=created_at.desc`),
       sb.get("exercises","?select=id"),
       sb.get("foods","?select=id").catch(()=>[] as any[]),
-    ]).then(([clients,exs,fds])=>{
+      sb.get("bookings",`?coach_id=eq.${getCoachId()}&date=gte.${todayISO}&status=neq.cancelled&order=date.asc,time.asc&limit=10`).catch(()=>[] as any[]),
+    ]).then(async([clients,exs,fds,bookings])=>{
       setRecent(clients);
+      // Fallback: if no bookings found with coach_id, fetch all (existing data without coach_id)
+      const finalBookings = bookings.length > 0 ? bookings :
+        await sb.get("bookings",`?date=gte.${todayISO}&status=neq.cancelled&order=date.asc,time.asc&limit=10`).catch(()=>[] as any[]);
+      setUpcomingBookings(finalBookings);
       setStats({clients:clients.length,exercises:exs.length,foods:fds.length,mealplans:clients.filter((c:any)=>c.meal_plan_name).length});
       setLoading(false);
     }).catch(()=>setLoading(false));
@@ -44,12 +52,13 @@ function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
 
   const todayName=DAYS[new Date().getDay()===0?6:new Date().getDay()-1];
   const todayClients=recent.filter(c=>(c.training_days||[]).includes(todayName));
+  const todayBookings=upcomingBookings.filter(b=>b.date===todayISO);
 
   const statCards=[
     {icon:"👥",label:"Klientai",val:stats.clients,color:C.gold,tab:"clients"},
     {icon:"🏋️",label:"Pratimai",val:stats.exercises,color:C.teal,tab:"exercises"},
     {icon:"🥗",label:"Maisto produktai",val:stats.foods,color:C.green,tab:"foods"},
-    {icon:"📋",label:"Mitybos planai",val:stats.mealplans,color:C.purple,tab:"clients"},
+    {icon:"📅",label:"Rezervacijos",val:upcomingBookings.length,color:C.teal,tab:"calendar"},
   ];
 
   return(
@@ -115,10 +124,26 @@ function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
           )}
         </div>
         <div style={css.card}>
-          <span style={css.secTitle}>Šiandien treniruojasi</span>
-          <div style={{fontSize:12,color:C.gold,fontWeight:700,marginBottom:10}}>{todayName}</div>
-          {loading?<Spinner/>:todayClients.length===0?<div style={{textAlign:"center",color:C.muted,padding:"16px 0",fontSize:13}}>Šiandien niekas netreniruojasi 😴</div>:(
-            <div style={{display:"flex",flexDirection:"column",gap:7}}>
+          <span style={css.secTitle}>Artimiausi užsiėmimai</span>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+            <div style={{fontSize:11,color:C.gold,fontWeight:600,letterSpacing:"0.08em"}}>{todayName}</div>
+            {todayBookings.length>0&&<span style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:20,padding:"1px 8px",fontSize:10,color:C.gold,fontWeight:700}}>{todayBookings.length} rezervacija</span>}
+          </div>
+          {loading?<Spinner/>:(
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {/* Calendar bookings today */}
+              {todayBookings.map((b:any)=>(
+                <div key={b.id} style={{display:"flex",alignItems:"center",gap:10,background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:10,padding:"9px 12px"}}>
+                  <div style={{fontSize:16,fontWeight:900,color:C.gold,minWidth:44,fontFamily:"'Cormorant SC',serif"}}>{b.time}</div>
+                  <div style={{width:1,height:28,background:C.goldBorder}}/>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:12,fontWeight:700,color:C.text}}>{b.client_name}</div>
+                    <div style={{fontSize:10,color:C.muted}}>{b.client_phone} · 📅 Rezervacija</div>
+                  </div>
+                  <div style={{background:b.status==="confirmed"?C.greenSoft:C.goldSoft,border:`1px solid ${b.status==="confirmed"?C.greenBorder:C.goldBorder}`,borderRadius:6,padding:"2px 7px",fontSize:9,fontWeight:700,color:b.status==="confirmed"?C.green:C.gold}}>{b.status==="confirmed"?"✓ Patvirtinta":"⏳ Laukiama"}</div>
+                </div>
+              ))}
+              {/* Training clients today */}
               {todayClients.map((c:any)=>{
                 const exCnt=(c.program||{})[todayName]?.length||0;
                 return(
@@ -126,11 +151,29 @@ function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
                     <div style={{width:32,height:32,background:C.green,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:900,color:C.bg,flexShrink:0}}>{(c.name||"?")[0].toUpperCase()}</div>
                     <div style={{flex:1}}>
                       <div style={{fontSize:12,fontWeight:700,color:C.text}}>{c.name}</div>
-                      <div style={{fontSize:10,color:C.green}}>{exCnt} pratimų šiandien</div>
+                      <div style={{fontSize:10,color:C.green}}>{exCnt} pratimų · 🏋️ Programa</div>
                     </div>
                   </div>
                 );
               })}
+              {todayBookings.length===0&&todayClients.length===0&&(
+                <div style={{textAlign:"center",color:C.muted,padding:"16px 0",fontSize:13}}>Šiandien nėra užsiėmimų 😴</div>
+              )}
+              {/* Upcoming bookings */}
+              {upcomingBookings.filter(b=>b.date>todayISO).slice(0,3).map((b:any)=>(
+                <div key={b.id} style={{display:"flex",alignItems:"center",gap:10,background:C.faint,border:`1px solid ${C.border}`,borderRadius:10,padding:"8px 12px"}}>
+                  <div style={{textAlign:"center",minWidth:38}}>
+                    <div style={{fontSize:14,fontWeight:900,color:C.gold,fontFamily:"'Cormorant SC',serif"}}>{new Date(b.date+"T12:00:00").getDate()}</div>
+                    <div style={{fontSize:8,color:C.muted,letterSpacing:"0.06em"}}>{new Date(b.date+"T12:00:00").toLocaleDateString("lt-LT",{month:"short"}).toUpperCase()}</div>
+                  </div>
+                  <div style={{width:1,height:28,background:C.border}}/>
+                  <div style={{fontSize:13,fontWeight:700,color:C.gold,minWidth:40}}>{b.time}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:11,fontWeight:600,color:C.text}}>{b.client_name}</div>
+                    <div style={{fontSize:10,color:C.muted}}>{b.client_phone}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
