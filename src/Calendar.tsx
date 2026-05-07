@@ -21,6 +21,7 @@ const DEFAULT_SCHEDULE = {
   slot_duration:60,
   advance_days:7,
   blocked_dates:[] as string[],
+  coach_id:null as string|null,
 };
 
 type Schedule = typeof DEFAULT_SCHEDULE;
@@ -58,10 +59,10 @@ export function BookingPage(){
 
   useEffect(()=>{
     Promise.all([
-      sb.get("schedule","?limit=1").catch(()=>[]),
+      sb.get("schedule","?limit=1&order=created_at").catch(()=>[]),
       sb.get("bookings",`?date=gte.${todayStr()}&order=date,time`).catch(()=>[]),
     ]).then(([sch,bk])=>{
-      if(sch.length) setSchedule({...DEFAULT_SCHEDULE,...sch[0]});
+      if(sch.length){ setSchedule({...DEFAULT_SCHEDULE,...sch[0]}); }
       setBookings(bk);
       setLoading(false);
     }).catch(()=>setLoading(false));
@@ -87,7 +88,11 @@ export function BookingPage(){
     setSubmitting(true); setError("");
     try{
       // coach_id stored separately per coach; bookings are global slots but we need to filter
-      await sb.insert("bookings",{date:selectedDate,time:selectedTime,client_name:name.trim(),client_phone:phone.trim(),goal:"",notes:"",status:"pending"});
+      // Get coach_id from schedule record (may be null for old data, but store it)
+      const coachId = (schedule as any).id ? 
+        await sb.get("schedule","?limit=1&order=created_at").then((r:any[])=>r[0]?.coach_id||null).catch(()=>null)
+        : null;
+      await sb.insert("bookings",{date:selectedDate,time:selectedTime,client_name:name.trim(),client_phone:phone.trim(),goal:"",notes:"",status:"pending",coach_id:coachId});
       // Fire notification (don't await — don't block success screen if it fails)
       fetch(`${SUPABASE_URL}/functions/v1/notify-booking`,{
         method:"POST",
@@ -246,10 +251,15 @@ export function CalendarTab(){
   const load = useCallback(async()=>{
     setLoading(true);
     try{
-      const [sch,bk] = await Promise.all([
+      // Try coach-specific first, fall back to any schedule (for existing data)
+      let [sch,bk] = await Promise.all([
         sb.get("schedule",`?coach_id=eq.${getCoachId()}&limit=1`).catch(()=>[]),
         sb.get("bookings",`?coach_id=eq.${getCoachId()}&order=date,time`).catch(()=>[]),
       ]);
+      // Fallback: if no schedule found with coach_id, get any schedule
+      if(!sch.length) sch = await sb.get("schedule","?limit=1&order=created_at").catch(()=>[]);
+      // Fallback: if no bookings with coach_id, get all bookings (single coach setup)
+      if(!bk.length) bk = await sb.get("bookings","?order=date,time").catch(()=>[]);
       if(sch.length){ setSchedule({...DEFAULT_SCHEDULE,...sch[0]}); setSchedForm({...DEFAULT_SCHEDULE,...sch[0]}); setScheduleId(sch[0].id); }
       setBookings(bk);
     }finally{ setLoading(false); }
