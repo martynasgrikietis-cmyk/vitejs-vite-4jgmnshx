@@ -30,9 +30,9 @@ function LoginScreen({onLogin}:{onLogin:()=>void}){
     <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:FONT,padding:16}}>
       <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse 80% 50% at 50% 0%,#1a2540 0%,transparent 70%)",pointerEvents:"none"}}/>
       <div style={{background:C.surface,borderRadius:24,border:`1px solid ${C.border}`,padding:"40px 32px",maxWidth:380,width:"100%",textAlign:"center",boxShadow:"0 40px 100px #00000066",position:"relative"}}>
-        <div style={{width:72,height:72,background:`linear-gradient(135deg,${C.gold},#e8961a)`,borderRadius:20,display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,fontWeight:900,color:C.bg,margin:"0 auto 20px",boxShadow:`0 8px 24px ${C.gold}44`}}>M</div>
-        <div style={{fontSize:26,fontWeight:900,color:C.text,marginBottom:4,letterSpacing:"-0.03em"}}>Coach Martynas</div>
-        <div style={{fontSize:11,color:C.muted,letterSpacing:"0.2em",textTransform:"uppercase",marginBottom:32}}>Sporto & Mitybos sistema</div>
+        <div style={{width:72,height:72,background:`linear-gradient(135deg,${C.gold},#e8961a)`,borderRadius:20,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:900,color:C.bg,margin:"0 auto 20px",boxShadow:`0 8px 24px ${C.gold}44`,letterSpacing:"-0.05em"}}>DNA</div>
+        <div style={{fontSize:26,fontWeight:900,color:C.text,marginBottom:4,letterSpacing:"-0.03em"}}>DNA Trainer</div>
+        <div style={{fontSize:11,color:C.muted,letterSpacing:"0.2em",textTransform:"uppercase",marginBottom:32}}>Sporto & Mitybos programa</div>
         <Err msg={err}/>
         <div style={{marginBottom:16}}>
           <span style={css.label}>Slaptažodis</span>
@@ -78,7 +78,7 @@ function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
       {/* Hero banner */}
       <div className="fu" style={{background:`linear-gradient(135deg,${C.surface} 0%,${C.surface2} 100%)`,borderRadius:20,border:`1px solid ${C.border}`,padding:"28px 24px",marginBottom:22,position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",top:0,right:0,width:300,height:180,background:`radial-gradient(ellipse at 100% 0%,${C.gold}18 0%,transparent 65%)`,pointerEvents:"none"}}/>
-        <div style={{fontSize:11,color:C.gold,fontWeight:700,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:6}}>Coach Martynas · Sistema</div>
+        <div style={{fontSize:11,color:C.gold,fontWeight:700,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:6}}>DNA Trainer</div>
         <div style={{fontSize:26,fontWeight:900,color:C.text,marginBottom:4,letterSpacing:"-0.02em"}}>Sveiki sugrįžę! 👋</div>
         <div style={{fontSize:13,color:C.muted,marginBottom:18}}>{new Date().toLocaleDateString("lt-LT",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
         <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
@@ -382,8 +382,8 @@ function SharePage({token,type}:{token:string,type:string}){
             );
           })}
           <div style={{textAlign:"center",color:C.muted,fontSize:11,marginTop:32,paddingTop:16,borderTop:`1px solid ${C.border}`}}>
-            <div style={{fontWeight:700,color:C.gold,marginBottom:4}}>Coach Martynas</div>
-            <div>Sporto & Mitybos sistema</div>
+            <div style={{fontWeight:700,color:C.gold,marginBottom:4}}>DNA Trainer</div>
+            <div>Sporto & Mitybos programa</div>
           </div>
         </div>
       )}
@@ -393,8 +393,8 @@ function SharePage({token,type}:{token:string,type:string}){
         <>
           <MealSharePage client={client}/>
           <div style={{textAlign:"center",color:C.muted,fontSize:11,padding:"16px 16px 32px",borderTop:`1px solid ${C.border}`,maxWidth:560,margin:"0 auto"}}>
-            <div style={{fontWeight:700,color:C.gold,marginBottom:4}}>Coach Martynas</div>
-            <div>Sporto & Mitybos sistema</div>
+            <div style={{fontWeight:700,color:C.gold,marginBottom:4}}>DNA Trainer</div>
+            <div>Sporto & Mitybos programa</div>
           </div>
         </>
       )}
@@ -562,7 +562,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
     const pstyle=`*{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,Arial,sans-serif;background:#fff;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}.hdr{background:#0a0d14;padding:18px 24px;display:flex;align-items:center;gap:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.logo{width:42px;height:42px;background:linear-gradient(135deg,#f0b429,#e8961a);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#0a0d14;flex-shrink:0}.ht{font-size:17px;font-weight:900;color:#f0b429}.hs{font-size:9px;color:#888;letter-spacing:3px;text-transform:uppercase;margin-top:2px}.hr{margin-left:auto;text-align:right;color:#fff}.sec{margin:12px 18px;border:1.5px solid #e0e0e8;border-radius:11px;overflow:hidden}.sh{background:#0a0d14;color:#fff;padding:9px 16px;font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;-webkit-print-color-adjust:exact;print-color-adjust:exact}.ig{display:flex;flex-wrap:wrap;gap:7px;padding:11px 14px}.ib{background:#f5f5fa;border:1.5px solid #e0e0e8;border-radius:8px;padding:7px 11px;min-width:70px}.il{font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px}.iv{font-size:13px;font-weight:700}.er{display:flex;gap:10px;padding:10px 12px;border-top:1px solid #f0f0f5;align-items:flex-start;page-break-inside:avoid}.en{width:22px;height:22px;background:#f0f0f5;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#555;flex-shrink:0;margin-top:2px}.ei{width:90px;height:72px;object-fit:cover;border-radius:7px;flex-shrink:0;border:1.5px solid #e8e8f0}.ep{width:90px;height:72px;background:#f0f0f5;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px}.en2{font-size:12px;font-weight:700;margin-bottom:2px}.em{font-size:10px;color:#38bdf8;font-weight:600;margin-bottom:5px}.ss{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:3px}.sb{border-radius:6px;padding:3px 7px;display:inline-flex;flex-direction:column;align-items:center;border:1.5px solid}.sl{font-size:8px;color:#888;text-transform:uppercase;letter-spacing:1px}.sv{font-size:12px;font-weight:800}.ed{font-size:10px;color:#777;font-style:italic;line-height:1.5}.nut2{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #eee}.prog-t{width:100%;border-collapse:collapse;font-size:12px}.prog-t th{padding:7px 10px;text-align:left;border-bottom:1.5px solid #e0e0e8;font-size:10px;color:#888;text-transform:uppercase;background:#f5f5fa}.prog-t td{padding:7px 10px;border-bottom:1px solid #f0f0f5}.hd{display:none}.pb{position:fixed;top:10px;right:10px;padding:9px 18px;background:#f0b429;color:#000;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;z-index:999;box-shadow:0 2px 8px #0003}.ft{text-align:center;padding:14px;color:#aaa;font-size:10px;border-top:1px solid #eee;margin-top:10px}@media(max-width:768px){.sec{margin:8px 10px}.sh{padding:8px 12px;font-size:10px}.ig{padding:8px 10px;gap:5px}.ib{padding:5px 8px;min-width:55px}.iv{font-size:11px}.er{gap:8px;padding:8px 10px}.ei{width:75px;height:58px}.ep{width:75px;height:58px;font-size:17px}.en2{font-size:11px}.nut2{grid-template-columns:1fr}.nut2>div{border-right:none!important;border-bottom:1px solid #eee}.hd{display:none}}@media(max-width:480px){.er{flex-wrap:wrap}.ei,.ep{width:100%;height:140px}.prog-t{font-size:10px}.prog-t th,.prog-t td{padding:5px 6px}.hd{display:none}}@media print{.pb{display:none}body{font-size:11px}}`;
     let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${pn||"Programa"}-${c.name}</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet"><style>${pstyle}</style></head><body>`;
     h+=`<button class="pb" onclick="window.print()">🖨️ Išsaugoti kaip PDF</button>`;
-    h+=`<div class="hdr"><div class="logo">M</div><div><div class="ht">Coach Martynas</div><div class="hs">Sporto programa</div></div><div class="hr"><div style="font-size:13px;font-weight:700">${pn||"Sporto programa"}</div><div style="font-size:10px;color:#888;margin-top:2px">${today2}</div></div></div>`;
+    h+=`<div class="hdr"><div class="logo">M</div><div><div class="ht">DNA Trainer</div><div class="hs">DNA Trainer programa</div></div><div class="hr"><div style="font-size:13px;font-weight:700">${pn||"DNA Trainer programa"}</div><div style="font-size:10px;color:#888;margin-top:2px">${today2}</div></div></div>`;
     h+=`<div class="sec"><div class="sh">👤 Kliento informacija</div><div class="ig">`;
     if(c.name)h+=`<div class="ib"><div class="il">Vardas</div><div class="iv">${c.name}</div></div>`;
     if(c.age)h+=`<div class="ib"><div class="il">Amžius</div><div class="iv">${c.age} m.</div></div>`;
@@ -609,7 +609,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
       pl.forEach((p:any,i:number)=>{h+=`<tr style="background:${i%2?"#fafafa":"#fff"}"><td>${new Date(p.date).toLocaleDateString("lt-LT")}</td><td style="font-weight:700;color:#f0b429">${p.weight?p.weight+" kg":"—"}</td><td class="hd">${p.chest?p.chest+" cm":"—"}</td><td class="hd">${p.waist?p.waist+" cm":"—"}</td><td class="hd">${p.hips?p.hips+" cm":"—"}</td><td style="font-style:italic;color:#666">${p.notes||"—"}</td></tr>`;});
       h+=`</tbody></table></div></div>`;
     }
-    h+=`<div class="ft">© Coach Martynas · ${today2}</div></body></html>`;
+    h+=`<div class="ft">© DNA Trainer · ${today2}</div></body></html>`;
     win.document.write(h);win.document.close();
   };
 
@@ -622,7 +622,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
     const pstyle=`*{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,Arial,sans-serif;background:#fff;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}.hdr{background:#0a0d14;padding:18px 24px;display:flex;align-items:center;gap:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.logo{width:42px;height:42px;background:linear-gradient(135deg,#22c55e,#16a34a);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;flex-shrink:0}.ht{font-size:17px;font-weight:900;color:#22c55e}.hs{font-size:9px;color:#888;letter-spacing:3px;text-transform:uppercase;margin-top:2px}.hr{margin-left:auto;text-align:right;color:#fff}.sec{margin:12px 18px;border:1.5px solid #e0e0e8;border-radius:11px;overflow:hidden}.sh{background:#0a0d14;color:#fff;padding:9px 16px;font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;-webkit-print-color-adjust:exact;print-color-adjust:exact}.day-tot{display:flex;gap:8px;padding:8px 14px;background:#f9fafb;border-bottom:1px solid #eee;flex-wrap:wrap}.tot-badge{border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700}.mt-hdr{padding:8px 14px 4px;font-size:10px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:1px}.fr{display:flex;gap:10px;padding:6px 14px;border-top:1px solid #f5f5f5;align-items:center;page-break-inside:avoid}.fi{width:52px;height:52px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid #eee}.fp{width:52px;height:52px;background:#f0f0f5;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px}.fn{font-size:12px;font-weight:700;margin-bottom:2px}.fg{font-size:10px;color:#888}.fb{display:flex;gap:5px;margin-top:3px;flex-wrap:wrap}.fbb{border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600}.pb{position:fixed;top:10px;right:10px;padding:9px 18px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;z-index:999;box-shadow:0 2px 8px #0003}.ft{text-align:center;padding:14px;color:#aaa;font-size:10px;border-top:1px solid #eee;margin-top:10px}@media(max-width:600px){.sec{margin:8px 10px}.fr{gap:8px;padding:5px 10px}.fi,.fp{width:42px;height:42px}.pb{top:6px;right:6px;padding:7px 12px;font-size:12px}}@media print{.pb{display:none}}`;
     let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${mpn}-${c.name}</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet"><style>${pstyle}</style></head><body>`;
     h+=`<button class="pb" onclick="window.print()">🖨️ Išsaugoti kaip PDF</button>`;
-    h+=`<div class="hdr"><div class="logo">🥗</div><div><div class="ht">Coach Martynas</div><div class="hs">Mitybos planas</div></div><div class="hr"><div style="font-size:13px;font-weight:700">${mpn}</div><div style="font-size:10px;color:#888;margin-top:2px">${c.name} · ${today2}</div></div></div>`;
+    h+=`<div class="hdr"><div class="logo">🥗</div><div><div class="ht">DNA Trainer</div><div class="hs">Mitybos planas</div></div><div class="hr"><div style="font-size:13px;font-weight:700">${mpn}</div><div style="font-size:10px;color:#888;margin-top:2px">${c.name} · ${today2}</div></div></div>`;
     // Client info strip
     h+=`<div style="display:flex;flex-wrap:wrap;gap:8px;padding:10px 18px;background:#f9fafb;border-bottom:1px solid #eee">`;
     if(c.name)h+=`<span style="background:#f0f0f8;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600">👤 ${c.name}</span>`;
@@ -664,7 +664,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
       });
       h+=`</div>`;
     });
-    h+=`<div class="ft">© Coach Martynas · Mitybos planas · ${today2}</div></body></html>`;
+    h+=`<div class="ft">© DNA Trainer · Mitybos planas · ${today2}</div></body></html>`;
     win.document.write(h);win.document.close();
   };
 
@@ -1106,10 +1106,10 @@ function MainApp(){
     <div style={css.page}>
       <style>{RESPONSIVE_CSS}</style>
       <div style={css.header} className="header-pad">
-        <div style={css.logo}>M</div>
+        <div style={{...css.logo,fontSize:11,letterSpacing:"-0.05em"}}>DNA</div>
         <div>
-          <div style={{fontWeight:900,fontSize:15,color:C.gold,letterSpacing:"-0.01em"}}>Coach Martynas</div>
-          <div style={{fontSize:9,color:C.muted,letterSpacing:"0.18em",textTransform:"uppercase",marginTop:1}} className="hsubtitle">Sporto & Mitybos sistema</div>
+          <div style={{fontWeight:900,fontSize:15,color:C.gold,letterSpacing:"-0.01em"}}>DNA Trainer</div>
+          <div style={{fontSize:9,color:C.muted,letterSpacing:"0.18em",textTransform:"uppercase",marginTop:1}} className="hsubtitle">Sporto & Mitybos programa</div>
         </div>
         <div style={{marginLeft:"auto",display:"flex",gap:4,alignItems:"center"}}>
           {NAV.map(n=>(
