@@ -67,10 +67,10 @@ function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
         <div style={{position:"relative",padding:"32px 28px 28px"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
             <div style={{width:24,height:1,background:C.gold}}/>
-            <div style={{fontSize:9,color:C.gold,fontWeight:600,letterSpacing:"0.28em",textTransform:"uppercase"}}>Sporto sistema · {new Date().getFullYear()}</div>
+            <div style={{fontSize:10,color:C.gold,fontWeight:700,letterSpacing:"0.2em",textTransform:"uppercase"}}>Sporto sistema · {new Date().getFullYear()}</div>
           </div>
-          <div style={{fontSize:34,fontWeight:600,color:C.text,marginBottom:4,letterSpacing:"0.06em",fontFamily:"'Cormorant SC','Cormorant Garamond',serif",lineHeight:1.1}}>Sveiki sugrįžę</div>
-          <div style={{fontSize:12,color:C.muted,marginBottom:22,letterSpacing:"0.04em"}}>{new Date().toLocaleDateString("lt-LT",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
+          <div style={{fontSize:36,fontWeight:800,color:"#FFFFFF",marginBottom:4,letterSpacing:"-0.01em",fontFamily:"'Inter',sans-serif",lineHeight:1.1}}>Sveiki sugrįžę</div>
+          <div style={{fontSize:13,color:C.muted,marginBottom:22}}>{new Date().toLocaleDateString("lt-LT",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}> 
             <button onClick={()=>onNav("clients",true)} style={css.btnG}>+ Naujas klientas</button>
             <button onClick={()=>onNav("exercises",true)} style={css.btnGhost}>+ Pratimas</button>
@@ -84,9 +84,9 @@ function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
         {statCards.map(s=>(
           <div key={s.label} onClick={()=>onNav(s.tab)} style={{background:C.surface,borderRadius:14,border:`1px solid ${C.border}`,padding:"18px 16px",cursor:"pointer",position:"relative",overflow:"hidden",transition:"border-color .15s"}}>
             <div style={{position:"absolute",top:0,right:0,width:70,height:70,background:`radial-gradient(ellipse at 100% 0%,${s.color}18 0%,transparent 70%)`,pointerEvents:"none"}}/>
-            <div style={{fontSize:26,marginBottom:6}}>{s.icon}</div>
-            <div style={{fontSize:30,fontWeight:900,color:s.color,lineHeight:1,marginBottom:4}}>{loading?"—":s.val}</div>
-            <div style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase" as const,letterSpacing:"0.08em"}}>{s.label}</div>
+            <div style={{fontSize:32,marginBottom:8}}>{s.icon}</div>
+            <div style={{fontSize:38,fontWeight:900,color:s.color,lineHeight:1,marginBottom:6,fontFamily:"'Inter',sans-serif"}}>{loading?"—":s.val}</div>
+            <div style={{fontSize:11,color:C.muted,fontWeight:700,textTransform:"uppercase" as const,letterSpacing:"0.1em"}}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -131,7 +131,7 @@ function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
               {/* Calendar bookings today */}
               {todayBookings.map((b:any)=>(
                 <div key={b.id} style={{display:"flex",alignItems:"center",gap:10,background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:10,padding:"9px 12px"}}>
-                  <div style={{fontSize:16,fontWeight:900,color:C.gold,minWidth:44,fontFamily:"'Cormorant SC',serif"}}>{b.time}</div>
+                  <div style={{fontSize:20,fontWeight:800,color:C.gold,minWidth:52,fontFamily:"'Inter',sans-serif"}}>{b.time}</div>
                   <div style={{width:1,height:28,background:C.goldBorder}}/>
                   <div style={{flex:1}}>
                     <div style={{fontSize:12,fontWeight:700,color:C.text}}>{b.client_name}</div>
@@ -215,7 +215,7 @@ function ExercisesTab({autoOpen=false}:{autoOpen?:boolean}){
   return(
     <div>
       <div style={{display:"flex",alignItems:"flex-end",marginBottom:18,flexWrap:"wrap",gap:12}}>
-        <div><div style={{fontSize:22,fontWeight:900,color:C.text,letterSpacing:"-0.02em"}}>Pratimų biblioteka</div><div style={{color:C.muted,fontSize:13,marginTop:2}}>{exercises.length} pratimų iš viso</div></div>
+        <div><div style={{fontSize:24,fontWeight:800,color:"#FFFFFF",letterSpacing:"-0.02em"}}>Pratimų biblioteka</div><div style={{color:C.muted,fontSize:13,marginTop:2}}>{exercises.length} pratimų iš viso</div></div>
         <div style={{display:"flex",gap:8,marginLeft:"auto",flexWrap:"wrap" as const}}>
           <button onClick={()=>setShowLibrary(true)} style={{...css.btnGhost,fontSize:12}}>📚 Biblioteka</button>
           <button onClick={()=>setShowCSV(true)} style={{...css.btnGhost,fontSize:12}}>📊 CSV import</button>
@@ -238,9 +238,9 @@ function ExercisesTab({autoOpen=false}:{autoOpen?:boolean}){
                 <div style={{position:"absolute",bottom:8,left:8,background:"rgba(0,0,0,0.55)",borderRadius:6,padding:"3px 9px",fontSize:11,color:C.teal,fontWeight:600}}>{ex.muscle}</div>
               </div>
               <div style={{padding:"12px 14px",flex:1,display:"flex",flexDirection:"column",gap:4}}>
-                <div style={{fontWeight:700,fontSize:14,color:C.text}}>{ex.name}</div>
+                <div style={{fontWeight:700,fontSize:15,color:"#FFFFFF"}}>{ex.name}</div>
                 <div style={{fontSize:12,color:C.muted}}>{ex.equipment}</div>
-                <div style={{fontSize:12,color:C.gold,fontWeight:600}}>{ex.sets} ser. · {ex.reps} kart.</div>
+                <div style={{fontSize:13,color:C.gold,fontWeight:600}}>{ex.sets} ser. · {ex.reps} kart.</div>
                 {ex.description&&<div style={{fontSize:11,color:C.muted,fontStyle:"italic"}}>{ex.description}</div>}
                 {ex.video_url&&<a href={ex.video_url} target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",gap:5,marginTop:4,background:"#ef444418",border:"1px solid #ef444440",borderRadius:7,padding:"3px 10px",fontSize:11,fontWeight:700,color:"#f87171",textDecoration:"none"}}>▶ Žiūrėti video</a>}
                 <div style={{display:"flex",gap:7,marginTop:"auto",paddingTop:8}}>
@@ -705,7 +705,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
   return(
     <div>
       <div style={{display:"flex",alignItems:"flex-end",marginBottom:18,flexWrap:"wrap",gap:12}}>
-        <div><div style={{fontSize:22,fontWeight:900,color:C.text,letterSpacing:"-0.02em"}}>Klientų duomenų bazė</div><div style={{color:C.muted,fontSize:13,marginTop:2}}>{clients.length} klientų</div></div>
+        <div><div style={{fontSize:24,fontWeight:800,color:"#FFFFFF",letterSpacing:"-0.02em"}}>Klientų duomenų bazė</div><div style={{color:C.muted,fontSize:13,marginTop:2}}>{clients.length} klientų</div></div>
         <button onClick={openNew} style={{...css.btnG,marginLeft:"auto"}}>+ Naujas klientas</button>
       </div>
       <Err msg={error}/>
@@ -729,7 +729,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
                   <div style={{background:C.faint,padding:"14px 16px",display:"flex",alignItems:"center",gap:12}}>
                     <div style={{width:44,height:44,background:`linear-gradient(135deg,${C.gold},#B06A08)`,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:900,color:C.bg,flexShrink:0}}>{(c.name||"?")[0].toUpperCase()}</div>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:14,fontWeight:700,color:C.text}}>{c.name}</div>
+                      <div style={{fontSize:15,fontWeight:700,color:"#FFFFFF"}}>{c.name}</div>
                       <div style={{fontSize:11,color:C.muted,marginTop:2}}>{c.program_name||"Programa"} · {new Date(c.created_at).toLocaleDateString("lt-LT")}</div>
                     </div>
                     {c.meal_plan_name&&<span title="Turi mitybos planą" style={{fontSize:16}}>🥗</span>}
@@ -1138,7 +1138,7 @@ function MainApp(){
         <div style={{...css.logo}}/>  
         <div>
           <div style={{fontWeight:900,fontSize:15,color:C.gold,letterSpacing:"-0.01em"}}>DNA Trainer</div>
-          <div style={{fontSize:9,color:C.muted,letterSpacing:"0.18em",textTransform:"uppercase",marginTop:1}} className="hsubtitle">Sporto & Mitybos programa</div>
+          <div style={{fontSize:10,color:C.muted,letterSpacing:"0.12em",textTransform:"uppercase",marginTop:2}} className="hsubtitle">Sporto & Mitybos programa</div>
         </div>
         <div style={{marginLeft:"auto",display:"flex",gap:4,alignItems:"center"}}>
           {NAV.map(n=>(
