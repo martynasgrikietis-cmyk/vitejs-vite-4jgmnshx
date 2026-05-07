@@ -54,16 +54,22 @@ function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
 
   return(
     <div>
-      {/* Hero banner */}
-      <div className="fu" style={{background:`linear-gradient(135deg,#FFFFFF 0%,#F8F8F8 100%)`,borderRadius:20,border:`1px solid ${C.border}`,padding:"28px 24px",marginBottom:22,position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",top:0,right:0,width:300,height:180,background:`radial-gradient(ellipse at 100% 0%,#D4860A10 0%,transparent 65%)`,pointerEvents:"none"}}/>
-        <div style={{fontSize:11,color:C.gold,fontWeight:700,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:6}}>DNA Trainer</div>
-        <div style={{fontSize:26,fontWeight:900,color:C.text,marginBottom:4,letterSpacing:"-0.02em"}}>Sveiki sugrįžę! 👋</div>
-        <div style={{fontSize:13,color:C.muted,marginBottom:18}}>{new Date().toLocaleDateString("lt-LT",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
-        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-          <button onClick={()=>onNav("clients",true)} style={{...css.btnG,borderRadius:10}}>+ Naujas klientas</button>
-          <button onClick={()=>onNav("exercises",true)} style={{...css.btnGhost,borderRadius:10}}>+ Pratimas</button>
-          <button onClick={()=>onNav("foods",true)} style={{...css.btnGhost,borderRadius:10}}>+ Maistas</button>
+      {/* Hero banner — cinematic photo */}
+      <div className="fu" style={{position:"relative",borderRadius:16,overflow:"hidden",marginBottom:22,minHeight:210}}>
+        <img src="https://images.unsplash.com/photo-1549476464-37392f717541?w=1400&q=85" alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",filter:"brightness(0.22) saturate(0.6)"}} onError={e=>(e.target as HTMLImageElement).style.display="none"}/>
+        <div style={{position:"absolute",inset:0,background:`linear-gradient(135deg,${C.bg}EE 0%,${C.bg}88 60%,${C.bg}00 100%)`}}/>
+        <div style={{position:"relative",padding:"32px 28px 28px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+            <div style={{width:24,height:1,background:C.gold}}/>
+            <div style={{fontSize:9,color:C.gold,fontWeight:600,letterSpacing:"0.28em",textTransform:"uppercase"}}>Sporto sistema · {new Date().getFullYear()}</div>
+          </div>
+          <div style={{fontSize:34,fontWeight:600,color:C.text,marginBottom:4,letterSpacing:"0.06em",fontFamily:"'Cormorant SC','Cormorant Garamond',serif",lineHeight:1.1}}>Sveiki sugrįžę</div>
+          <div style={{fontSize:12,color:C.muted,marginBottom:22,letterSpacing:"0.04em"}}>{new Date().toLocaleDateString("lt-LT",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}> 
+            <button onClick={()=>onNav("clients",true)} style={css.btnG}>+ Naujas klientas</button>
+            <button onClick={()=>onNav("exercises",true)} style={css.btnGhost}>+ Pratimas</button>
+            <button onClick={()=>onNav("foods",true)} style={css.btnGhost}>+ Maistas</button>
+          </div>
         </div>
       </div>
 
@@ -285,8 +291,10 @@ function SharePage({token,type}:{token:string,type:string}){
         .fu4{animation:fadeUp .4s .32s ease both;}
       `}</style>
 
-      {/* Hero header */}
-      <div style={{background:`linear-gradient(180deg,#F0F0F0 0%,${C.bg} 100%)`,padding:"36px 20px 28px",textAlign:"center",borderBottom:`1px solid ${C.border}`,position:"relative",overflow:"hidden"}}>
+      {/* Hero header — cinematic */}
+      <div style={{position:"relative",padding:"36px 20px 28px",textAlign:"center",borderBottom:`1px solid ${C.border}`,overflow:"hidden",minHeight:200}}>
+        <img src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1000&q=80" alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",filter:"brightness(0.18) saturate(0.5)"}} onError={e=>(e.target as HTMLImageElement).style.display="none"}/>
+        <div style={{position:"absolute",inset:0,background:`linear-gradient(180deg,${C.bg}44 0%,${C.bg}CC 60%,${C.bg} 100%)`}}/>
         <div style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:500,height:220,background:`radial-gradient(ellipse at 50% 0%,${accentColor}14 0%,transparent 70%)`,pointerEvents:"none"}}/>
         <div style={{width:72,height:72,background:`linear-gradient(135deg,${C.gold},#B06A08)`,borderRadius:20,display:"flex",alignItems:"center",justifyContent:"center",fontSize:30,fontWeight:900,color:C.bg,margin:"0 auto 18px",boxShadow:`0 8px 28px ${C.gold}44`}} className="fu">{(client.name||"?")[0].toUpperCase()}</div>
         <div style={{fontSize:26,fontWeight:900,color:C.text,marginBottom:4,letterSpacing:"-0.02em"}} className="fu1">{client.name}</div>
@@ -1087,7 +1095,7 @@ function MainApp(){
     <div style={css.page}>
       <style>{RESPONSIVE_CSS}</style>
       <div style={css.header} className="header-pad">
-        <div style={{...css.logo,fontSize:11,letterSpacing:"-0.05em"}}>DNA</div>
+        <div style={{...css.logo}}/>  
         <div>
           <div style={{fontWeight:900,fontSize:15,color:C.gold,letterSpacing:"-0.01em"}}>DNA Trainer</div>
           <div style={{fontSize:9,color:C.muted,letterSpacing:"0.18em",textTransform:"uppercase",marginTop:1}} className="hsubtitle">Sporto & Mitybos programa</div>
