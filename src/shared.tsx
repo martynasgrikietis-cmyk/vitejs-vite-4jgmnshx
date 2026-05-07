@@ -136,6 +136,17 @@ export function calcNut(w:string,h:string,age:string,gender:string,act:number){
 }
 export function genToken(){return Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);}
 
+// Returns current coach ID from session (used for filtering queries)
+export function getCoachId():string|null{
+  try{const s=JSON.parse(sessionStorage.getItem("dna_session")||"null");return s?.id||null;}
+  catch{return null;}
+}
+// Returns true if current user is admin
+export function getIsAdmin():boolean{
+  try{const s=JSON.parse(sessionStorage.getItem("dna_session")||"null");return s?.role==="admin";}
+  catch{return false;}
+}
+
 // ── Shared UI components ──────────────────────────────────
 import { useState, useRef } from "react";
 
