@@ -45,7 +45,7 @@ function getSlots(schedule: Schedule, dateStr: string, bookings: Booking[]): str
 }
 
 // ── BOOKING PUBLIC PAGE ───────────────────────────────────
-export function BookingPage(){
+export function BookingPage({coachId}:{coachId:string|null}){
   const [schedule, setSchedule] = useState<Schedule>(DEFAULT_SCHEDULE);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,15 +58,17 @@ export function BookingPage(){
   const [error, setError] = useState("");
 
   useEffect(()=>{
+    const schedQ = coachId ? `?coach_id=eq.${coachId}&limit=1` : "?limit=1&order=created_at";
+    const bookQ  = coachId ? `?coach_id=eq.${coachId}&date=gte.${todayStr()}&order=date,time` : `?date=gte.${todayStr()}&order=date,time`;
     Promise.all([
-      sb.get("schedule","?limit=1&order=created_at").catch(()=>[]),
-      sb.get("bookings",`?date=gte.${todayStr()}&order=date,time`).catch(()=>[]),
+      sb.get("schedule", schedQ).catch(()=>[]),
+      sb.get("bookings", bookQ).catch(()=>[]),
     ]).then(([sch,bk])=>{
       if(sch.length){ setSchedule({...DEFAULT_SCHEDULE,...sch[0]}); }
       setBookings(bk);
       setLoading(false);
     }).catch(()=>setLoading(false));
-  },[]);
+  },[coachId]);
 
   // Build available days (next 7 days)
   const days: string[] = [];
@@ -88,11 +90,8 @@ export function BookingPage(){
     setSubmitting(true); setError("");
     try{
       // coach_id stored separately per coach; bookings are global slots but we need to filter
-      // Get coach_id from schedule record (may be null for old data, but store it)
-      const coachId = (schedule as any).id ? 
-        await sb.get("schedule","?limit=1&order=created_at").then((r:any[])=>r[0]?.coach_id||null).catch(()=>null)
-        : null;
-      await sb.insert("bookings",{date:selectedDate,time:selectedTime,client_name:name.trim(),client_phone:phone.trim(),goal:"",notes:"",status:"pending",coach_id:coachId});
+      // Use coachId from URL param — this ensures booking goes to correct coach
+      await sb.insert("bookings",{date:selectedDate,time:selectedTime,client_name:name.trim(),client_phone:phone.trim(),goal:"",notes:"",status:"pending",coach_id:coachId||null});
       // Fire notification (don't await — don't block success screen if it fails)
       fetch(`${SUPABASE_URL}/functions/v1/notify-booking`,{
         method:"POST",
@@ -246,20 +245,16 @@ export function CalendarTab(){
   const [selectedBooking, setSelectedBooking] = useState<Booking|null>(null);
   const [schedForm, setSchedForm] = useState<Schedule>(DEFAULT_SCHEDULE);
   const [blockDate, setBlockDate] = useState("");
-  const [bookingLink] = useState(()=>window.location.origin+window.location.pathname+"?type=booking");
+  const [bookingLink] = useState(()=>window.location.origin+window.location.pathname+`?type=booking&coach=${getCoachId()}`);
 
   const load = useCallback(async()=>{
     setLoading(true);
     try{
-      // Try coach-specific first, fall back to any schedule (for existing data)
-      let [sch,bk] = await Promise.all([
-        sb.get("schedule",`?coach_id=eq.${getCoachId()}&limit=1`).catch(()=>[]),
-        sb.get("bookings",`?coach_id=eq.${getCoachId()}&order=date,time`).catch(()=>[]),
+      const coachId = getCoachId();
+      const [sch,bk] = await Promise.all([
+        sb.get("schedule",`?coach_id=eq.${coachId}&limit=1`).catch(()=>[]),
+        sb.get("bookings",`?coach_id=eq.${coachId}&order=date,time`).catch(()=>[]),
       ]);
-      // Fallback: if no schedule found with coach_id, get any schedule
-      if(!sch.length) sch = await sb.get("schedule","?limit=1&order=created_at").catch(()=>[]);
-      // Fallback: if no bookings with coach_id, get all bookings (single coach setup)
-      if(!bk.length) bk = await sb.get("bookings","?order=date,time").catch(()=>[]);
       if(sch.length){ setSchedule({...DEFAULT_SCHEDULE,...sch[0]}); setSchedForm({...DEFAULT_SCHEDULE,...sch[0]}); setScheduleId(sch[0].id); }
       setBookings(bk);
     }finally{ setLoading(false); }
@@ -270,7 +265,7 @@ export function CalendarTab(){
     setSaving(true);
     try{
       if(scheduleId) await sb.update("schedule",scheduleId,schedForm);
-      else{ const r=await sb.insert("schedule",{...schedForm,coach_id:getCoachId()}); setScheduleId(r[0]?.id||null); }
+      else{ const c=getCoachId(); const r=await sb.insert("schedule",{...schedForm,coach_id:c}); setScheduleId(r[0]?.id||null); }
       setSchedule(schedForm); setView("week");
     }catch(e:any){ alert("Klaida: "+e.message); }
     finally{ setSaving(false); }
