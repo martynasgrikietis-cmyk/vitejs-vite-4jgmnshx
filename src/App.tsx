@@ -24,6 +24,187 @@ const emptyClient  = {name:"",age:"",weight:"",height:"",gender:"Vyras",goal:"",
 
 // LoginScreen is now in auth.tsx
 
+// ── CALENDAR + NOTES WIDGET ───────────────────────────────
+function CalendarNotesWidget({upcomingBookings}:{upcomingBookings:any[]}){
+  const today = new Date();
+  const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+  const [notes, setNotes] = useState<{id:number,text:string,done:boolean}[]>(()=>{
+    try{ return JSON.parse(localStorage.getItem("dna_notes")||"[]"); }catch{ return []; }
+  });
+  const [noteInput, setNoteInput] = useState("");
+
+  const saveNotes = (updated: {id:number,text:string,done:boolean}[]) => {
+    setNotes(updated);
+    try{ localStorage.setItem("dna_notes", JSON.stringify(updated)); }catch{}
+  };
+
+  const addNote = () => {
+    const t = noteInput.trim();
+    if(!t) return;
+    saveNotes([...notes, {id: Date.now(), text: t, done: false}]);
+    setNoteInput("");
+  };
+
+  const toggleNote = (id:number) => saveNotes(notes.map(n => n.id===id ? {...n, done: !n.done} : n));
+  const deleteNote = (id:number) => saveNotes(notes.filter(n => n.id!==id));
+
+  // Calendar grid
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const startOffset = firstDay === 0 ? 6 : firstDay - 1; // Monday first
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  // Booking dots — which days have bookings
+  const bookedDays = new Set(
+    upcomingBookings
+      .map(b => { const d = new Date(b.date+"T12:00"); return d.getMonth()===month && d.getFullYear()===year ? d.getDate() : null; })
+      .filter(Boolean)
+  );
+
+  const monthName = viewDate.toLocaleDateString("lt-LT", {month:"long",year:"numeric"});
+  const todayDay = today.getDate();
+  const isCurrentMonth = today.getMonth()===month && today.getFullYear()===year;
+
+  const prevMonth = () => setViewDate(new Date(year, month-1, 1));
+  const nextMonth = () => setViewDate(new Date(year, month+1, 1));
+
+  const weekDays = ["P","A","T","K","Pn","Š","S"];
+
+  return (
+    <div style={{display:"flex",flexDirection:"column" as const,gap:16}}>
+
+      {/* ── Mini Calendar ── */}
+      <div style={{...css.card,padding:18}}>
+        {/* Month nav */}
+        <div style={{display:"flex",alignItems:"center",marginBottom:14}}>
+          <button onClick={prevMonth} style={{...css.btnGhost,padding:"3px 8px",fontSize:12,lineHeight:1}}>‹</button>
+          <div style={{flex:1,textAlign:"center" as const,fontSize:12,fontWeight:700,color:C.text,textTransform:"capitalize" as const,letterSpacing:"0.04em"}}>{monthName}</div>
+          <button onClick={nextMonth} style={{...css.btnGhost,padding:"3px 8px",fontSize:12,lineHeight:1}}>›</button>
+        </div>
+
+        {/* Weekday headers */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
+          {weekDays.map(d=>(
+            <div key={d} style={{textAlign:"center" as const,fontSize:9,fontWeight:700,color:C.muted,letterSpacing:"0.06em",padding:"2px 0"}}>{d}</div>
+          ))}
+        </div>
+
+        {/* Day grid */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
+          {/* Empty cells before first day */}
+          {Array.from({length:startOffset}).map((_,i)=>(
+            <div key={`e${i}`}/>
+          ))}
+          {/* Day cells */}
+          {Array.from({length:daysInMonth}).map((_,i)=>{
+            const day = i+1;
+            const isToday = isCurrentMonth && day===todayDay;
+            const hasBooking = bookedDays.has(day);
+            return(
+              <div key={day} style={{
+                position:"relative" as const,
+                textAlign:"center" as const,
+                padding:"5px 2px",
+                borderRadius:6,
+                background:isToday?C.gold:"transparent",
+                cursor:"default",
+              }}>
+                <div style={{
+                  fontSize:11,fontWeight:isToday?800:400,
+                  color:isToday?C.bg:day===todayDay?C.text:C.muted,
+                  lineHeight:1,
+                }}>{day}</div>
+                {hasBooking && !isToday && (
+                  <div style={{
+                    position:"absolute" as const,bottom:1,left:"50%",transform:"translateX(-50%)",
+                    width:4,height:4,borderRadius:"50%",
+                    background:C.gold,
+                  }}/>
+                )}
+                {hasBooking && isToday && (
+                  <div style={{
+                    position:"absolute" as const,bottom:1,left:"50%",transform:"translateX(-50%)",
+                    width:4,height:4,borderRadius:"50%",
+                    background:C.bg,
+                  }}/>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Legend */}
+        {bookedDays.size>0 && (
+          <div style={{display:"flex",alignItems:"center",gap:5,marginTop:10,paddingTop:10,borderTop:`1px solid ${C.border}`}}>
+            <div style={{width:6,height:6,borderRadius:"50%",background:C.gold}}/>
+            <span style={{fontSize:9,color:C.muted,letterSpacing:"0.08em"}}>{bookedDays.size} rezervacij{bookedDays.size===1?"a":"ų"} šį mėnesį</span>
+          </div>
+        )}
+      </div>
+
+      {/* ── Notes / Tasks ── */}
+      <div style={{...css.card,padding:18,flex:1}}>
+        <div style={{display:"flex",alignItems:"center",marginBottom:12}}>
+          <span style={{...css.secTitle,marginBottom:0,flex:1}}>📝 Užrašai</span>
+          <span style={{fontSize:10,color:C.muted}}>{notes.filter(n=>!n.done).length} aktyvūs</span>
+        </div>
+
+        {/* Input */}
+        <div style={{display:"flex",gap:6,marginBottom:12}}>
+          <input
+            value={noteInput}
+            onChange={e=>setNoteInput(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&addNote()}
+            placeholder="Pridėti užduotį..."
+            style={{...css.input,flex:1,fontSize:12,padding:"8px 10px"}}
+          />
+          <button onClick={addNote} style={{...css.btnG,padding:"8px 12px",fontSize:14,fontWeight:900,flexShrink:0}}>+</button>
+        </div>
+
+        {/* Notes list */}
+        <div style={{display:"flex",flexDirection:"column" as const,gap:6,maxHeight:180,overflowY:"auto" as const}}>
+          {notes.length===0 && (
+            <div style={{textAlign:"center" as const,color:C.muted,padding:"16px 0",fontSize:12}}>Nėra užrašų</div>
+          )}
+          {notes.map(note=>(
+            <div key={note.id} style={{
+              display:"flex",alignItems:"flex-start",gap:8,
+              padding:"8px 10px",borderRadius:8,
+              background:note.done?C.faint:C.surface2,
+              border:`1px solid ${note.done?C.border:C.border}`,
+              opacity:note.done?0.5:1,
+              transition:"opacity 0.2s",
+            }}>
+              {/* Checkbox */}
+              <div
+                onClick={()=>toggleNote(note.id)}
+                style={{
+                  width:16,height:16,borderRadius:4,flexShrink:0,
+                  border:`1.5px solid ${note.done?C.green:C.border}`,
+                  background:note.done?C.green:"transparent",
+                  display:"flex",alignItems:"center",justifyContent:"center",
+                  cursor:"pointer",marginTop:1,
+                  transition:"all 0.15s",
+                }}
+              >
+                {note.done&&<span style={{fontSize:9,color:C.bg,fontWeight:900}}>✓</span>}
+              </div>
+              {/* Text */}
+              <div style={{flex:1,fontSize:12,color:C.text,lineHeight:1.4,textDecoration:note.done?"line-through":"none",wordBreak:"break-word" as const}}>{note.text}</div>
+              {/* Delete */}
+              <button
+                onClick={()=>deleteNote(note.id)}
+                style={{background:"none",border:"none",color:C.muted,fontSize:13,cursor:"pointer",padding:0,flexShrink:0,lineHeight:1,marginTop:1}}
+              >×</button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── DASHBOARD ─────────────────────────────────────────────
 function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
   const [stats,setStats]=useState({clients:0,exercises:0,foods:0,mealplans:0});
@@ -67,7 +248,7 @@ function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
         <div style={{position:"relative",padding:"32px 28px 28px"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
             <div style={{width:24,height:1,background:C.gold}}/>
-            <div style={{fontSize:10,color:C.gold,fontWeight:700,letterSpacing:"0.2em",textTransform:"uppercase"}}>Sporto sistema · {new Date().getFullYear()}</div>
+            <div style={{fontSize:10,color:C.gold,fontWeight:600,letterSpacing:"0.22em",textTransform:"uppercase"}}>Sporto sistema · {new Date().getFullYear()}</div>
           </div>
           <div style={{fontSize:36,fontWeight:800,color:"#FFFFFF",marginBottom:4,letterSpacing:"-0.01em",fontFamily:"'Inter',sans-serif",lineHeight:1.1}}>Sveiki sugrįžę</div>
           <div style={{fontSize:13,color:C.muted,marginBottom:22}}>{new Date().toLocaleDateString("lt-LT",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
@@ -82,11 +263,13 @@ function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
       {/* Stats cards */}
       <div className="dash-stats fu1" style={{}}>
         {statCards.map(s=>(
-          <div key={s.label} onClick={()=>onNav(s.tab)} style={{background:C.surface,borderRadius:14,border:`1px solid ${C.border}`,padding:"18px 16px",cursor:"pointer",position:"relative",overflow:"hidden",transition:"border-color .15s"}}>
-            <div style={{position:"absolute",top:0,right:0,width:70,height:70,background:`radial-gradient(ellipse at 100% 0%,${s.color}18 0%,transparent 70%)`,pointerEvents:"none"}}/>
-            <div style={{fontSize:32,marginBottom:8}}>{s.icon}</div>
-            <div style={{fontSize:38,fontWeight:900,color:s.color,lineHeight:1,marginBottom:6,fontFamily:"'Inter',sans-serif"}}>{loading?"—":s.val}</div>
-            <div style={{fontSize:11,color:C.muted,fontWeight:700,textTransform:"uppercase" as const,letterSpacing:"0.1em"}}>{s.label}</div>
+          <div key={s.label} onClick={()=>onNav(s.tab)} className="stat-card" style={{background:C.surface,borderRadius:16,border:`1px solid ${C.border}`,padding:"20px 18px",cursor:"pointer",position:"relative",overflow:"hidden"}}>
+            <div style={{position:"absolute",top:0,right:0,width:80,height:80,background:`radial-gradient(ellipse at 100% 0%,${s.color}22 0%,transparent 70%)`,pointerEvents:"none"}}/>
+            <div style={{position:"absolute",bottom:-8,left:-8,width:60,height:60,background:`radial-gradient(circle,${s.color}08 0%,transparent 70%)`,pointerEvents:"none"}}/>
+            <div style={{fontSize:30,marginBottom:10}}>{s.icon}</div>
+            <div style={{fontSize:36,fontWeight:900,color:s.color,lineHeight:1,marginBottom:7,fontFamily:"'Inter',sans-serif",letterSpacing:"-0.02em"}}>{loading?"—":s.val}</div>
+            <div style={{fontSize:10,color:C.muted,fontWeight:700,textTransform:"uppercase" as const,letterSpacing:"0.12em"}}>{s.label}</div>
+            <div style={{position:"absolute",bottom:0,left:0,right:0,height:2,background:`linear-gradient(to right,${s.color}00,${s.color}60,${s.color}00)`}}/>
           </div>
         ))}
       </div>
@@ -160,7 +343,7 @@ function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
               {upcomingBookings.filter(b=>b.date>todayISO).slice(0,3).map((b:any)=>(
                 <div key={b.id} style={{display:"flex",alignItems:"center",gap:10,background:C.faint,border:`1px solid ${C.border}`,borderRadius:10,padding:"8px 12px"}}>
                   <div style={{textAlign:"center",minWidth:38}}>
-                    <div style={{fontSize:14,fontWeight:900,color:C.gold,fontFamily:"'Cormorant SC',serif"}}>{new Date(b.date+"T12:00:00").getDate()}</div>
+                    <div style={{fontSize:14,fontWeight:900,color:C.gold,fontFamily:"'Inter',sans-serif"}}>{new Date(b.date+"T12:00:00").getDate()}</div>
                     <div style={{fontSize:8,color:C.muted,letterSpacing:"0.06em"}}>{new Date(b.date+"T12:00:00").toLocaleDateString("lt-LT",{month:"short"}).toUpperCase()}</div>
                   </div>
                   <div style={{width:1,height:28,background:C.border}}/>
@@ -174,6 +357,9 @@ function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
             </div>
           )}
         </div>
+
+        {/* ── 3rd column: Mini Calendar + Notes ── */}
+        <CalendarNotesWidget upcomingBookings={upcomingBookings}/>
       </div>
     </div>
   );
@@ -409,7 +595,7 @@ function SharePage({token,type}:{token:string,type:string}){
             );
           })}
           <div style={{textAlign:"center",color:C.muted,fontSize:11,marginTop:32,paddingTop:16,borderTop:`1px solid ${C.border}`}}>
-            <div style={{fontWeight:700,color:C.gold,marginBottom:4}}>DNA Trainer</div>
+            <div style={{display:"flex",alignItems:"center",gap:8,justifyContent:"center",marginBottom:4}}><svg width="16" height="16" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="22" stroke={C.gold} strokeWidth="1.5" opacity={0.6}/><ellipse cx="24" cy="24" rx="12" ry="5.5" stroke={C.gold} strokeWidth="1.5" fill="none"/><ellipse cx="24" cy="24" rx="12" ry="5.5" stroke={C.gold} strokeWidth="1.5" fill="none" transform="rotate(60 24 24)"/><ellipse cx="24" cy="24" rx="12" ry="5.5" stroke={C.gold} strokeWidth="1.5" fill="none" transform="rotate(120 24 24)"/><circle cx="24" cy="24" r="2.5" fill={C.gold}/></svg><span style={{fontSize:11,fontWeight:300,letterSpacing:"0.18em",color:C.gold}}>DNA TRAINER</span></div>
             <div>Sporto & Mitybos programa</div>
           </div>
         </div>
@@ -420,7 +606,7 @@ function SharePage({token,type}:{token:string,type:string}){
         <>
           <MealSharePage client={client}/>
           <div style={{textAlign:"center",color:C.muted,fontSize:11,padding:"16px 16px 32px",borderTop:`1px solid ${C.border}`,maxWidth:560,margin:"0 auto"}}>
-            <div style={{fontWeight:700,color:C.gold,marginBottom:4}}>DNA Trainer</div>
+            <div style={{display:"flex",alignItems:"center",gap:8,justifyContent:"center",marginBottom:4}}><svg width="16" height="16" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="22" stroke={C.gold} strokeWidth="1.5" opacity={0.6}/><ellipse cx="24" cy="24" rx="12" ry="5.5" stroke={C.gold} strokeWidth="1.5" fill="none"/><ellipse cx="24" cy="24" rx="12" ry="5.5" stroke={C.gold} strokeWidth="1.5" fill="none" transform="rotate(60 24 24)"/><ellipse cx="24" cy="24" rx="12" ry="5.5" stroke={C.gold} strokeWidth="1.5" fill="none" transform="rotate(120 24 24)"/><circle cx="24" cy="24" r="2.5" fill={C.gold}/></svg><span style={{fontSize:11,fontWeight:300,letterSpacing:"0.18em",color:C.gold}}>DNA TRAINER</span></div>
             <div>Sporto & Mitybos programa</div>
           </div>
         </>
@@ -1104,6 +1290,186 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
   );
 }
 
+// ── ADMIN STATISTICS TAB ─────────────────────────────────
+function AdminStatsTab(){
+  const [coaches,setCoaches]=useState<any[]>([]);
+  const [allClients,setAllClients]=useState<any[]>([]);
+  const [allBookings,setAllBookings]=useState<any[]>([]);
+  const [exercises,setExercises]=useState<any[]>([]);
+  const [foods,setFoods]=useState<any[]>([]);
+  const [loading,setLoading]=useState(true);
+
+  useEffect(()=>{
+    Promise.all([
+      sb.get("coaches","?order=created_at.asc"),
+      sb.get("clients","?order=created_at.desc"),
+      sb.get("bookings","?order=created_at.desc"),
+      sb.get("exercises","?select=id"),
+      sb.get("foods","?select=id").catch(()=>[] as any[]),
+    ]).then(([c,cl,bk,ex,fd])=>{
+      setCoaches(c); setAllClients(cl); setAllBookings(bk);
+      setExercises(ex); setFoods(fd); setLoading(false);
+    }).catch(()=>setLoading(false));
+  },[]);
+
+  if(loading)return <Spinner/>;
+
+  const totalRevenue = allClients.length * 149; // estimate per client
+  const todayISO = new Date().toISOString().slice(0,10);
+  const todayBookings = allBookings.filter(b=>b.date===todayISO);
+  const pendingBookings = allBookings.filter(b=>b.status==="pending");
+  const confirmedBookings = allBookings.filter(b=>b.status==="confirmed");
+
+  const topStats = [
+    {icon:"👥",label:"Visi treneriai",val:coaches.length,color:C.gold},
+    {icon:"🏃",label:"Visi klientai",val:allClients.length,color:C.teal},
+    {icon:"📅",label:"Viso rezervacijų",val:allBookings.length,color:C.green},
+    {icon:"🏋️",label:"Pratimai bibliotekoje",val:exercises.length,color:C.purple},
+    {icon:"🥗",label:"Maisto produktai",val:foods.length,color:C.green},
+    {icon:"⏳",label:"Laukiančios rezervacijos",val:pendingBookings.length,color:C.red},
+  ];
+
+  return(
+    <div className="fu">
+      {/* Header */}
+      <div style={{marginBottom:28}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+          <div style={{width:3,height:20,background:C.gold,borderRadius:2}}/>
+          <div style={{fontSize:10,color:C.gold,fontWeight:700,letterSpacing:"0.18em",textTransform:"uppercase"}}>Admin · Sistemos statistika</div>
+        </div>
+        <div style={{fontSize:28,fontWeight:800,color:C.text,letterSpacing:"-0.01em"}}>Platformos apžvalga</div>
+        <div style={{fontSize:13,color:C.muted,marginTop:4}}>{new Date().toLocaleDateString("lt-LT",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
+      </div>
+
+      {/* Top stats */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:14,marginBottom:28}}>
+        {topStats.map(s=>(
+          <div key={s.label} className="stat-card" style={{background:C.surface,borderRadius:16,border:`1px solid ${C.border}`,padding:"18px 16px",position:"relative",overflow:"hidden"}}>
+            <div style={{position:"absolute",top:0,right:0,width:60,height:60,background:`radial-gradient(ellipse at 100% 0%,${s.color}20 0%,transparent 70%)`}}/>
+            <div style={{fontSize:26,marginBottom:8}}>{s.icon}</div>
+            <div style={{fontSize:32,fontWeight:900,color:s.color,lineHeight:1,marginBottom:5,fontFamily:"'Inter',sans-serif"}}>{s.val}</div>
+            <div style={{fontSize:10,color:C.muted,fontWeight:600,textTransform:"uppercase" as const,letterSpacing:"0.1em"}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Per-coach breakdown */}
+      <div style={{...css.card,marginBottom:20}}>
+        <div className="section-header">
+          <div className="gold-line"><span style={{fontSize:12,fontWeight:700,color:C.text,letterSpacing:"0.1em",textTransform:"uppercase"}}>Treneriai ir jų statistika</span></div>
+        </div>
+        <div style={{display:"flex",flexDirection:"column" as const,gap:10}}>
+          {coaches.map(coach=>{
+            const cClients = allClients.filter(c=>c.coach_id===coach.id);
+            const cBookings = allBookings.filter(b=>b.coach_id===coach.id);
+            const cPending = cBookings.filter(b=>b.status==="pending");
+            const cConfirmed = cBookings.filter(b=>b.status==="confirmed");
+            const cWithProgram = cClients.filter(c=>c.program && Object.keys(c.program||{}).length>0);
+            const cWithMeal = cClients.filter(c=>c.meal_plan_name);
+            const lastActive = cClients[0]?.created_at ? new Date(cClients[0].created_at).toLocaleDateString("lt-LT") : "—";
+
+            return(
+              <div key={coach.id} style={{background:C.faint,borderRadius:12,border:`1px solid ${C.border}`,padding:"16px 18px",display:"flex",alignItems:"center",gap:16,flexWrap:"wrap" as const}}>
+                {/* Avatar + name */}
+                <div style={{display:"flex",alignItems:"center",gap:12,minWidth:160,flexShrink:0}}>
+                  <div style={{width:40,height:40,background:`linear-gradient(135deg,${C.gold},#8B6520)`,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:900,color:C.bg,flexShrink:0}}>
+                    {(coach.full_name||"?")[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:700,color:C.text}}>{coach.full_name}</div>
+                    <div style={{display:"flex",gap:5,marginTop:3}}>
+                      <span style={{fontSize:9,background:coach.role==="admin"?C.goldSoft:"transparent",border:`1px solid ${coach.role==="admin"?C.goldBorder:C.border}`,borderRadius:10,padding:"1px 7px",color:coach.role==="admin"?C.gold:C.muted,fontWeight:700,textTransform:"uppercase" as const}}>
+                        {coach.role==="admin"?"ADMIN":"COACH"}
+                      </span>
+                      <span style={{fontSize:9,background:coach.active?C.greenSoft:C.redSoft,border:`1px solid ${coach.active?C.greenBorder:C.redBorder}`,borderRadius:10,padding:"1px 7px",color:coach.active?C.green:C.red,fontWeight:700}}>
+                        {coach.active?"AKTYVUS":"NEAKTYVUS"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stats grid */}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:10,flex:1}}>
+                  {[
+                    {label:"Klientai",val:cClients.length,color:C.teal},
+                    {label:"Rezervacijos",val:cBookings.length,color:C.gold},
+                    {label:"Laukia",val:cPending.length,color:C.red},
+                    {label:"Patvirtinta",val:cConfirmed.length,color:C.green},
+                    {label:"Su programa",val:cWithProgram.length,color:C.purple},
+                    {label:"Su mityba",val:cWithMeal.length,color:C.green},
+                  ].map(stat=>(
+                    <div key={stat.label} style={{textAlign:"center" as const}}>
+                      <div style={{fontSize:20,fontWeight:800,color:stat.color,fontFamily:"'Inter',sans-serif",lineHeight:1}}>{stat.val}</div>
+                      <div style={{fontSize:9,color:C.muted,marginTop:3,letterSpacing:"0.06em"}}>{stat.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Last activity */}
+                <div style={{fontSize:10,color:C.muted,flexShrink:0,textAlign:"right" as const}}>
+                  <div>Paskutinis klientas</div>
+                  <div style={{color:C.text,fontWeight:600,marginTop:2}}>{lastActive}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Today + pending bookings */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+        <div style={css.card}>
+          <div className="section-header">
+            <div className="gold-line"><span style={{fontSize:12,fontWeight:700,color:C.text,letterSpacing:"0.1em",textTransform:"uppercase"}}>Šiandienos rezervacijos</span></div>
+            <span style={{fontSize:12,color:C.gold,fontWeight:700}}>{todayBookings.length}</span>
+          </div>
+          {todayBookings.length===0
+            ? <div style={{textAlign:"center" as const,color:C.muted,padding:"24px 0",fontSize:13}}>Šiandien nėra rezervacijų</div>
+            : <div style={{display:"flex",flexDirection:"column" as const,gap:8}}>
+                {todayBookings.map((b:any)=>(
+                  <div key={b.id} style={{display:"flex",alignItems:"center",gap:10,background:C.faint,borderRadius:10,padding:"10px 12px",border:`1px solid ${C.border}`}}>
+                    <div style={{fontSize:15,fontWeight:800,color:C.gold,minWidth:46,fontFamily:"'Inter',sans-serif"}}>{b.time}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:13,fontWeight:600,color:C.text}}>{b.client_name}</div>
+                      <div style={{fontSize:11,color:C.muted}}>{b.client_phone||"—"}</div>
+                    </div>
+                    <span style={{fontSize:9,background:b.status==="confirmed"?C.greenSoft:C.goldSoft,border:`1px solid ${b.status==="confirmed"?C.greenBorder:C.goldBorder}`,borderRadius:8,padding:"2px 8px",color:b.status==="confirmed"?C.green:C.gold,fontWeight:700}}>
+                      {b.status==="confirmed"?"✓ Patvirtinta":"⏳ Laukia"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+          }
+        </div>
+
+        <div style={css.card}>
+          <div className="section-header">
+            <div className="gold-line"><span style={{fontSize:12,fontWeight:700,color:C.text,letterSpacing:"0.1em",textTransform:"uppercase"}}>Laukiančios patvirtinimo</span></div>
+            <span style={{fontSize:12,color:C.red,fontWeight:700}}>{pendingBookings.length}</span>
+          </div>
+          {pendingBookings.length===0
+            ? <div style={{textAlign:"center" as const,color:C.muted,padding:"24px 0",fontSize:13}}>Viskas patvirtinta ✓</div>
+            : <div style={{display:"flex",flexDirection:"column" as const,gap:8,maxHeight:300,overflowY:"auto" as const}}>
+                {pendingBookings.slice(0,8).map((b:any)=>(
+                  <div key={b.id} style={{display:"flex",alignItems:"center",gap:10,background:C.faint,borderRadius:10,padding:"9px 12px",border:`1px solid ${C.border}`}}>
+                    <div style={{textAlign:"center" as const,minWidth:36}}>
+                      <div style={{fontSize:14,fontWeight:800,color:C.gold,fontFamily:"'Inter',sans-serif",lineHeight:1}}>{new Date(b.date+"T12:00").getDate()}</div>
+                      <div style={{fontSize:8,color:C.muted,letterSpacing:"0.06em"}}>{new Date(b.date+"T12:00").toLocaleDateString("lt-LT",{month:"short"}).toUpperCase()}</div>
+                    </div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:600,color:C.text}}>{b.client_name}</div>
+                      <div style={{fontSize:10,color:C.muted}}>{b.time}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── MAIN APP ──────────────────────────────────────────────
 // MainApp: shown when logged in
 function MainApp(){
@@ -1128,17 +1494,30 @@ function MainApp(){
     {id:"exercises",icon:"🏋️",label:"Pratimai"},
     {id:"foods",icon:"🥗",label:"Mityba"},
     {id:"calendar",icon:"📅",label:"Kalendorius"},
-    ...(isAdmin?[{id:"users",icon:"⚙️",label:"Vartotojai"}]:[]),
+    ...(isAdmin?[{id:"stats",icon:"📊",label:"Statistika"},{id:"users",icon:"⚙️",label:"Vartotojai"}]:[]),
   ];
 
   return(
     <div style={css.page}>
       <style>{RESPONSIVE_CSS}</style>
       <div style={css.header} className="header-pad">
-        <div style={{...css.logo}}/>  
+        {/* Atom DNA Logo */}
+        <svg width="34" height="34" viewBox="0 0 48 48" fill="none" style={{flexShrink:0}}>
+          <circle cx="24" cy="24" r="22" stroke={C.text} strokeWidth="1" opacity={0.4}/>
+          <ellipse cx="24" cy="24" rx="12" ry="5.5" stroke={C.text} strokeWidth="1.1" fill="none" opacity={0.75}/>
+          <ellipse cx="24" cy="24" rx="12" ry="5.5" stroke={C.text} strokeWidth="1.1" fill="none" opacity={0.75} transform="rotate(60 24 24)"/>
+          <ellipse cx="24" cy="24" rx="12" ry="5.5" stroke={C.text} strokeWidth="1.1" fill="none" opacity={0.75} transform="rotate(120 24 24)"/>
+          <circle cx="24" cy="24" r="2.2" fill={C.gold}/>
+          <circle cx="36" cy="24" r="1.4" fill={C.text} opacity={0.85}/>
+          <circle cx="18" cy="14.5" r="1.4" fill={C.text} opacity={0.85}/>
+          <circle cx="18" cy="33.5" r="1.4" fill={C.text} opacity={0.85}/>
+        </svg>
+        {/* Divider */}
+        <div style={{width:1,height:26,background:C.border,flexShrink:0}}/>
+        {/* Wordmark */}
         <div>
-          <div style={{fontWeight:900,fontSize:15,color:C.gold,letterSpacing:"-0.01em"}}>DNA Trainer</div>
-          <div style={{fontSize:10,color:C.muted,letterSpacing:"0.12em",textTransform:"uppercase",marginTop:2}} className="hsubtitle">Sporto & Mitybos programa</div>
+          <div style={{fontWeight:300,fontSize:13,color:C.text,letterSpacing:"0.22em",fontFamily:"'Inter',sans-serif",textTransform:"uppercase"}}>DNA TRAINER</div>
+          <div style={{fontSize:9,color:C.muted,letterSpacing:"0.15em",textTransform:"uppercase",marginTop:1}} className="hsubtitle">Sporto sistema</div>
         </div>
         <div style={{marginLeft:"auto",display:"flex",gap:4,alignItems:"center"}}>
           {NAV.map(n=>(
@@ -1163,6 +1542,7 @@ function MainApp(){
         {tab==="clients"    && <ClientsTab key={tab+autoOpen} exercises={exercises} foods={foods} autoOpen={autoOpen}/>}
         {tab==="calendar"   && <CalendarTab/>}
         {tab==="users"      && isAdmin && <UsersTab/>}
+        {tab==="stats"      && isAdmin && <AdminStatsTab/>}
       </div>
     </div>
   );
