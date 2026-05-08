@@ -1344,24 +1344,12 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
           {step===2&&planType==="meal"&&(<div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap" as const}}>
               <div style={{flex:1}}><span style={css.label}>Mitybos plano pavadinimas</span><input value={mealPlanName} onChange={e=>setMealPlanName(e.target.value)} placeholder="pvz. Tomo mitybos planas" style={{...css.input,maxWidth:380}}/></div>
-              <AIMealPlanGenerator
-                clientForm={clientForm}
-                foods={foods}
-                trainingDays={trainingDays}
-                onGenerate={(plan:any,name:string)=>{setMealPlan(plan);setMealPlanName(name);}}
-              />
             </div>
             <MealPlanBuilder days={trainingDays.length>0?trainingDays:DAYS.slice(0,5)} mealPlan={mealPlan} setMealPlan={setMealPlan} foods={foods}/>
           </div>)}
           {step===2&&planType!=="meal"&&(<div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap" as const}}>
               <div style={{flex:1}}><span style={css.label}>Programos pavadinimas</span><input value={programName} onChange={e=>setProgramName(e.target.value)} placeholder="pvz. Tomo 3 dienų programa" style={{...css.input,maxWidth:380}}/></div>
-              <AIProgramGenerator
-                clientForm={clientForm}
-                exercises={exercises}
-                trainingDays={trainingDays}
-                onGenerate={(prog:any,name:string)=>{setProgram(prog);setProgramName(name);}}
-              />
             </div>
             {trainingDays.length===0?<div style={{...css.card,textAlign:"center",color:C.muted,padding:36}}>Grįžkite į 1 žingsnį ir pasirinkite treniruočių dienas.</div>:trainingDays.map(day=>(<div key={day} style={{...css.card,marginBottom:12}}>
               <div style={{display:"flex",alignItems:"center",marginBottom:10,gap:8}}>
@@ -1688,159 +1676,6 @@ function AdminStatsTab(){
   );
 }
 
-// ── AI PROGRAM GENERATOR (#16) ───────────────────────────
-function AIProgramGenerator({clientForm,exercises,trainingDays,onGenerate}:any){
-  const [loading,setLoading]=useState(false);
-  const [done,setDone]=useState(false);
-
-  const generate=async()=>{
-    if(!clientForm.name||trainingDays.length===0){
-      alert("Pirmiausia įveskite kliento vardą ir pasirinkite treniruočių dienas (1 žingsnis).");
-      return;
-    }
-    setLoading(true);
-    const exList=exercises.slice(0,60).map((e:any)=>({id:e.id,name:e.name,muscle:e.muscle,sets:e.sets,reps:e.reps}));
-    const prompt=`Sukurk treniruočių programą klientui.
-Kliento duomenys:
-- Vardas: ${clientForm.name}
-- Tikslas: ${clientForm.goal||"Bendra sveikata"}
-- Lygis: ${clientForm.level||"Vidutinis"}
-- Amžius: ${clientForm.age||"30"} m.
-- Svoris: ${clientForm.weight||"80"} kg
-- Treniruočių dienos: ${trainingDays.join(", ")}
-
-Galimi pratimai iš bibliotekos (naudok tik šiuos):
-${JSON.stringify(exList,null,1)}
-
-Grąžink TIKTAI JSON objektą (be jokio teksto prieš ar po), tokio formato:
-{
-  "programName": "Programos pavadinimas",
-  "program": {
-    "Pirmadienis": [
-      {"id":"ex-id","name":"Pratimo pavadinimas","muscle":"Raumenų grupė","sets":"4","reps":"8-10","customSets":"4","customReps":"8-10","customWeight":"","customRest":"90 sek","imgs":[]},
-      ...
-    ],
-    "Trečiadienis": [...],
-    ...
-  }
-}
-Kiekvienai dienai 4-6 pratimai. Programos pavadinimas lietuviškai. Naudok tik pratimus iš sąrašo.`;
-
-    try{
-      const resp=await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          model:"claude-sonnet-4-20250514",
-          max_tokens:1000,
-          messages:[{role:"user",content:prompt}],
-        }),
-      });
-      const data=await resp.json();
-      const text=data.content?.find((b:any)=>b.type==="text")?.text||"";
-      const clean=text.replace(/```json|```/g,"").trim();
-      const parsed=JSON.parse(clean);
-      onGenerate(parsed.program||{}, parsed.programName||`${clientForm.name} programa`);
-      setDone(true);
-      setTimeout(()=>setDone(false),3000);
-    }catch(e){
-      alert("AI klaida. Patikrinkite interneto ryšį ir bandykite dar kartą.");
-    }finally{setLoading(false);}
-  };
-
-  return(
-    <button onClick={generate} disabled={loading} style={{
-      ...css.btnG,
-      background:done?"#4E9068":`linear-gradient(135deg,#7B6DB0,#4A3880)`,
-      color:"#fff",display:"flex",alignItems:"center",gap:8,
-      padding:"10px 18px",fontSize:12,flexShrink:0,
-      opacity:loading?0.7:1,whiteSpace:"nowrap" as const,
-    }}>
-      {loading?<><div style={{width:14,height:14,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Generuoja...</>
-      :done?<>✓ Programa sukurta!</>
-      :<>🤖 AI Generuoti programą</>}
-    </button>
-  );
-}
-
-// ── AI MEAL PLAN GENERATOR (#17) ─────────────────────────
-function AIMealPlanGenerator({clientForm,foods,trainingDays,onGenerate}:any){
-  const [loading,setLoading]=useState(false);
-  const [done,setDone]=useState(false);
-
-  const generate=async()=>{
-    if(!clientForm.name){
-      alert("Pirmiausia įveskite kliento vardą (1 žingsnis).");
-      return;
-    }
-    setLoading(true);
-    const foodList=foods.slice(0,80).map((f:any)=>({id:f.id,name:f.name,category:f.category,calories:f.calories,protein:f.protein,carbs:f.carbs,fat:f.fat,unit:f.unit||"g",portion:f.portion||100}));
-    const days=trainingDays.length>0?trainingDays:["Pirmadienis","Antradienis","Trečiadienis","Ketvirtadienis","Penktadienis"];
-    const MEAL_TIMES_LIST=["🌅 Pusryčiai","☀️ Priešpiečiai","🍽️ Pietūs","🌤️ Užkandis","🌙 Vakarienė"];
-
-    const prompt=`Sukurk mitybos planą klientui.
-Kliento duomenys:
-- Vardas: ${clientForm.name}
-- Tikslas: ${clientForm.goal||"Sveikata"}
-- Svoris: ${clientForm.weight||"80"} kg
-- Ūgis: ${clientForm.height||"175"} cm
-- Lytis: ${clientForm.gender||"Vyras"}
-- Dienos: ${days.join(", ")}
-
-Galimi maisto produktai (naudok tik šiuos):
-${JSON.stringify(foodList,null,1)}
-
-Grąžink TIKTAI JSON be jokio papildomo teksto:
-{
-  "planName": "Plano pavadinimas",
-  "plan": {
-    "Pirmadienis": {
-      "🌅 Pusryčiai": [{"id":"food-id","name":"Maisto pavadinimas","grams":150,"kcalActual":250,"protActual":20,"carbsActual":30,"fatActual":8,"category":"kategorija","imgs":[]}],
-      "🍽️ Pietūs": [...],
-      "🌙 Vakarienė": [...]
-    },
-    "Antradienis": {...}
-  }
-}
-Kiekvienai dienai 3-4 valgymų laikai su 1-3 produktais. Gramai realistiški. Tik šie meal times: ${MEAL_TIMES_LIST.join(", ")}.`;
-
-    try{
-      const resp=await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          model:"claude-sonnet-4-20250514",
-          max_tokens:1000,
-          messages:[{role:"user",content:prompt}],
-        }),
-      });
-      const data=await resp.json();
-      const text=data.content?.find((b:any)=>b.type==="text")?.text||"";
-      const clean=text.replace(/```json|```/g,"").trim();
-      const parsed=JSON.parse(clean);
-      onGenerate(parsed.plan||{}, parsed.planName||`${clientForm.name} mitybos planas`);
-      setDone(true);
-      setTimeout(()=>setDone(false),3000);
-    }catch(e){
-      alert("AI klaida. Patikrinkite interneto ryšį ir bandykite dar kartą.");
-    }finally{setLoading(false);}
-  };
-
-  return(
-    <button onClick={generate} disabled={loading} style={{
-      ...css.btnG,
-      background:done?"#4E9068":`linear-gradient(135deg,#4E9068,#2A5A40)`,
-      color:"#fff",display:"flex",alignItems:"center",gap:8,
-      padding:"10px 18px",fontSize:12,flexShrink:0,
-      opacity:loading?0.7:1,whiteSpace:"nowrap" as const,
-    }}>
-      {loading?<><div style={{width:14,height:14,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Generuoja...</>
-      :done?<>✓ Mitybos planas sukurtas!</>
-      :<>🤖 AI Generuoti mitybos planą</>}
-    </button>
-  );
-}
-
 // ── GLOBAL SEARCH MODAL (#10) ────────────────────────────
 function GlobalSearchModal({clients,exercises,foods,onClose,onNav}:any){
   const [q,setQ]=useState("");
@@ -2014,13 +1849,12 @@ Atsakyk trumpai ir konkrečiai (iki 150 žodžių).`;
     setInput("");
     setLoading(true);
     try{
-      const resp=await fetch("https://api.anthropic.com/v1/messages",{
+      const resp=await fetch(`${SUPABASE_URL}/functions/v1/ai-proxy`,{
         method:"POST",
-        headers:{"Content-Type":"application/json"},
+        headers:{"Content-Type":"application/json","Authorization":`Bearer ${SUPABASE_KEY}`},
         body:JSON.stringify({
-          model:"claude-sonnet-4-20250514",
-          max_tokens:1000,
           system:systemPrompt,
+          max_tokens:1000,
           messages:newMessages.map(m=>({role:m.role,content:m.text})),
         }),
       });
