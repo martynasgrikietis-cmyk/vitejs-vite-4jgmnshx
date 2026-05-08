@@ -1,6 +1,6 @@
 // ── App.tsx — Dashboard, Exercises, Clients, Share page ──
 import { useState, useCallback, useEffect } from "react";
-import { sb, C, FONT, RESPONSIVE_CSS, css, ALL_MUSCLES, GOALS, LEVELS, DAYS, REST_OPTIONS, ACTIVITY_LEVELS, calcBMI, bmiCat, calcNut, genToken, getCoachId, getIsAdmin, Tag, Badge, Spinner, Err, NutriBadge, ImgGallery, MultiImgUploader } from "./shared";
+import { sb, C, FONT, RESPONSIVE_CSS, css, ALL_MUSCLES, GOALS, LEVELS, DAYS, REST_OPTIONS, ACTIVITY_LEVELS, calcBMI, bmiCat, calcNut, genToken, getCoachId, getIsAdmin, Tag, Badge, Spinner, Skeleton, SkeletonCard, Err, NutriBadge, ImgGallery, MultiImgUploader } from "./shared";
 import { LoginScreen, AuthProvider, UsersTab, useAuth, getSession, clearSession } from "./auth";
 import { FoodsTab, MealPlanBuilder, MealSharePage } from "./MealPlan";
 import { CalendarTab, BookingPage } from "./Calendar";
@@ -717,12 +717,21 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
   const [saving,setSaving]=useState(false);
   const [confirmDel,setConfirmDel]=useState<any>(null);
   const [shareModal,setShareModal]=useState<any>(null);
+  const [templateModal,setTemplateModal]=useState(false);
 
   const load=useCallback(async()=>{setLoading(true);setError("");try{setClients(await sb.get("clients",`?coach_id=eq.${getCoachId()}&order=name`));}catch(e:any){setError("Klaida: "+e.message);}finally{setLoading(false);};},[]);
   useEffect(()=>{load();},[load]);
   const loadProgress=async(cid:any)=>{setProgLoading(true);try{setProgressList(await sb.get("progress",`?client_id=eq.${cid}&order=date.desc`));}catch(e){console.error(e);}finally{setProgLoading(false);};};
   const openView=(c:any)=>{setView(c);loadProgress(c.id);};
   const openNew=()=>{setEditClientId(null);setClientForm({...emptyClient});setProgram({});setProgramName("");setMealPlan({});setMealPlanName("");setStep(1);setPlanType("both");setClientFormOpen(true);};
+  const copyFromTemplate=(template:any)=>{
+    setProgram(template.program||{});
+    setProgramName((template.program_name||"")+" (kopija)");
+    setMealPlan(template.meal_plan||{});
+    setMealPlanName(template.meal_plan_name?(template.meal_plan_name+" (kopija)"):"");
+    setPlanType(template.meal_plan_name&&template.program_name?"both":template.meal_plan_name?"meal":"training");
+    setTemplateModal(false);
+  };
   const openEdit=(c:any)=>{
     setEditClientId(c.id);
     setClientForm({name:c.name||"",age:c.age||"",weight:c.weight||"",height:c.height||"",gender:c.gender||"Vyras",goal:c.goal||"",level:c.level||"",notes:c.notes||"",training_days:c.training_days||[],activity_index:c.activity_index??2});
@@ -756,7 +765,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
   const toggleDay=(d:string)=>setClientForm(p=>({...p,training_days:p.training_days.includes(d)?p.training_days.filter((x:string)=>x!==d):[...p.training_days,d]}));
   const openPick=(day:string)=>{setPickDay(day);setPickedEx(null);setPickSets("");setPickReps("");setPickWeight("");setPickRest("");};
   const pickList=exercises.filter(e=>(pickMuscle==="Visos"||e.muscle===pickMuscle)&&(e.name.toLowerCase().includes(pickSearch.toLowerCase())||e.muscle.toLowerCase().includes(pickSearch.toLowerCase())));
-  const addToDay=()=>{if(!pickedEx)return;setProgram((p:any)=>({...p,[pickDay]:[...(p[pickDay]||[]),{...pickedEx,customSets:pickSets||pickedEx.sets,customReps:pickReps||pickedEx.reps,customWeight:pickWeight||"",customRest:pickRest||""}]}));setPickDay(null);};
+  const addToDay=()=>{if(!pickedEx)return;const isSuperset=pickSets==="SS";setProgram((p:any)=>({...p,[pickDay]:[...(p[pickDay]||[]),{...pickedEx,customSets:isSuperset?"3":pickSets||pickedEx.sets,customReps:pickReps||pickedEx.reps,customWeight:pickWeight||"",customRest:pickRest||"",superset:isSuperset}]}));setPickDay(null);};
   const removeFromDay=(day:string,idx:number)=>setProgram((p:any)=>({...p,[day]:p[day].filter((_:any,i:number)=>i!==idx)}));
   const openShareModal=async(c:any)=>{
     let token=c.share_token;
@@ -896,7 +905,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
       </div>
       <Err msg={error}/>
       {clients.length>0&&<input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Ieškoti kliento..." style={{...css.input,maxWidth:360,marginBottom:16}}/>}
-      {loading?<Spinner/>:(
+      {loading?(<div className="cl-grid">{[1,2,3,4,5,6].map(i=><SkeletonCard key={i}/>)}</div>):(
         clients.length===0?(
           <div style={{...css.card,textAlign:"center",padding:"60px 32px"}}>
             <div style={{fontSize:48,marginBottom:14}}>👥</div>
@@ -908,36 +917,63 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
             {filtered.map(c=>{
               const bmi=calcBMI(c.weight,c.height);
               const bmiN=bmi?parseFloat(bmi.toFixed(1)):null;
+              const bmiC=bmiN?bmiCat(bmiN):null;
               const dayCount=Object.values(c.program||{}).filter((d:any)=>d.length>0).length;
-              const exCount=Object.values(c.program||{}).reduce((s:any,d:any)=>s+d.length,0);
+              const exCount=Object.values(c.program||{}).reduce((s:any,d:any)=>s+d.length,0) as number;
+              const todayName=DAYS[new Date().getDay()===0?6:new Date().getDay()-1];
+              const trainsToday=(c.training_days||[]).includes(todayName);
+              const completionPct=Math.min(100,Math.round((exCount/20)*100));
               return(
-                <div key={c.id} style={{background:C.surface,borderRadius:14,border:`1px solid ${C.border}`,overflow:"hidden",display:"flex",flexDirection:"column"}}>
-                  <div style={{background:C.faint,padding:"14px 16px",display:"flex",alignItems:"center",gap:12}}>
-                    <div style={{width:44,height:44,background:`linear-gradient(135deg,${C.gold},#B06A08)`,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:900,color:C.bg,flexShrink:0}}>{(c.name||"?")[0].toUpperCase()}</div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:15,fontWeight:700,color:"#FFFFFF"}}>{c.name}</div>
-                      <div style={{fontSize:11,color:C.muted,marginTop:2}}>{c.program_name||"Programa"} · {new Date(c.created_at).toLocaleDateString("lt-LT")}</div>
+                <div key={c.id} style={{background:C.surface,borderRadius:16,border:`1px solid ${trainsToday?C.goldBorder:C.border}`,overflow:"hidden",display:"flex",flexDirection:"column" as const,transition:"transform .15s,border-color .15s",cursor:"pointer"}} onClick={()=>openView(c)}>
+                  {/* Card top — accent bar */}
+                  <div style={{height:3,background:trainsToday?`linear-gradient(to right,${C.gold},${C.gold}80)`:C.border}}/>
+                  <div style={{padding:"14px 16px 10px",display:"flex",alignItems:"flex-start",gap:12}}>
+                    {/* Avatar */}
+                    <div style={{width:46,height:46,background:`linear-gradient(135deg,${C.gold},#8B6520)`,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,fontWeight:900,color:C.bg,flexShrink:0,position:"relative" as const}}>
+                      {(c.name||"?")[0].toUpperCase()}
+                      {trainsToday&&<div style={{position:"absolute" as const,bottom:-3,right:-3,width:12,height:12,borderRadius:"50%",background:C.green,border:`2px solid ${C.surface}`}}/>}
                     </div>
-                    {c.meal_plan_name&&<span title="Turi mitybos planą" style={{fontSize:16}}>🥗</span>}
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:14,fontWeight:700,color:C.text,whiteSpace:"nowrap" as const,overflow:"hidden",textOverflow:"ellipsis"}}>{c.name}</div>
+                      <div style={{display:"flex",alignItems:"center",gap:5,marginTop:3,flexWrap:"wrap" as const}}>
+                        {c.goal&&<span style={{fontSize:10,background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:10,padding:"1px 7px",color:C.gold,fontWeight:600}}>{c.goal}</span>}
+                        {c.level&&<span style={{fontSize:10,background:C.tealSoft,border:`1px solid ${C.tealBorder}`,borderRadius:10,padding:"1px 7px",color:C.teal,fontWeight:600}}>{c.level}</span>}
+                      </div>
+                    </div>
+                    <div style={{textAlign:"right" as const,flexShrink:0}}>
+                      {bmiN&&<div style={{fontSize:13,fontWeight:800,color:bmiC!.color}}>{bmiN}</div>}
+                      {bmiN&&<div style={{fontSize:9,color:C.muted,letterSpacing:"0.06em"}}>KMI</div>}
+                    </div>
                   </div>
-                  <div style={{padding:"10px 16px",display:"flex",flexWrap:"wrap",gap:6}}>
-                    {c.age&&<div style={{background:C.faint,borderRadius:7,padding:"3px 9px",fontSize:11}}><span style={{color:C.muted}}>Amžius </span><b style={{color:C.text}}>{c.age} m.</b></div>}
-                    {c.weight&&<div style={{background:C.faint,borderRadius:7,padding:"3px 9px",fontSize:11}}><span style={{color:C.muted}}>Svoris </span><b style={{color:C.text}}>{c.weight} kg</b></div>}
-                    {bmiN&&<div style={{background:C.faint,borderRadius:7,padding:"3px 9px",fontSize:11}}><span style={{color:C.muted}}>KMI </span><b style={{color:bmiCat(bmiN).color}}>{bmiN}</b></div>}
-                    {c.goal&&<Badge label={c.goal} color={C.gold}/>}
-                    {c.level&&<Badge label={c.level} color={C.teal}/>}
+
+                  {/* Stats row */}
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:0,borderTop:`1px solid ${C.border}`,borderBottom:`1px solid ${C.border}`}}>
+                    {[[dayCount,"dienų","📅"],[exCount,"pratimų","🏋️"],[c.weight?c.weight+"kg":"—","svoris","⚖️"]].map(([val,lbl,icon],i)=>(
+                      <div key={lbl as string} style={{padding:"8px 0",textAlign:"center" as const,borderRight:i<2?`1px solid ${C.border}`:"none"}}>
+                        <div style={{fontSize:14,fontWeight:800,color:C.text}}>{val}</div>
+                        <div style={{fontSize:9,color:C.muted,letterSpacing:"0.06em",marginTop:1}}>{lbl as string}</div>
+                      </div>
+                    ))}
                   </div>
-                  <div style={{padding:"0 16px 10px",display:"flex",gap:12,flexWrap:"wrap" as const}}>
-                    <div style={{fontSize:11,color:C.muted}}>📅 <b style={{color:C.text}}>{dayCount}</b> dienų</div>
-                    <div style={{fontSize:11,color:C.muted}}>🏋️ <b style={{color:C.text}}>{exCount}</b> pratimų</div>
-                    {c.meal_plan_name&&<div style={{fontSize:11,color:C.green}}>🥗 <b style={{color:C.green}}>{c.meal_plan_name}</b></div>}
-                    {!c.meal_plan_name&&c.program_name&&<div style={{fontSize:11,color:C.muted}}>📋 <b style={{color:C.text}}>{c.program_name}</b></div>}
+
+                  {/* Program completion bar */}
+                  <div style={{padding:"10px 16px"}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
+                      <div style={{fontSize:10,color:C.muted}}>{c.program_name||"Programa"}</div>
+                      <div style={{fontSize:10,color:C.gold,fontWeight:600}}>{completionPct}%</div>
+                    </div>
+                    <div style={{height:4,background:C.faint,borderRadius:2,overflow:"hidden"}}>
+                      <div style={{height:"100%",width:`${completionPct}%`,background:`linear-gradient(to right,${C.gold},${C.gold}88)`,borderRadius:2,transition:"width .3s"}}/>
+                    </div>
+                    {c.meal_plan_name&&<div style={{marginTop:7,fontSize:10,color:C.green,display:"flex",alignItems:"center",gap:4}}>🥗 <span>{c.meal_plan_name}</span></div>}
                   </div>
-                  <div style={{padding:"10px 16px",borderTop:`1px solid ${C.border}`,display:"flex",gap:7}}>
-                    <button onClick={()=>openView(c)} style={{...css.btnTeal,flex:1,justifyContent:"center"}}>👁️ Peržiūrėti</button>
-                    <button onClick={()=>openEdit(c)} style={{...css.btnG,flex:1,padding:"7px 10px",fontSize:12}}>✏️ Redaguoti</button>
-                    <button onClick={()=>openShareModal(c)} style={{...css.btnGhost,padding:"7px 10px"}} title="Nuoroda klientui">🔗</button>
-                    <button onClick={()=>setConfirmDel(c)} style={css.btnRed}>🗑️</button>
+
+                  {/* Actions */}
+                  <div style={{padding:"0 12px 12px",display:"flex",gap:6}} onClick={e=>e.stopPropagation()}>
+                    <button onClick={()=>openView(c)} style={{...css.btnTeal,flex:1,fontSize:11,justifyContent:"center",padding:"7px 6px"}}>👁️ Peržiūrėti</button>
+                    <button onClick={()=>openEdit(c)} style={{...css.btnG,flex:1,fontSize:11,padding:"7px 6px"}}>✏️ Redaguoti</button>
+                    <button onClick={()=>openShareModal(c)} style={{...css.btnGhost,padding:"7px 10px",fontSize:13}} title="Nuoroda klientui">🔗</button>
+                    <button onClick={()=>setConfirmDel(c)} style={{...css.btnRed,padding:"7px 10px",fontSize:13}}>🗑️</button>
                   </div>
                 </div>
               );
@@ -982,25 +1018,158 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
           </div>
           {/* Progress */}
           <div style={{...css.card,marginBottom:12}}>
-            <div style={{display:"flex",alignItems:"center",marginBottom:10}}>
+            <div style={{display:"flex",alignItems:"center",marginBottom:14}}>
               <span style={{...css.secTitle,marginBottom:0}}>📈 Pažangos istorija</span>
               <button onClick={()=>setProgFormOpen(true)} style={{...css.btnTeal,marginLeft:"auto",fontSize:11}}>+ Pridėti</button>
             </div>
-            {progLoading?<Spinner/>:progressList.length===0?<div style={{textAlign:"center",color:C.muted,padding:"14px 0",fontSize:13}}>Pažangos įrašų dar nėra.</div>:(
-              <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                {progressList.map((p:any)=>(
-                  <div key={p.id} style={{background:C.faint,borderRadius:8,padding:"9px 12px",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-                    <div style={{fontSize:11,color:C.muted,minWidth:76}}>{new Date(p.date).toLocaleDateString("lt-LT")}</div>
-                    {p.weight&&<div style={{background:C.surface,borderRadius:6,padding:"3px 9px",fontSize:12,fontWeight:700,color:C.gold}}>{p.weight} kg</div>}
-                    {p.chest&&<div style={{fontSize:11,color:C.muted}}>Kr: <b style={{color:C.text}}>{p.chest}cm</b></div>}
-                    {p.waist&&<div style={{fontSize:11,color:C.muted}}>Ju: <b style={{color:C.text}}>{p.waist}cm</b></div>}
-                    {p.hips&&<div style={{fontSize:11,color:C.muted}}>Kl: <b style={{color:C.text}}>{p.hips}cm</b></div>}
-                    {p.notes&&<div style={{fontSize:11,color:C.muted,fontStyle:"italic",flex:1}}>📝 {p.notes}</div>}
-                    <button onClick={()=>delProgress(p.id)} style={{...css.btnRed,padding:"3px 7px",fontSize:10,marginLeft:"auto"}}>🗑️</button>
-                  </div>
-                ))}
-              </div>
-            )}
+            {progLoading?<Spinner/>:progressList.length===0
+              ?<div style={{textAlign:"center",color:C.muted,padding:"24px 0",fontSize:13}}>
+                  <div style={{fontSize:32,marginBottom:8}}>📊</div>
+                  Pažangos įrašų dar nėra.<br/>
+                  <span style={{fontSize:11}}>Pridėkite pirmą matavimą!</span>
+                </div>
+              :(<>
+                {/* Weight chart */}
+                {progressList.filter(p=>p.weight).length>=2&&(()=>{
+                  const pts=[...progressList].filter(p=>p.weight).reverse();
+                  const weights=pts.map(p=>parseFloat(p.weight));
+                  const minW=Math.min(...weights)-1;
+                  const maxW=Math.max(...weights)+1;
+                  const range=maxW-minW||1;
+                  const W=100,H=60;
+                  const cx=(i:number)=>(i/(pts.length-1))*W;
+                  const cy=(w:number)=>H-((w-minW)/range)*H;
+                  const path=pts.map((p,i)=>`${i===0?"M":"L"}${cx(i).toFixed(1)},${cy(parseFloat(p.weight)).toFixed(1)}`).join(" ");
+                  const area=`${path} L${W},${H} L0,${H} Z`;
+                  const first=weights[0],last=weights[weights.length-1];
+                  const diff=last-first;
+                  const trend=diff<0?"↓ Mažėja":"↑ Didėja";
+                  const trendColor=diff<0?C.green:C.red;
+                  return(
+                    <div style={{marginBottom:16}}>
+                      {/* Summary row */}
+                      <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap" as const}}>
+                        <div style={{background:C.faint,borderRadius:8,padding:"8px 12px",flex:1,minWidth:80}}>
+                          <div style={{fontSize:9,color:C.muted,letterSpacing:"0.12em",textTransform:"uppercase" as const,marginBottom:3}}>Pradinis</div>
+                          <div style={{fontSize:18,fontWeight:800,color:C.text}}>{weights[0]} <span style={{fontSize:10,color:C.muted}}>kg</span></div>
+                        </div>
+                        <div style={{background:C.faint,borderRadius:8,padding:"8px 12px",flex:1,minWidth:80}}>
+                          <div style={{fontSize:9,color:C.muted,letterSpacing:"0.12em",textTransform:"uppercase" as const,marginBottom:3}}>Dabartinis</div>
+                          <div style={{fontSize:18,fontWeight:800,color:C.gold}}>{weights[weights.length-1]} <span style={{fontSize:10,color:C.muted}}>kg</span></div>
+                        </div>
+                        <div style={{background:C.faint,borderRadius:8,padding:"8px 12px",flex:1,minWidth:80}}>
+                          <div style={{fontSize:9,color:C.muted,letterSpacing:"0.12em",textTransform:"uppercase" as const,marginBottom:3}}>Pokytis</div>
+                          <div style={{fontSize:18,fontWeight:800,color:trendColor}}>{diff>0?"+":""}{diff.toFixed(1)} <span style={{fontSize:10,color:C.muted}}>kg</span></div>
+                        </div>
+                        <div style={{background:C.faint,borderRadius:8,padding:"8px 12px",flex:1,minWidth:80}}>
+                          <div style={{fontSize:9,color:C.muted,letterSpacing:"0.12em",textTransform:"uppercase" as const,marginBottom:3}}>Tendencija</div>
+                          <div style={{fontSize:15,fontWeight:800,color:trendColor,marginTop:2}}>{trend}</div>
+                        </div>
+                      </div>
+                      {/* SVG chart */}
+                      <div style={{background:C.faint,borderRadius:12,padding:"14px 12px 8px",border:`1px solid ${C.border}`}}>
+                        <div style={{fontSize:9,color:C.muted,letterSpacing:"0.12em",marginBottom:8,textTransform:"uppercase" as const}}>Svorio dinamika (kg)</div>
+                        <svg viewBox={`0 0 ${W} ${H+14}`} style={{width:"100%",overflow:"visible"}}>
+                          {/* Grid lines */}
+                          {[0,0.25,0.5,0.75,1].map(t=>(
+                            <line key={t} x1="0" y1={(H*(1-t)).toFixed(1)} x2={W} y2={(H*(1-t)).toFixed(1)} stroke={C.border} strokeWidth="0.5" strokeDasharray="2,2"/>
+                          ))}
+                          {/* Area fill */}
+                          <defs>
+                            <linearGradient id="wgrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor={C.gold} stopOpacity="0.25"/>
+                              <stop offset="100%" stopColor={C.gold} stopOpacity="0"/>
+                            </linearGradient>
+                          </defs>
+                          <path d={area} fill="url(#wgrad)"/>
+                          {/* Line */}
+                          <path d={path} fill="none" stroke={C.gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          {/* Dots + labels */}
+                          {pts.map((p,i)=>(
+                            <g key={i}>
+                              <circle cx={cx(i).toFixed(1)} cy={cy(parseFloat(p.weight)).toFixed(1)} r="3" fill={C.gold} stroke={C.surface} strokeWidth="1.5"/>
+                              {/* X-axis date label */}
+                              <text x={cx(i).toFixed(1)} y={H+11} textAnchor="middle" fontSize="4.5" fill={C.muted}>
+                                {new Date(p.date).toLocaleDateString("lt-LT",{month:"numeric",day:"numeric"})}
+                              </text>
+                            </g>
+                          ))}
+                          {/* Y-axis labels */}
+                          {[minW+1,Math.round((minW+maxW)/2),maxW-1].map((v,i)=>(
+                            <text key={i} x="-1" y={(cy(v)+1.5).toFixed(1)} textAnchor="end" fontSize="4.5" fill={C.muted}>{v.toFixed(0)}</text>
+                          ))}
+                        </svg>
+                      </div>
+
+                      {/* Measurements chart if available */}
+                      {progressList.some(p=>p.waist||p.chest||p.hips)&&(()=>{
+                        const mPts=[...progressList].filter(p=>p.waist||p.chest||p.hips).reverse();
+                        if(mPts.length<2)return null;
+                        const series=[
+                          {key:"waist",label:"Juosmuo",color:C.teal},
+                          {key:"chest",label:"Krūtinė",color:C.purple},
+                          {key:"hips",label:"Klubai",color:C.green},
+                        ].filter(s=>mPts.some((p:any)=>p[s.key]));
+                        const allVals=series.flatMap(s=>mPts.map((p:any)=>parseFloat(p[s.key]||"0")).filter(Boolean));
+                        const minM=Math.min(...allVals)-1,maxM=Math.max(...allVals)+1,rangeM=maxM-minM||1;
+                        const cxm=(i:number)=>(i/(mPts.length-1))*100;
+                        const cym=(v:number)=>60-((v-minM)/rangeM)*60;
+                        return(
+                          <div style={{background:C.faint,borderRadius:12,padding:"14px 12px 8px",border:`1px solid ${C.border}`,marginTop:10}}>
+                            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8,flexWrap:"wrap" as const}}>
+                              <div style={{fontSize:9,color:C.muted,letterSpacing:"0.12em",textTransform:"uppercase" as const}}>Matmenys (cm)</div>
+                              {series.map(s=>(
+                                <div key={s.key} style={{display:"flex",alignItems:"center",gap:4}}>
+                                  <div style={{width:8,height:2,background:s.color,borderRadius:1}}/>
+                                  <span style={{fontSize:9,color:C.muted}}>{s.label}</span>
+                                </div>
+                              ))}
+                            </div>
+                            <svg viewBox="0 0 100 74" style={{width:"100%",overflow:"visible"}}>
+                              {[0,0.5,1].map(t=>(
+                                <line key={t} x1="0" y1={(60*(1-t)).toFixed(1)} x2="100" y2={(60*(1-t)).toFixed(1)} stroke={C.border} strokeWidth="0.5" strokeDasharray="2,2"/>
+                              ))}
+                              {series.map(s=>{
+                                const linePts=mPts.filter((p:any)=>p[s.key]);
+                                if(linePts.length<2)return null;
+                                const p2=linePts.map((p:any,i:number)=>`${i===0?"M":"L"}${cxm(i).toFixed(1)},${cym(parseFloat(p[s.key])).toFixed(1)}`).join(" ");
+                                return(
+                                  <g key={s.key}>
+                                    <path d={p2} fill="none" stroke={s.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                    {linePts.map((p:any,i:number)=>(
+                                      <circle key={i} cx={cxm(i).toFixed(1)} cy={cym(parseFloat(p[s.key])).toFixed(1)} r="2.5" fill={s.color} stroke={C.surface} strokeWidth="1"/>
+                                    ))}
+                                  </g>
+                                );
+                              })}
+                              {mPts.map((p:any,i:number)=>(
+                                <text key={i} x={cxm(i).toFixed(1)} y="72" textAnchor="middle" fontSize="4.5" fill={C.muted}>
+                                  {new Date(p.date).toLocaleDateString("lt-LT",{month:"numeric",day:"numeric"})}
+                                </text>
+                              ))}
+                            </svg>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  );
+                })()}
+                {/* Progress entries table */}
+                <div style={{display:"flex",flexDirection:"column" as const,gap:6}}>
+                  {progressList.map((p:any)=>(
+                    <div key={p.id} style={{background:C.faint,borderRadius:8,padding:"9px 12px",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap" as const}}>
+                      <div style={{fontSize:11,color:C.muted,minWidth:76}}>{new Date(p.date).toLocaleDateString("lt-LT")}</div>
+                      {p.weight&&<div style={{background:C.surface,borderRadius:6,padding:"3px 9px",fontSize:12,fontWeight:700,color:C.gold}}>{p.weight} kg</div>}
+                      {p.chest&&<div style={{fontSize:11,color:C.muted}}>Kr: <b style={{color:C.text}}>{p.chest}cm</b></div>}
+                      {p.waist&&<div style={{fontSize:11,color:C.muted}}>Ju: <b style={{color:C.text}}>{p.waist}cm</b></div>}
+                      {p.hips&&<div style={{fontSize:11,color:C.muted}}>Kl: <b style={{color:C.text}}>{p.hips}cm</b></div>}
+                      {p.notes&&<div style={{fontSize:11,color:C.muted,fontStyle:"italic",flex:1}}>📝 {p.notes}</div>}
+                      <button onClick={()=>delProgress(p.id)} style={{...css.btnRed,padding:"3px 7px",fontSize:10,marginLeft:"auto"}}>🗑️</button>
+                    </div>
+                  ))}
+                </div>
+              </>)
+            }
           </div>
           {/* Training summary */}
           <div style={{fontSize:13,fontWeight:700,color:C.text,marginBottom:10}}>📋 {view.program_name||"Programa"}</div>
@@ -1016,6 +1185,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
                 <div style={{padding:"6px 10px",display:"flex",flexDirection:"column",gap:5}}>
                   {exs.map((ex:any,i:number)=>(
                     <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:C.faint,borderRadius:7,padding:"7px 10px"}}>
+                      {ex.superset&&<div style={{fontSize:9,fontWeight:800,color:C.purple,background:C.purpleSoft,border:`1px solid ${C.purpleBorder}`,borderRadius:4,padding:"2px 5px",flexShrink:0}}>SS</div>}
                       <div style={{width:32,height:32,borderRadius:6,overflow:"hidden",background:C.border,flexShrink:0}}>{(ex.imgs||[]).filter(Boolean)[0]?<img src={(ex.imgs||[])[0]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>📷</div>}</div>
                       <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,color:C.text}}>{ex.name}</div><div style={{fontSize:10,color:C.teal}}>{ex.muscle}</div></div>
                       <div style={{display:"flex",gap:4}}>{ex.customSets&&<span style={{fontSize:10,color:C.gold,fontWeight:700}}>{ex.customSets}s</span>}{ex.customReps&&<span style={{fontSize:10,color:C.muted}}>{ex.customReps}r</span>}</div>
@@ -1103,8 +1273,9 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
 
       {/* Client form — 4 steps */}
       {clientFormOpen&&(<div style={css.overlay}><div style={{...css.modal(920),maxHeight:"95vh"}}>
-        <div style={{padding:"13px 18px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center"}}>
+        <div style={{padding:"13px 18px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:10}}>
           <div style={{fontWeight:700,fontSize:14,color:C.gold}}>{editClientId?"✏️ Redaguoti klientą":"➕ Naujas klientas"}</div>
+          {!editClientId&&clients.length>0&&<button onClick={()=>setTemplateModal(true)} style={{...css.btnGhost,fontSize:11,padding:"4px 10px",display:"flex",alignItems:"center",gap:5}}><span>📋</span>Kopijuoti programą</button>}
           <div className="step-nav" style={{marginLeft:"auto"}}>
             {(planType==="both"?[["1","Info"],["2","Treniruotės"],["3","Mityba"],["4","Peržiūra"]]:planType==="training"?[["1","Info"],["2","Treniruotės"],["3","Peržiūra"]]:[["1","Info"],["2","Mityba"],["3","Peržiūra"]]).map(([n,l])=>(
               <button key={n} style={{...css.navBtn(step===+n),padding:"5px 11px",fontSize:11}} onClick={()=>setStep(+n)}><b>{n}.</b> {l}</button>
@@ -1273,8 +1444,39 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
           <div><span style={css.label}>Kartojimai</span><input value={pickReps} onChange={e=>setPickReps(e.target.value)} placeholder={pickedEx.reps} style={{...css.input,width:80,textAlign:"center",padding:"6px 5px"}}/></div>
           <div><span style={css.label}>Svoris (kg)</span><input value={pickWeight} onChange={e=>setPickWeight(e.target.value)} placeholder="60" style={{...css.input,width:80,textAlign:"center",padding:"6px 5px",color:C.teal}}/></div>
           <div><span style={css.label}>Poilsis</span><select value={pickRest} onChange={e=>setPickRest(e.target.value)} style={{...css.select,width:95,padding:"6px 5px",color:C.purple}}><option value="">—</option>{REST_OPTIONS.map(r=><option key={r}>{r}</option>)}</select></div>
+          <div><span style={css.label}>Superset</span><button onClick={()=>setPickSets(ps=>ps==="SS"?"":((ps||"")+""))} style={{...css.btnGhost,padding:"6px 10px",fontSize:11,color:pickSets==="SS"?C.purple:C.muted,borderColor:pickSets==="SS"?C.purpleBorder:C.border,background:pickSets==="SS"?C.purpleSoft:"transparent"}}>SS {pickSets==="SS"?"✓":""}</button></div>
           <button onClick={addToDay} style={{...css.btnG,alignSelf:"flex-end"}}>Pridėti +</button>
         </div>)}
+      </div></div>)}
+
+      {/* Template copy modal (#15) */}
+      {templateModal&&(<div style={css.overlay}><div style={{...css.modal(520)}}>
+        <div style={{padding:"14px 18px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center"}}>
+          <div style={{fontWeight:700,fontSize:14,color:C.gold}}>📋 Kopijuoti programą iš kliento</div>
+          <button onClick={()=>setTemplateModal(false)} style={{marginLeft:"auto",width:27,height:27,background:C.faint,border:`1px solid ${C.border}`,borderRadius:7,color:C.muted,cursor:"pointer",fontSize:14}}>×</button>
+        </div>
+        <div style={{padding:14,maxHeight:400,overflowY:"auto" as const}}>
+          <div style={{fontSize:12,color:C.muted,marginBottom:12}}>Pasirinkite klientą kurio programą norite kopijuoti:</div>
+          {clients.filter((c:any)=>(c.program&&Object.keys(c.program).length>0)||c.meal_plan_name).map((c:any)=>{
+            const exCnt=Object.values(c.program||{}).reduce((s:any,d:any)=>s+d.length,0) as number;
+            return(
+              <div key={c.id} onClick={()=>copyFromTemplate(c)} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 12px",borderRadius:10,background:C.faint,border:`1px solid ${C.border}`,marginBottom:8,cursor:"pointer",transition:"border-color .15s"}} onMouseEnter={e=>(e.currentTarget.style.borderColor=C.goldBorder)} onMouseLeave={e=>(e.currentTarget.style.borderColor=C.border)}>
+                <div style={{width:36,height:36,background:`linear-gradient(135deg,${C.gold},#8B6520)`,borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:900,color:C.bg,flexShrink:0}}>{(c.name||"?")[0]}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,fontWeight:700,color:C.text}}>{c.name}</div>
+                  <div style={{fontSize:11,color:C.muted,marginTop:2,display:"flex",gap:8}}>
+                    {c.program_name&&<span>📋 {c.program_name} ({exCnt} prat.)</span>}
+                    {c.meal_plan_name&&<span style={{color:C.green}}>🥗 {c.meal_plan_name}</span>}
+                  </div>
+                </div>
+                <span style={{fontSize:11,color:C.gold,fontWeight:700}}>Kopijuoti →</span>
+              </div>
+            );
+          })}
+          {clients.filter((c:any)=>(c.program&&Object.keys(c.program).length>0)||c.meal_plan_name).length===0&&(
+            <div style={{textAlign:"center" as const,color:C.muted,padding:"24px 0",fontSize:13}}>Nėra klientų su programomis</div>
+          )}
+        </div>
       </div></div>)}
 
       {confirmDel&&(<div style={css.overlay}><div style={{background:C.surface,borderRadius:16,border:`1px solid ${C.redBorder}`,padding:28,maxWidth:340,width:"100%",textAlign:"center"}}>
@@ -1470,6 +1672,280 @@ function AdminStatsTab(){
   );
 }
 
+// ── GLOBAL SEARCH MODAL (#10) ────────────────────────────
+function GlobalSearchModal({clients,exercises,foods,onClose,onNav}:any){
+  const [q,setQ]=useState("");
+  const ref=useState<any>(null);
+
+  useEffect(()=>{
+    const handler=(e:KeyboardEvent)=>{if(e.key==="Escape")onClose();};
+    window.addEventListener("keydown",handler);
+    return()=>window.removeEventListener("keydown",handler);
+  },[]);
+
+  const qL=q.toLowerCase();
+  const matchC=q.length>1?clients.filter((c:any)=>c.name?.toLowerCase().includes(qL)||(c.goal||"").toLowerCase().includes(qL)).slice(0,4):[];
+  const matchE=q.length>1?exercises.filter((e:any)=>e.name?.toLowerCase().includes(qL)||(e.muscle||"").toLowerCase().includes(qL)).slice(0,4):[];
+  const matchF=q.length>1?foods.filter((f:any)=>f.name?.toLowerCase().includes(qL)||(f.category||"").toLowerCase().includes(qL)).slice(0,4):[];
+  const total=matchC.length+matchE.length+matchF.length;
+
+  return(
+    <div style={css.overlay} onClick={onClose}>
+      <div style={{...css.modal(580),maxHeight:"80vh"}} onClick={e=>e.stopPropagation()}>
+        {/* Search input */}
+        <div style={{padding:"16px 18px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:18}}>🔍</span>
+          <input
+            autoFocus
+            value={q}
+            onChange={e=>setQ(e.target.value)}
+            placeholder="Ieškoti klientų, pratimų, maisto..."
+            style={{...css.input,border:"none",background:"transparent",fontSize:15,flex:1,padding:0,outline:"none"}}
+          />
+          <kbd style={{fontSize:10,color:C.muted,background:C.faint,border:`1px solid ${C.border}`,borderRadius:4,padding:"2px 6px"}}>ESC</kbd>
+        </div>
+        <div style={{overflowY:"auto",padding:q.length>1?"10px 0":"20px"}}>
+          {q.length<2&&(
+            <div style={{textAlign:"center",color:C.muted,padding:"24px",fontSize:13}}>
+              <div style={{fontSize:32,marginBottom:8}}>⌨️</div>
+              Rašykite bent 2 simbolius...
+            </div>
+          )}
+          {q.length>1&&total===0&&(
+            <div style={{textAlign:"center",color:C.muted,padding:"24px",fontSize:13}}>
+              <div style={{fontSize:32,marginBottom:8}}>🔍</div>
+              Nerasta: <b style={{color:C.text}}>"{q}"</b>
+            </div>
+          )}
+          {/* Clients */}
+          {matchC.length>0&&<>
+            <div style={{padding:"4px 18px 6px",fontSize:9,color:C.muted,letterSpacing:"0.18em",textTransform:"uppercase",fontWeight:700}}>👥 Klientai</div>
+            {matchC.map((c:any)=>(
+              <div key={c.id} onClick={()=>onNav("clients")} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 18px",cursor:"pointer",transition:"background .1s"}} onMouseEnter={e=>(e.currentTarget.style.background=C.faint)} onMouseLeave={e=>(e.currentTarget.style.background="transparent")}>
+                <div style={{width:34,height:34,background:`linear-gradient(135deg,${C.gold},#8B6520)`,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:900,color:C.bg,flexShrink:0}}>{(c.name||"?")[0]}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,fontWeight:600,color:C.text}}>{c.name}</div>
+                  <div style={{fontSize:11,color:C.muted}}>{c.goal||"—"} · {c.weight&&c.weight+"kg"}</div>
+                </div>
+                <span style={{fontSize:11,color:C.muted}}>→</span>
+              </div>
+            ))}
+          </>}
+          {/* Exercises */}
+          {matchE.length>0&&<>
+            <div style={{padding:"10px 18px 6px",fontSize:9,color:C.muted,letterSpacing:"0.18em",textTransform:"uppercase",fontWeight:700,borderTop:matchC.length>0?`1px solid ${C.border}`:"none",marginTop:matchC.length>0?4:0}}>🏋️ Pratimai</div>
+            {matchE.map((e:any)=>(
+              <div key={e.id} onClick={()=>onNav("exercises")} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 18px",cursor:"pointer"}} onMouseEnter={ev=>(ev.currentTarget.style.background=C.faint)} onMouseLeave={ev=>(ev.currentTarget.style.background="transparent")}>
+                <div style={{width:34,height:34,background:C.tealSoft,border:`1px solid ${C.tealBorder}`,borderRadius:8,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  {(e.imgs||[])[0]?<img src={e.imgs[0]} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<span style={{fontSize:16}}>🏋️</span>}
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,fontWeight:600,color:C.text}}>{e.name}</div>
+                  <div style={{fontSize:11,color:C.teal}}>{e.muscle} · {e.sets} ser.</div>
+                </div>
+                <span style={{fontSize:11,color:C.muted}}>→</span>
+              </div>
+            ))}
+          </>}
+          {/* Foods */}
+          {matchF.length>0&&<>
+            <div style={{padding:"10px 18px 6px",fontSize:9,color:C.muted,letterSpacing:"0.18em",textTransform:"uppercase",fontWeight:700,borderTop:`1px solid ${C.border}`,marginTop:4}}>🥗 Maistas</div>
+            {matchF.map((f:any)=>(
+              <div key={f.id} onClick={()=>onNav("foods")} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 18px",cursor:"pointer"}} onMouseEnter={ev=>(ev.currentTarget.style.background=C.faint)} onMouseLeave={ev=>(ev.currentTarget.style.background="transparent")}>
+                <div style={{width:34,height:34,background:C.greenSoft,border:`1px solid ${C.greenBorder}`,borderRadius:8,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  {(f.imgs||[])[0]?<img src={f.imgs[0]} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<span style={{fontSize:16}}>🥗</span>}
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,fontWeight:600,color:C.text}}>{f.name}</div>
+                  <div style={{fontSize:11,color:C.green}}>{f.category} · {f.calories&&f.calories+" kcal"}</div>
+                </div>
+                <span style={{fontSize:11,color:C.muted}}>→</span>
+              </div>
+            ))}
+          </>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── QUICK ACTIONS FAB (#9) ────────────────────────────────
+function QuickActionsFAB({onNav}:any){
+  const [open,setOpen]=useState(false);
+  const actions=[
+    {icon:"👥",label:"Naujas klientas",tab:"clients",color:C.gold},
+    {icon:"🏋️",label:"Naujas pratimas",tab:"exercises",color:C.teal},
+    {icon:"🥗",label:"Naujas maistas",tab:"foods",color:C.green},
+    {icon:"📅",label:"Kalendorius",tab:"calendar",color:C.purple},
+  ];
+  return(
+    <div style={{position:"fixed",bottom:90,right:20,zIndex:190,display:"flex",flexDirection:"column" as const,alignItems:"flex-end",gap:10}}>
+      {/* Action items */}
+      {open&&actions.map((a,i)=>(
+        <div key={a.tab} onClick={()=>{setOpen(false);onNav(a.tab,true);}} style={{
+          display:"flex",alignItems:"center",gap:10,
+          background:C.surface,border:`1px solid ${C.border}`,
+          borderRadius:12,padding:"8px 14px 8px 10px",
+          cursor:"pointer",boxShadow:"0 4px 20px rgba(0,0,0,0.4)",
+          animation:"fadeUp .2s ease both",
+          animationDelay:`${i*0.04}s`,
+          whiteSpace:"nowrap" as const,
+        }}>
+          <div style={{width:28,height:28,background:a.color+"20",border:`1px solid ${a.color}40`,borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>{a.icon}</div>
+          <span style={{fontSize:12,fontWeight:600,color:C.text}}>{a.label}</span>
+        </div>
+      ))}
+      {/* FAB button */}
+      <button
+        onClick={()=>setOpen(o=>!o)}
+        style={{
+          width:48,height:48,borderRadius:"50%",
+          background:open?C.surface:`linear-gradient(135deg,${C.gold},#8B6520)`,
+          border:open?`1px solid ${C.border}`:"none",
+          color:open?C.muted:"#0A0608",
+          fontSize:open?20:22,cursor:"pointer",
+          boxShadow:`0 4px 24px ${C.gold}44`,
+          display:"flex",alignItems:"center",justifyContent:"center",
+          transition:"all .2s",
+          transform:open?"rotate(45deg)":"rotate(0deg)",
+        }}
+      >{open?"×":"+"}</button>
+    </div>
+  );
+}
+
+// ── AI ASSISTANT (#16 #17 #18) ───────────────────────────
+function AIAssistantButton({clients,exercises}:any){
+  const [open,setOpen]=useState(false);
+  const [messages,setMessages]=useState<{role:"user"|"assistant",text:string}[]>([]);
+  const [input,setInput]=useState("");
+  const [loading,setLoading]=useState(false);
+  const messagesEndRef=useState<any>(null);
+
+  const systemPrompt=`Tu esi DNA Trainer AI asistenas — sporto trenerio pagalbininkas. 
+Kalbi lietuviškai. Esi draugiškas, profesionalus ir glaustas.
+Duomenys apie trenerio klientus:
+${JSON.stringify(clients.map((c:any)=>({vardas:c.name,tikslas:c.goal,svoris:c.weight,ukgis:c.height,amzius:c.age,treniruociu_dienos:c.training_days,programa:c.program_name,mityba:c.meal_plan_name})),null,1)}
+Pratimų kiekis bibliotekoje: ${exercises.length}
+Šiandienos data: ${new Date().toLocaleDateString("lt-LT")}
+
+Gali:
+- Atsakyti į klausimus apie klientus ("Kuris klientas labiausiai progresuoja?")
+- Pasiūlyti treniruočių programas
+- Padėti su mitybos planais  
+- Analizuoti klientų duomenis
+- Duoti sporto ir mitybos patarimus
+Atsakyk trumpai ir konkrečiai (iki 150 žodžių).`;
+
+  const send=async()=>{
+    const t=input.trim();
+    if(!t||loading)return;
+    const newMessages=[...messages,{role:"user" as const,text:t}];
+    setMessages(newMessages);
+    setInput("");
+    setLoading(true);
+    try{
+      const resp=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:1000,
+          system:systemPrompt,
+          messages:newMessages.map(m=>({role:m.role,content:m.text})),
+        }),
+      });
+      const data=await resp.json();
+      const reply=data.content?.find((b:any)=>b.type==="text")?.text||"Atsiprašau, įvyko klaida.";
+      setMessages(p=>[...p,{role:"assistant",text:reply}]);
+    }catch(e){
+      setMessages(p=>[...p,{role:"assistant",text:"Klaida prisijungiant prie AI. Patikrinkite interneto ryšį."}]);
+    }finally{setLoading(false);}
+  };
+
+  // Quick prompts
+  const quickPrompts=[
+    "Kuris klientas labiausiai aktyvus?",
+    "Pasiūlyk programą pradedančiajam",
+    "Kiek klientų treniruojasi šiandien?",
+    "Sukurk 7 dienų mitybos planą riebalų deginimui",
+  ];
+
+  if(!open)return(
+    <button onClick={()=>setOpen(true)} style={{
+      position:"fixed",bottom:150,right:20,zIndex:189,
+      width:44,height:44,borderRadius:"50%",
+      background:"linear-gradient(135deg,#7B6DB0,#4A3880)",
+      border:"none",color:"#fff",fontSize:20,cursor:"pointer",
+      boxShadow:"0 4px 20px #7B6DB060",
+      display:"flex",alignItems:"center",justifyContent:"center",
+    }} title="AI Asistenas">🤖</button>
+  );
+
+  return(
+    <div style={{
+      position:"fixed",bottom:90,right:20,zIndex:300,
+      width:340,maxHeight:520,
+      background:C.surface,border:`1px solid ${C.border}`,
+      borderRadius:18,display:"flex",flexDirection:"column" as const,
+      boxShadow:"0 20px 60px rgba(0,0,0,0.6)",overflow:"hidden",
+    }}>
+      {/* Header */}
+      <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:10,background:C.faint}}>
+        <div style={{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,#7B6DB0,#4A3880)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>🤖</div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:13,fontWeight:700,color:C.text}}>DNA AI Asistenas</div>
+          <div style={{fontSize:10,color:C.purple}}>Claude · Lietuvių kalba</div>
+        </div>
+        <button onClick={()=>setOpen(false)} style={{background:"none",border:"none",color:C.muted,fontSize:18,cursor:"pointer"}}>×</button>
+      </div>
+
+      {/* Messages */}
+      <div style={{flex:1,overflowY:"auto" as const,padding:"12px 14px",display:"flex",flexDirection:"column" as const,gap:10,minHeight:200,maxHeight:300}}>
+        {messages.length===0&&(
+          <div>
+            <div style={{textAlign:"center" as const,color:C.muted,fontSize:12,marginBottom:12,paddingTop:8}}>
+              Sveiki! Aš galiu atsakyti į klausimus apie jūsų klientus, pasiūlyti programas ir padėti su mityba.
+            </div>
+            <div style={{display:"flex",flexDirection:"column" as const,gap:6}}>
+              {quickPrompts.map(qp=>(
+                <button key={qp} onClick={()=>{setInput(qp);}} style={{...css.btnGhost,textAlign:"left" as const,padding:"7px 11px",fontSize:11,color:C.muted,whiteSpace:"normal" as const,lineHeight:1.4}}>{qp}</button>
+              ))}
+            </div>
+          </div>
+        )}
+        {messages.map((m,i)=>(
+          <div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end" as const:"flex-start" as const}}>
+            <div style={{
+              maxWidth:"85%",padding:"9px 12px",borderRadius:m.role==="user"?"12px 12px 4px 12px":"12px 12px 12px 4px",
+              background:m.role==="user"?`linear-gradient(135deg,${C.gold},#8B6520)`:C.faint,
+              border:m.role==="user"?"none":`1px solid ${C.border}`,
+              fontSize:12,color:m.role==="user"?C.bg:C.text,lineHeight:1.6,
+            }}>{m.text}</div>
+          </div>
+        ))}
+        {loading&&(
+          <div style={{display:"flex",gap:4,padding:"8px 12px"}}>
+            {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:C.purple,animation:"spin .8s linear infinite",animationDelay:`${i*0.15}s`}}/>)}
+          </div>
+        )}
+      </div>
+
+      {/* Input */}
+      <div style={{padding:"10px 12px",borderTop:`1px solid ${C.border}`,display:"flex",gap:8}}>
+        <input
+          value={input}
+          onChange={e=>setInput(e.target.value)}
+          onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&send()}
+          placeholder="Klauskite apie klientus, programas..."
+          style={{...css.input,flex:1,fontSize:12,padding:"8px 10px"}}
+        />
+        <button onClick={send} disabled={loading||!input.trim()} style={{...css.btnG,padding:"8px 12px",fontSize:12,opacity:loading||!input.trim()?0.5:1}}>↑</button>
+      </div>
+    </div>
+  );
+}
+
 // ── MAIN APP ──────────────────────────────────────────────
 // MainApp: shown when logged in
 function MainApp(){
@@ -1478,12 +1954,15 @@ function MainApp(){
   const [autoOpen,setAutoOpen]=useState(false);
   const [exercises,setExercises]=useState<any[]>([]);
   const [foods,setFoods]=useState<any[]>([]);
+  const [globalSearch,setGlobalSearch]=useState(false);
+  const [allClients,setAllClients]=useState<any[]>([]);
 
   const handleLogout=()=>{logout();};
 
   useEffect(()=>{
     sb.get("exercises","?order=name").then(d=>setExercises(d)).catch(()=>{});
     sb.get("foods","?order=name").then(d=>setFoods(d)).catch(()=>{});
+    sb.get("clients",`?coach_id=eq.${getCoachId()}&order=name`).then(d=>setAllClients(d)).catch(()=>{});
   },[]);
 
   const navigate=(t:string,open=false)=>{setTab(t);setAutoOpen(open);setTimeout(()=>setAutoOpen(false),100);};
@@ -1519,7 +1998,13 @@ function MainApp(){
           <div style={{fontWeight:300,fontSize:13,color:C.text,letterSpacing:"0.22em",fontFamily:"'Inter',sans-serif",textTransform:"uppercase"}}>DNA TRAINER</div>
           <div style={{fontSize:9,color:C.muted,letterSpacing:"0.15em",textTransform:"uppercase",marginTop:1}} className="hsubtitle">Sporto sistema</div>
         </div>
-        <div style={{marginLeft:"auto",display:"flex",gap:4,alignItems:"center"}}>
+        {/* Global search button */}
+        <button onClick={()=>setGlobalSearch(true)} style={{marginLeft:8,display:"flex",alignItems:"center",gap:7,background:C.faint,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 12px",color:C.muted,fontSize:12,cursor:"pointer",transition:"all .15s"}} className="search-btn">
+          <span style={{fontSize:14}}>🔍</span>
+          <span className="logout-label" style={{fontSize:11,letterSpacing:"0.04em"}}>Ieškoti...</span>
+          <span className="logout-label" style={{fontSize:9,background:C.border,borderRadius:4,padding:"1px 5px",marginLeft:4}}>⌘K</span>
+        </button>
+        <div style={{marginLeft:"auto",display:"flex",gap:4,alignItems:"center"}} className="header-nav-items">
           {NAV.map(n=>(
             <button key={n.id} style={css.navBtn(tab===n.id)} onClick={()=>navigate(n.id)}>
               <span>{n.icon}</span> <span className="logout-label">{n.label}</span>
@@ -1544,6 +2029,28 @@ function MainApp(){
         {tab==="users"      && isAdmin && <UsersTab/>}
         {tab==="stats"      && isAdmin && <AdminStatsTab/>}
       </div>
+      {/* ── GLOBAL SEARCH MODAL ── */}
+      {globalSearch&&<GlobalSearchModal
+        clients={allClients} exercises={exercises} foods={foods}
+        onClose={()=>setGlobalSearch(false)}
+        onNav={(t:string,open?:boolean)=>{setGlobalSearch(false);navigate(t,open);}}
+      />}
+
+      {/* ── QUICK ACTIONS FAB ── */}
+      <QuickActionsFAB onNav={(t:string,open?:boolean)=>navigate(t,open)}/>
+
+      {/* ── AI ASSISTANT FLOATING BUTTON ── */}
+      <AIAssistantButton clients={allClients} exercises={exercises}/>
+
+      {/* Mobile bottom navigation */}
+      <nav className="bottom-nav">
+        {NAV.map(n=>(
+          <div key={n.id} className={`bottom-nav-item${tab===n.id?" active":""}`} onClick={()=>navigate(n.id)}>
+            <span className="bottom-nav-icon">{n.icon}</span>
+            <span className="bottom-nav-label">{n.label}</span>
+          </div>
+        ))}
+      </nav>
     </div>
   );
 }
