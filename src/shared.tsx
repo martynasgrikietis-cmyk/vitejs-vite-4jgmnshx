@@ -44,6 +44,7 @@ export const RESPONSIVE_CSS = `
   input,select,textarea{font-size:15px!important;}
   @keyframes spin{to{transform:rotate(360deg)}}
   @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes skelShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
   .fu{animation:fadeUp .35s ease both;}
   .fu1{animation:fadeUp .35s .06s ease both;}
   .fu2{animation:fadeUp .35s .12s ease both;}
@@ -99,9 +100,23 @@ export const RESPONSIVE_CSS = `
     .food4-grid{grid-template-columns:1fr 1fr;}
   }
   @media(hover:none){button{min-height:40px;}}
+  .bottom-nav{display:none;}
+  @media(max-width:640px){
+    .bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:#0F1118;border-top:1px solid #1E2330;z-index:200;padding:6px 0 calc(6px + env(safe-area-inset-bottom));justify-content:space-around;align-items:center;}
+    .bottom-nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 10px;cursor:pointer;border-radius:10px;transition:background .15s;min-width:52px;}
+    .bottom-nav-item.active{background:rgba(212,168,83,0.12);}
+    .bottom-nav-icon{font-size:20px;line-height:1;}
+    .bottom-nav-label{font-size:9px;color:#5A6070;letter-spacing:0.06em;font-weight:600;text-transform:uppercase;}
+    .bottom-nav-item.active .bottom-nav-label{color:#D4A853;}
+    .content-pad{padding-bottom:calc(80px + env(safe-area-inset-bottom)) !important;}
+    .header-nav-items{display:none !important;}
+  }
   .stat-card{transition:transform .15s,border-color .15s;}
   .stat-card:hover{transform:translateY(-2px);}
   .glass-card{background:rgba(15,17,24,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);}
+  .search-btn:hover{border-color:#D4A853 !important;color:#D4A853 !important;}
+  @keyframes skelShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  @keyframes aiPulse{0%,100%{transform:scale(1);opacity:0.4}50%{transform:scale(1.5);opacity:1}}
   .nav-tab{transition:all .15s;}
   .nav-tab:hover{color:#F0EBE0 !important;}
   .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
@@ -161,6 +176,27 @@ import { useState, useRef } from "react";
 export const Tag=({c,label,active,onClick}:any)=><button onClick={onClick} style={{padding:"5px 12px",borderRadius:20,border:active?`1px solid ${c}`:`1px solid ${C.border}`,background:active?c+"22":"transparent",color:active?c:C.muted,fontFamily:FONT,fontSize:11,cursor:"pointer",fontWeight:600,flexShrink:0}}>{label}</button>;
 export const Badge=({label,color}:any)=><span style={{background:color+"18",border:`1px solid ${color}44`,borderRadius:20,padding:"3px 11px",color,fontSize:11,fontWeight:700}}>{label}</span>;
 export const Spinner=()=><div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:60,color:C.muted,fontSize:14,gap:10}}><div style={{width:20,height:20,border:`2px solid ${C.border}`,borderTopColor:C.gold,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>Kraunama...</div>;
+export const Skeleton=({w="100%",h=16,radius=6}:{w?:string|number,h?:number,radius?:number})=>(
+  <div style={{width:w,height:h,borderRadius:radius,background:`linear-gradient(90deg,${C.border} 25%,${C.surface2} 50%,${C.border} 75%)`,backgroundSize:"200% 100%",animation:"skelShimmer 1.5s infinite"}}/>
+);
+export const SkeletonCard=()=>(
+  <div style={{background:C.surface,borderRadius:16,border:`1px solid ${C.border}`,overflow:"hidden",padding:0}}>
+    <div style={{height:3,background:C.border}}/>
+    <div style={{padding:"14px 16px 10px",display:"flex",gap:12}}>
+      <div style={{width:46,height:46,borderRadius:12,background:C.border}}/>
+      <div style={{flex:1,display:"flex",flexDirection:"column" as const,gap:6,paddingTop:4}}>
+        <Skeleton w="60%" h={14}/>
+        <Skeleton w="80%" h={10}/>
+      </div>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:0,borderTop:`1px solid ${C.border}`,borderBottom:`1px solid ${C.border}`}}>
+      {[0,1,2].map(i=><div key={i} style={{padding:"10px",borderRight:i<2?`1px solid ${C.border}`:"none",display:"flex",flexDirection:"column" as const,alignItems:"center",gap:4}}><Skeleton w={24} h={16}/><Skeleton w={32} h={8}/></div>)}
+    </div>
+    <div style={{padding:"10px 16px 12px",display:"flex",flexDirection:"column" as const,gap:6}}>
+      <Skeleton w="100%" h={4} radius={2}/>
+    </div>
+  </div>
+);
 export const Err=({msg}:any)=>msg?<div style={{background:C.redSoft,border:`1px solid ${C.redBorder}`,borderRadius:8,padding:"10px 14px",fontSize:13,color:C.red,marginBottom:14}}>{msg}</div>:null;
 export const NutriBadge=({kcal,p,c,f}:any)=>(
   <div style={{display:"flex",gap:5,flexWrap:"wrap" as const}}>
