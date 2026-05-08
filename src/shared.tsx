@@ -28,13 +28,13 @@ export const ACTIVITY_LEVELS = [
 ];
 
 export const C = {
-  bg:"#0A0C12",surface:"#121520",surface2:"#1A1E2C",border:"#222838",
-  gold:"#E0B870",goldSoft:"#E0B87018",goldBorder:"#E0B87050",
-  teal:"#8090A0",tealSoft:"#8090A015",tealBorder:"#8090A040",
-  red:"#AA5555",redSoft:"#AA555515",redBorder:"#AA555540",
-  green:"#6A9070",greenSoft:"#6A907015",greenBorder:"#6A907040",
-  purple:"#8070A0",purpleSoft:"#8070A015",purpleBorder:"#8070A040",
-  text:"#FFFFFF",muted:"#6B7280",faint:"#08090F",
+  bg:"#080A10",surface:"#0F1118",surface2:"#161A24",border:"#1E2330",
+  gold:"#D4A853",goldSoft:"#D4A85318",goldBorder:"#D4A85348",
+  teal:"#5B8DB8",tealSoft:"#5B8DB815",tealBorder:"#5B8DB840",
+  red:"#C05050",redSoft:"#C0505015",redBorder:"#C0505040",
+  green:"#4E9068",greenSoft:"#4E906815",greenBorder:"#4E906840",
+  purple:"#7B6DB0",purpleSoft:"#7B6DB015",purpleBorder:"#7B6DB040",
+  text:"#F0EBE0",muted:"#5A6070",faint:"#060709",
 };
 export const FONT = "'Inter','Helvetica Neue',system-ui,sans-serif";
 
@@ -53,7 +53,7 @@ export const RESPONSIVE_CSS = `
   .cl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
   .food-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;}
   .dash-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
-  .dash-bottom{display:grid;grid-template-columns:2fr 1fr;gap:20px;margin-top:20px;}
+  .dash-bottom{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:20px;margin-top:20px;}
   .cf-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
   .macro-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
   .ex2-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
@@ -99,17 +99,25 @@ export const RESPONSIVE_CSS = `
     .food4-grid{grid-template-columns:1fr 1fr;}
   }
   @media(hover:none){button{min-height:40px;}}
+  .stat-card{transition:transform .15s,border-color .15s;}
+  .stat-card:hover{transform:translateY(-2px);}
+  .glass-card{background:rgba(15,17,24,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);}
+  .nav-tab{transition:all .15s;}
+  .nav-tab:hover{color:#F0EBE0 !important;}
+  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .gold-line{display:flex;align-items:center;gap:8px;}
 `;
+
 
 export const css = {
   page:    {minHeight:"100vh",background:C.bg,color:C.text,fontFamily:FONT},
   header:  {background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"12px 28px",display:"flex",alignItems:"center",gap:14},
   logo:    {width:36,height:36,background:C.gold,borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:17,color:C.bg,flexShrink:0},
-  card:    {background:C.surface,borderRadius:14,border:`1px solid ${C.border}`,padding:22},
+  card:    {background:C.surface,borderRadius:16,border:`1px solid ${C.border}`,padding:24,backdropFilter:"blur(10px)"},
   label:   {fontSize:11,color:C.muted,letterSpacing:"0.08em",marginBottom:6,display:"block",fontWeight:600,textTransform:"uppercase" as const},
   input:   {width:"100%",background:C.faint,border:`1px solid ${C.border}`,borderRadius:8,padding:"11px 14px",color:C.text,fontFamily:FONT,fontSize:14,outline:"none",boxSizing:"border-box" as const},
   select:  {width:"100%",background:C.faint,border:`1px solid ${C.border}`,borderRadius:8,padding:"11px 14px",color:C.text,fontFamily:FONT,fontSize:14,outline:"none",boxSizing:"border-box" as const},
-  navBtn:  (a:boolean)=>({padding:"7px 16px",borderRadius:7,border:a?`1px solid ${C.gold}`:`1px solid transparent`,background:a?C.goldSoft:"transparent",color:a?C.gold:C.muted,fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:13,cursor:"pointer"}),
+  navBtn:  (a:boolean)=>({padding:"7px 16px",borderRadius:8,border:"none",background:a?C.gold:"transparent",color:a?C.bg:C.muted,fontFamily:"'Inter',sans-serif",fontWeight:a?700:500,fontSize:13,cursor:"pointer",transition:"all 0.15s"}),
   btnG:    {padding:"11px 22px",background:C.gold,color:C.bg,border:"none",borderRadius:8,fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:13,cursor:"pointer"},
   btnGhost:{padding:"9px 16px",background:"transparent",color:C.muted,border:`1px solid ${C.border}`,borderRadius:6,fontFamily:"'Mulish',sans-serif",fontWeight:500,fontSize:12,cursor:"pointer"},
   btnTeal: {padding:"8px 14px",background:C.tealSoft,color:C.teal,border:`1px solid ${C.tealBorder}`,borderRadius:7,fontFamily:"'Inter',sans-serif",fontSize:13,cursor:"pointer",fontWeight:600},
