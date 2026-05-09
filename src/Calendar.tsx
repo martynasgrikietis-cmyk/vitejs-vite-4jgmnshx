@@ -1,6 +1,6 @@
 // ── Calendar.tsx — Coach calendar, schedule settings, booking page ──
 import { useState, useEffect, useCallback } from "react";
-import { sb, C, FONT, css, Spinner, getCoachId } from "./shared";
+import { sb, C, FONT, css, Spinner, getCoachId, SUPABASE_URL, SUPABASE_KEY } from "./shared";
 
 // ── Helpers ───────────────────────────────────────────────
 const DAY_NAMES = ["Sekmadienis","Pirmadienis","Antradienis","Trečiadienis","Ketvirtadienis","Penktadienis","Šeštadienis"];
@@ -25,7 +25,7 @@ const DEFAULT_SCHEDULE = {
 };
 
 type Schedule = typeof DEFAULT_SCHEDULE;
-type Booking = { id:string; date:string; time:string; client_name:string; client_phone:string; goal:string; notes:string; status:string; created_at:string; };
+type Booking = { id:string; date:string; time:string; client_name:string; client_phone:string; client_email?:string; goal:string; notes:string; status:string; created_at:string; };
 
 // Generate time slots for a day
 function getSlots(schedule: Schedule, dateStr: string, bookings: Booking[]): string[] {
@@ -53,6 +53,7 @@ export function BookingPage({coachId}:{coachId:string|null}){
   const [selectedTime, setSelectedTime] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
@@ -89,15 +90,46 @@ export function BookingPage({coachId}:{coachId:string|null}){
     if(!name.trim()||!phone.trim()||!selectedDate||!selectedTime){ setError("Užpildykite visus laukus."); return; }
     setSubmitting(true); setError("");
     try{
-      // coach_id stored separately per coach; bookings are global slots but we need to filter
-      // Use coachId from URL param — this ensures booking goes to correct coach
-      await sb.insert("bookings",{date:selectedDate,time:selectedTime,client_name:name.trim(),client_phone:phone.trim(),goal:"",notes:"",status:"pending",coach_id:coachId||null});
-      // Fire notification (don't await — don't block success screen if it fails)
+      await sb.insert("bookings",{date:selectedDate,time:selectedTime,client_name:name.trim(),client_phone:phone.trim(),client_email:email.trim()||null,goal:"",notes:"",status:"pending",coach_id:coachId||null});
+
+      // Fetch this coach's telegram_chat_id
+      let coachTgChat = "";
+      if(coachId){
+        const coachData = await sb.get("coaches",`?id=eq.${coachId}&select=telegram_chat_id`).catch(()=>[]);
+        coachTgChat = coachData[0]?.telegram_chat_id || "";
+      }
+
+      const MONTH_NAMES = ["Sausis","Vasaris","Kovas","Balandis","Gegužė","Birželis","Liepa","Rugpjūtis","Rugsėjis","Spalis","Lapkritis","Gruodis"];
+      const DAY_NAMES   = ["Sekmadienis","Pirmadienis","Antradienis","Trečiadienis","Ketvirtadienis","Penktadienis","Šeštadienis"];
+      const d = new Date(selectedDate+"T12:00:00");
+      const dateFormatted = `${DAY_NAMES[d.getDay()]}, ${d.getDate()} ${MONTH_NAMES[d.getMonth()]}`;
+      const msg = `🏋️ *Nauja rezervacija!*\n\n👤 *${name.trim()}*\n📞 ${phone.trim()||"—"}\n📅 ${dateFormatted}\n⏰ ${selectedTime}\n\n_Atsakyk klientui ir patvirtink rezervaciją._`;
+
+      const TG_TOKEN = (window as any).__DNA_TG_TOKEN || "";
+      const TG_CHAT = coachTgChat || (window as any).__DNA_TG_CHAT || "";
+
+      // Notify coach via Telegram
+      if(TG_TOKEN && TG_CHAT){
+        fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`,{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({chat_id:TG_CHAT,text:msg,parse_mode:"Markdown"}),
+        }).catch(()=>{});
+      }
+
+      // Send confirmation email to client via Edge Function
       fetch(`${SUPABASE_URL}/functions/v1/notify-booking`,{
         method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({date:selectedDate,time:selectedTime,client_name:name.trim(),client_phone:phone.trim()}),
+        headers:{"Content-Type":"application/json","Authorization":`Bearer ${SUPABASE_KEY}`},
+        body:JSON.stringify({
+          date:selectedDate, time:selectedTime,
+          client_name:name.trim(), client_phone:phone.trim(),
+          client_email:email.trim(),
+          coach_id:coachId||null, telegram_chat_id:TG_CHAT,
+          date_formatted:dateFormatted,
+        }),
       }).catch(()=>{});
+
       setDone(true);
     }catch(e:any){ setError("Klaida: "+e.message); }
     finally{ setSubmitting(false); }
@@ -134,8 +166,21 @@ export function BookingPage({coachId}:{coachId:string|null}){
       {/* Hero */}
       <div style={{background:`linear-gradient(180deg,#F0F0F0 0%,${C.bg} 100%)`,padding:"36px 20px 28px",textAlign:"center",borderBottom:`1px solid ${C.border}`,position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:500,height:200,background:`radial-gradient(ellipse at 50% 0%,${C.gold}12 0%,transparent 70%)`,pointerEvents:"none"}}/>
-        <div style={{width:68,height:68,background:`linear-gradient(135deg,${C.gold},#e8961a)`,borderRadius:20,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:900,color:C.bg,margin:"0 auto 16px",boxShadow:`0 8px 28px ${C.gold}44`,letterSpacing:"-0.05em"}} className="fu">DNA</div>
-        <div style={{fontSize:24,fontWeight:900,color:C.text,marginBottom:4,letterSpacing:"-0.02em"}} className="fu1">DNA Trainer</div>
+        <svg width="64" height="64" viewBox="0 0 48 48" fill="none" style={{margin:"0 auto 16px",display:"block"}} className="fu">
+          <circle cx="24" cy="24" r="22" stroke={C.text} strokeWidth="1" opacity={0.35}/>
+          <ellipse cx="24" cy="24" rx="12" ry="5.5" stroke={C.text} strokeWidth="1.3" fill="none"/>
+          <ellipse cx="24" cy="24" rx="12" ry="5.5" stroke={C.text} strokeWidth="1.3" fill="none" transform="rotate(60 24 24)"/>
+          <ellipse cx="24" cy="24" rx="12" ry="5.5" stroke={C.text} strokeWidth="1.3" fill="none" transform="rotate(120 24 24)"/>
+          <circle cx="24" cy="24" r="2.5" fill={C.gold}/>
+          <circle cx="36" cy="24" r="1.5" fill={C.text}/>
+          <circle cx="18" cy="14.5" r="1.5" fill={C.text}/>
+          <circle cx="18" cy="33.5" r="1.5" fill={C.text}/>
+        </svg>
+        <div style={{display:"flex",alignItems:"center",gap:10,justifyContent:"center",marginBottom:4}} className="fu1">
+          <div style={{width:16,height:1,background:C.border}}/>
+          <div style={{fontSize:18,fontWeight:300,color:C.text,letterSpacing:"0.2em",fontFamily:"'Inter',sans-serif",textTransform:"uppercase"}}>DNA TRAINER</div>
+          <div style={{width:16,height:1,background:C.border}}/>
+        </div>
         <div style={{fontSize:13,color:C.muted,marginBottom:4}} className="fu1">Asmeninė treniruotė — 60 min.</div>
         <div style={{fontSize:12,color:C.gold,fontWeight:600}} className="fu2">📅 Pasirinkite laiką ir užsiregistruokite</div>
       </div>
@@ -212,6 +257,10 @@ export function BookingPage({coachId}:{coachId:string|null}){
                 <span style={css.label}>Telefono numeris *</span>
                 <input value={phone} onChange={e=>setPhone(e.target.value)} style={css.input} placeholder="+370 600 00000" type="tel"/>
               </div>
+              <div>
+                <span style={css.label}>El. paštas (patvirtinimui) <span style={{color:C.muted,fontWeight:400}}>— nebūtinas</span></span>
+                <input value={email} onChange={e=>setEmail(e.target.value)} style={css.input} placeholder="jonas@gmail.com" type="email"/>
+              </div>
               {error&&<div style={{background:"#ef444418",border:"1px solid #ef444440",borderRadius:8,padding:"10px 14px",fontSize:13,color:"#f87171"}}>{error}</div>}
               <button onClick={submit} disabled={submitting} style={{...css.btnG,width:"100%",padding:"14px",fontSize:15,borderRadius:12,opacity:name&&phone?1:0.5}}>
                 {submitting?"⏳ Registruojama...":"✅ Rezervuoti treniruotę"}
@@ -246,6 +295,8 @@ export function CalendarTab(){
   const [schedForm, setSchedForm] = useState<Schedule>(DEFAULT_SCHEDULE);
   const [blockDate, setBlockDate] = useState("");
   const [bookingLink] = useState(()=>window.location.origin+window.location.pathname+`?type=booking&coach=${getCoachId()}`);
+  const [newBookingAlert, setNewBookingAlert] = useState<Booking|null>(null);
+  const lastCountRef = {current: -1};
 
   const load = useCallback(async()=>{
     setLoading(true);
@@ -260,6 +311,28 @@ export function CalendarTab(){
     }finally{ setLoading(false); }
   },[]);
   useEffect(()=>{ load(); },[load]);
+
+  // Poll for new bookings every 30 seconds
+  useEffect(()=>{
+    let prevCount = -1;
+    const poll = async()=>{
+      try{
+        const coachId = getCoachId();
+        const bk = await sb.get("bookings",`?coach_id=eq.${coachId}&order=created_at.desc&limit=50`);
+        const pending = bk.filter((b:Booking)=>b.status==="pending");
+        if(prevCount>=0 && pending.length > prevCount){
+          // New booking arrived!
+          const newest = bk[0];
+          setNewBookingAlert(newest);
+          setBookings(bk);
+          setTimeout(()=>setNewBookingAlert(null), 8000);
+        }
+        prevCount = pending.length;
+      }catch{}
+    };
+    const timer = setInterval(poll, 30000);
+    return ()=>clearInterval(timer);
+  },[]);
 
   const saveSchedule = async()=>{
     setSaving(true);
@@ -276,6 +349,47 @@ export function CalendarTab(){
       await sb.update("bookings",id,{status});
       setBookings(p=>p.map(b=>b.id===id?{...b,status}:b));
       if(selectedBooking?.id===id) setSelectedBooking(p=>p?{...p,status}:null);
+
+      // Send email notification to client if they have an email
+      const booking = bookings.find(b=>b.id===id) || selectedBooking;
+      if(booking?.client_email){
+        const d = new Date(booking.date+"T12:00:00");
+        const dateFormatted = `${DAY_NAMES[d.getDay()]}, ${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+        const isConfirmed = status==="confirmed";
+
+        // Send via Edge Function
+        fetch(`${SUPABASE_URL}/functions/v1/notify-booking`,{
+          method:"POST",
+          headers:{"Content-Type":"application/json","Authorization":`Bearer ${SUPABASE_KEY}`},
+          body:JSON.stringify({
+            type: isConfirmed ? "confirm_client" : "decline_client",
+            client_email: booking.client_email,
+            client_name:  booking.client_name,
+            client_phone: booking.client_phone,
+            date:         booking.date,
+            time:         booking.time,
+            date_formatted: dateFormatted,
+            status,
+          }),
+        }).catch(()=>{});
+
+        // Also send Telegram confirmation to coach
+        const TG_TOKEN = (window as any).__DNA_TG_TOKEN||"";
+        const TG_CHAT  = (window as any).__DNA_TG_CHAT||"";
+        if(TG_TOKEN && TG_CHAT){
+          const emoji = isConfirmed ? "✅" : "❌";
+          const action = isConfirmed ? "PATVIRTINTA" : "ATŠAUKTA";
+          fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`,{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+              chat_id:TG_CHAT,
+              text:`${emoji} Rezervacija *${action}*\n\n👤 ${booking.client_name}\n📅 ${dateFormatted}\n⏰ ${booking.time}\n📧 El. paštas išsiųstas klientui`,
+              parse_mode:"Markdown",
+            }),
+          }).catch(()=>{});
+        }
+      }
     }catch(e:any){ alert("Klaida: "+e.message); }
   };
 
@@ -315,6 +429,27 @@ export function CalendarTab(){
 
   return(
     <div>
+      {/* New booking notification toast */}
+      {newBookingAlert && (
+        <div style={{
+          position:"fixed",top:20,right:20,zIndex:999,
+          background:`linear-gradient(135deg,${C.surface},${C.surface2})`,
+          border:`1px solid ${C.gold}`,borderRadius:14,
+          padding:"14px 18px",maxWidth:320,
+          boxShadow:`0 8px 40px rgba(0,0,0,0.6),0 0 0 1px ${C.goldBorder}`,
+          animation:"fadeUp .3s ease",
+          display:"flex",alignItems:"flex-start",gap:12,
+        }}>
+          <div style={{fontSize:24,flexShrink:0}}>🔔</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12,fontWeight:700,color:C.gold,letterSpacing:"0.1em",textTransform:"uppercase" as const,marginBottom:4}}>Nauja rezervacija!</div>
+            <div style={{fontSize:14,fontWeight:600,color:C.text}}>{newBookingAlert.client_name}</div>
+            <div style={{fontSize:12,color:C.muted,marginTop:2}}>{newBookingAlert.date} · {newBookingAlert.time}</div>
+            {newBookingAlert.client_phone && <div style={{fontSize:11,color:C.muted}}>{newBookingAlert.client_phone}</div>}
+          </div>
+          <button onClick={()=>setNewBookingAlert(null)} style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer",flexShrink:0,padding:0}}>×</button>
+        </div>
+      )}
       {/* Header */}
       <div style={{display:"flex",alignItems:"flex-end",marginBottom:20,flexWrap:"wrap" as const,gap:12}}>
         <div>
@@ -485,38 +620,75 @@ export function CalendarTab(){
       {/* Booking detail modal */}
       {selectedBooking&&(
         <div style={css.overlay}>
-          <div style={css.modal(440)}>
-            <div style={{padding:"16px 20px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center"}}>
-              <div style={{fontWeight:700,fontSize:15,color:C.gold}}>📅 Rezervacija</div>
-              <button onClick={()=>setSelectedBooking(null)} style={{marginLeft:"auto",width:28,height:28,background:C.faint,border:`1px solid ${C.border}`,borderRadius:7,color:C.muted,cursor:"pointer",fontSize:16}}>×</button>
+          <div style={css.modal(460)}>
+            <div style={{padding:"14px 20px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center"}}>
+              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:C.gold,letterSpacing:"0.04em"}}>REZERVACIJA</div>
+              <button onClick={()=>setSelectedBooking(null)} style={{marginLeft:"auto",width:28,height:28,background:C.faint,border:`1px solid ${C.border}`,color:C.muted,cursor:"pointer",fontSize:16}}>×</button>
             </div>
             <div style={{padding:22,display:"flex",flexDirection:"column" as const,gap:14}}>
-              {/* Date/time */}
-              <div style={{background:C.faint,borderRadius:12,padding:"14px 16px",textAlign:"center" as const}}>
-                <div style={{fontSize:13,color:C.muted,marginBottom:4}}>{getLT(new Date(selectedBooking.date+"T12:00:00"))}</div>
-                <div style={{fontSize:32,fontWeight:900,color:C.gold}}>{selectedBooking.time}</div>
-                <div style={{fontSize:11,color:C.muted,marginTop:2}}>60 minučių sesija</div>
+              {/* Date/time hero */}
+              <div style={{background:C.faint,border:`1px solid ${C.border}`,padding:"16px 20px",textAlign:"center" as const,position:"relative" as const}}>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,color:C.muted,letterSpacing:"0.18em",textTransform:"uppercase" as const,marginBottom:6}}>{getLT(new Date(selectedBooking.date+"T12:00:00"))}</div>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:52,color:C.gold,lineHeight:1,letterSpacing:"0.04em"}}>{selectedBooking.time}</div>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,color:C.muted,letterSpacing:"0.12em",marginTop:4}}>60 minučių sesija</div>
               </div>
+
               {/* Client info */}
-              <div style={{display:"flex",gap:10}}>
-                <div style={{width:48,height:48,background:`linear-gradient(135deg,${C.gold},#e8961a)`,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,fontWeight:900,color:C.bg,flexShrink:0}}>{(selectedBooking.client_name||"?")[0].toUpperCase()}</div>
-                <div>
-                  <div style={{fontSize:16,fontWeight:700,color:C.text}}>{selectedBooking.client_name}</div>
-                  <a href={`tel:${selectedBooking.client_phone}`} style={{fontSize:13,color:C.teal,textDecoration:"none",fontWeight:600}}>📞 {selectedBooking.client_phone}</a>
+              <div style={{background:C.faint,border:`1px solid ${C.border}`,padding:"14px 16px"}}>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:9,color:C.muted,letterSpacing:"0.2em",textTransform:"uppercase" as const,marginBottom:10}}>Kliento informacija</div>
+                <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+                  <div style={{width:44,height:44,background:`linear-gradient(135deg,${C.gold},#8B6520)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:900,color:C.bg,flexShrink:0}}>{(selectedBooking.client_name||"?")[0].toUpperCase()}</div>
+                  <div style={{flex:1,display:"flex",flexDirection:"column" as const,gap:6}}>
+                    <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:C.text,letterSpacing:"0.04em",lineHeight:1}}>{selectedBooking.client_name}</div>
+                    {selectedBooking.client_phone&&(
+                      <a href={`tel:${selectedBooking.client_phone}`} style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,color:C.teal,textDecoration:"none",fontWeight:600,letterSpacing:"0.04em",display:"flex",alignItems:"center",gap:6}}>
+                        📞 {selectedBooking.client_phone}
+                      </a>
+                    )}
+                    {selectedBooking.client_email?(
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <a href={`mailto:${selectedBooking.client_email}`} style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,color:C.green,textDecoration:"none",fontWeight:600,letterSpacing:"0.04em"}}>
+                          📧 {selectedBooking.client_email}
+                        </a>
+                        <span style={{background:C.greenSoft,border:`1px solid ${C.greenBorder}`,padding:"1px 7px",fontFamily:"'Barlow Condensed',sans-serif",fontSize:8,color:C.green,fontWeight:700,letterSpacing:"0.1em"}}>EL. PAŠTAS</span>
+                      </div>
+                    ):(
+                      <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,color:C.muted,letterSpacing:"0.06em"}}>📧 El. paštas nenurodytas</div>
+                    )}
+                    {selectedBooking.client_phone&&(
+                      <a href={`https://wa.me/${(selectedBooking.client_phone||"").replace(/\D/g,"")}?text=${encodeURIComponent(`Sveiki ${selectedBooking.client_name}! Jūsų rezervacija ${selectedBooking.date} ${selectedBooking.time}.`)}`} target="_blank" rel="noopener noreferrer" style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,color:"#25D366",textDecoration:"none",fontWeight:600,letterSpacing:"0.06em",display:"flex",alignItems:"center",gap:5}}>
+                        💬 Rašyti WhatsApp
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
-              {/* Status */}
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:12,color:C.muted}}>Statusas:</span>
-                <span style={{background:statusColor(selectedBooking.status)+"22",border:`1px solid ${statusColor(selectedBooking.status)}44`,borderRadius:6,padding:"3px 10px",fontSize:12,fontWeight:700,color:statusColor(selectedBooking.status)}}>{statusLabel(selectedBooking.status)}</span>
+
+              {/* Status + email notice */}
+              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap" as const}}>
+                <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,color:C.muted,letterSpacing:"0.1em"}}>STATUSAS:</span>
+                <span style={{background:statusColor(selectedBooking.status)+"22",border:`1px solid ${statusColor(selectedBooking.status)}44`,padding:"3px 12px",fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:700,color:statusColor(selectedBooking.status),letterSpacing:"0.1em"}}>{statusLabel(selectedBooking.status)}</span>
+                {selectedBooking.client_email&&selectedBooking.status==="pending"&&(
+                  <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,color:C.muted,letterSpacing:"0.06em",marginLeft:"auto"}}>📧 El. laiškas išsiųstas patvirtinus</span>
+                )}
               </div>
-              {/* Actions */}
+
+              {/* Action buttons */}
               <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
-                {selectedBooking.status!=="confirmed"&&<button onClick={()=>updateBookingStatus(selectedBooking.id,"confirmed")} style={{...css.btnGreen,flex:1}}>✅ Patvirtinti</button>}
-                {selectedBooking.status!=="cancelled"&&<button onClick={()=>updateBookingStatus(selectedBooking.id,"cancelled")} style={{...css.btnRed,flex:1}}>❌ Atšaukti</button>}
-                <button onClick={()=>deleteBooking(selectedBooking.id)} style={{...css.btnGhost,flex:1,fontSize:12}}>🗑️ Ištrinti</button>
+                {selectedBooking.status!=="confirmed"&&(
+                  <button onClick={()=>updateBookingStatus(selectedBooking.id,"confirmed")} style={{...css.btnGreen,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                    ✅ Patvirtinti{selectedBooking.client_email?" + siųsti el. laišką":""}
+                  </button>
+                )}
+                {selectedBooking.status!=="cancelled"&&(
+                  <button onClick={()=>updateBookingStatus(selectedBooking.id,"cancelled")} style={{...css.btnRed,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                    ❌ Atšaukti{selectedBooking.client_email?" + pranešti":""}
+                  </button>
+                )}
+                <button onClick={()=>deleteBooking(selectedBooking.id)} style={{...css.btnGhost,padding:"9px 14px",fontSize:11}}>🗑️</button>
               </div>
-              <div style={{fontSize:11,color:C.muted,textAlign:"center" as const}}>
+
+              <div style={{fontFamily:"'Barlow',sans-serif",fontSize:10,color:C.muted,letterSpacing:"0.04em",textAlign:"center" as const}}>
                 Užregistruota: {new Date(selectedBooking.created_at).toLocaleDateString("lt-LT",{year:"numeric",month:"long",day:"numeric",hour:"2-digit",minute:"2-digit"})}
               </div>
             </div>
