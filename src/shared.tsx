@@ -1,4 +1,4 @@
-// ── shared.tsx — constants, colors, helpers, shared UI ────
+// ── shared.tsx — DNA Trainer · Architectural Dark theme ──
 export const SUPABASE_URL = "https://wtsksjyayilyyudvizsx.supabase.co";
 export const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0c2tzanlheWlseXl1ZHZpenN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5NjI3NzgsImV4cCI6MjA5MzUzODc3OH0.wxlA05-VNVfsTe-630pQXYSewpDWII_AnOK2SIGEy7E";
 export const sb = {
@@ -11,7 +11,6 @@ export const sb = {
 };
 
 export const APP_PASSWORD = "coach2024";
-
 export const ALL_MUSCLES  = ["Krūtinė","Nugara","Kojos","Pečiai","Bicepsas","Tricepsas","Pilvas"];
 export const GOALS        = ["Raumenų auginimas","Riebalų deginimas","Jėgos ugdymas","Ištvermė","Reabilitacija","Sveikata"];
 export const LEVELS       = ["Pradedantysis","Vidutinis","Pažengęs"];
@@ -27,55 +26,165 @@ export const ACTIVITY_LEVELS = [
   {label:"Profesionalus sportininkas",factor:1.9},
 ];
 
+// ── ARCHITECTURAL DARK THEME ─────────────────────────────
 export const C = {
-  bg:"#080A10",surface:"#0F1118",surface2:"#161A24",border:"#1E2330",
-  gold:"#D4A853",goldSoft:"#D4A85318",goldBorder:"#D4A85348",
-  teal:"#5B8DB8",tealSoft:"#5B8DB815",tealBorder:"#5B8DB840",
-  red:"#C05050",redSoft:"#C0505015",redBorder:"#C0505040",
-  green:"#4E9068",greenSoft:"#4E906815",greenBorder:"#4E906840",
-  purple:"#7B6DB0",purpleSoft:"#7B6DB015",purpleBorder:"#7B6DB040",
-  text:"#F0EBE0",muted:"#5A6070",faint:"#060709",
+  bg:"#060709",surface:"#0E1016",surface2:"#121520",border:"#1E2430",
+  gold:"#D4A853",goldSoft:"#D4A85315",goldBorder:"#D4A85340",
+  teal:"#5B8DB8",tealSoft:"#5B8DB812",tealBorder:"#5B8DB838",
+  red:"#C05050",redSoft:"#C0505012",redBorder:"#C0505038",
+  green:"#4E9068",greenSoft:"#4E906812",greenBorder:"#4E906838",
+  purple:"#7B6DB0",purpleSoft:"#7B6DB012",purpleBorder:"#7B6DB038",
+  text:"#FFFFFF",muted:"#8A9AAA",faint:"#080A0F",
 };
-export const FONT = "'Inter','Helvetica Neue',system-ui,sans-serif";
+
+export const FONT = "'Barlow','Helvetica Neue',sans-serif";
+export const DISPLAY_FONT = "'Bebas Neue',sans-serif";
+export const CONDENSED_FONT = "'Barlow Condensed','Helvetica Neue',sans-serif";
+
+// Wallpaper used in hero / callout sections
+export const HERO_IMG = "https://images.unsplash.com/photo-1549476464-37392f717541?w=1600&q=90";
+export const GYM_IMG2 = "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=800&q=80";
+export const GYM_IMG3 = "https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?w=800&q=80";
 
 export const RESPONSIVE_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-  *{box-sizing:border-box;} body{margin:0;background:#0A0C12;font-size:15px;}
-  input,select,textarea{font-size:15px!important;}
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@400;500;600;700;800&display=swap');
+  *{box-sizing:border-box;} body{margin:0;background:#060709;font-size:14px;}
+  input,select,textarea{font-size:14px!important;}
+
   @keyframes spin{to{transform:rotate(360deg)}}
-  @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
   @keyframes skelShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-  .fu{animation:fadeUp .35s ease both;}
-  .fu1{animation:fadeUp .35s .06s ease both;}
-  .fu2{animation:fadeUp .35s .12s ease both;}
-  .fu3{animation:fadeUp .35s .18s ease both;}
-  .fu4{animation:fadeUp .35s .24s ease both;}
-  .ex-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;}
-  .cl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
-  .food-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;}
-  .dash-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
-  .dash-bottom{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:20px;margin-top:20px;}
-  .cf-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  @keyframes aiPulse{0%,100%{opacity:.4}50%{opacity:1}}
+
+  .fu {animation:fadeUp .4s ease both;}
+  .fu1{animation:fadeUp .4s .07s ease both;}
+  .fu2{animation:fadeUp .4s .14s ease both;}
+  .fu3{animation:fadeUp .4s .21s ease both;}
+  .fu4{animation:fadeUp .4s .28s ease both;}
+
+  /* ── GRIDS ── */
+  .ex-grid  {display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1px;background:#141820;}
+  .cl-grid  {display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1px;background:#141820;}
+  .food-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1px;background:#141820;}
+  .dash-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid #141820;border-bottom:1px solid #141820;}
+  .dash-bottom{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:0;border-top:1px solid #141820;}
+  .cf-grid  {display:grid;grid-template-columns:1fr 1fr;gap:16px;}
   .macro-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
-  .ex2-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .ex2-grid {display:grid;grid-template-columns:1fr 1fr;gap:12px;}
   .food4-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;}
-  .step-nav{display:flex;gap:5px;}
-  .pick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:10px;}
-  .pick-row{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;padding:12px 18px;border-top:1px solid #222838;background:#08090F;}
+  .step-nav {display:flex;gap:4px;}
+  .pick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:8px;}
+  .pick-row {display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;padding:14px 20px;border-top:1px solid #141820;background:#060709;}
   .view-actions{display:flex;gap:8px;flex-wrap:wrap;}
   .view-actions button{flex:1;min-width:100px;}
-  .meal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;}
+  .meal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:1px;background:#141820;}
+
+  /* ── SECTION HEADINGS ── */
+  .sec-heading{
+    font-family:'Bebas Neue',sans-serif;
+    font-size:42px;
+    color:#F5F0E8;
+    letter-spacing:0.04em;
+    line-height:1;
+    margin-bottom:20px;
+  }
+  .sec-eyebrow{
+    display:flex;align-items:center;gap:10px;margin-bottom:10px;
+  }
+  .sec-eyebrow-num{
+    font-family:'Bebas Neue',sans-serif;font-size:10px;
+    color:#D4A853;letter-spacing:0.3em;
+  }
+  .sec-eyebrow-line{width:24px;height:1px;background:#D4A853;}
+
+  /* ── NAV ── */
+  .arch-nav-btn{
+    font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;
+    letter-spacing:0.16em;text-transform:uppercase;color:#505868;
+    cursor:pointer;border:none;background:transparent;
+    padding:0 0 2px;border-bottom:1px solid transparent;
+    transition:color .2s,border-color .2s;
+  }
+  .arch-nav-btn:hover,.arch-nav-btn.active{color:#D4A853;border-bottom-color:#D4A853;}
+
+  /* ── TABLE/LIST ROWS ── */
+  .arch-row{
+    border-top:1px solid #141820;
+    transition:background .15s,padding-left .2s;
+    cursor:pointer;
+  }
+  .arch-row:hover{background:rgba(212,168,83,0.05);padding-left:6px;}
+
+  .arch-session-row{
+    padding:13px 0;border-top:1px solid #141820;
+    display:flex;align-items:center;gap:14px;cursor:pointer;
+    transition:padding-left .2s;
+  }
+  .arch-session-row:hover{padding-left:8px;}
+
+  /* ── STAT BLOCKS ── */
+  .arch-stat-block{
+    padding:22px 28px;border-right:1px solid #141820;
+    transition:background .2s;
+  }
+  .arch-stat-block:last-child{border-right:none;}
+  .arch-stat-block:hover{background:rgba(212,168,83,0.04);}
+
+  /* ── EXERCISE/CLIENT CARDS ── */
+  .arch-card{
+    background:#060709;
+    transition:background .2s;
+    cursor:pointer;
+  }
+  .arch-card:hover{background:#0C0E13;}
+
+  /* ── BUTTONS ── */
+  .arch-btn-primary{
+    font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;
+    letter-spacing:0.16em;text-transform:uppercase;cursor:pointer;
+    background:#D4A853;color:#060709;border:1px solid #D4A853;
+    padding:11px 20px;transition:filter .2s;
+  }
+  .arch-btn-primary:hover{filter:brightness(1.12);}
+  .arch-btn-ghost{
+    font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;
+    letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;
+    background:transparent;color:#C0B8A8;border:1px solid #141820;
+    padding:10px 18px;transition:all .2s;
+  }
+  .arch-btn-ghost:hover{border-color:#D4A85360;color:#D4A853;}
+
+  /* ── INPUTS ── */
+  .arch-input{
+    width:100%;background:#060709;
+    border-top:none;border-left:none;border-right:none;
+    border-bottom:1px solid #141820;
+    padding:10px 0;color:#F5F0E8;
+    font-family:'Barlow',sans-serif;font-size:14px;
+    outline:none;transition:border-color .2s;
+    box-sizing:border-box;
+  }
+  .arch-input:focus{border-bottom-color:#D4A853;}
+  .arch-input::placeholder{color:#303848;}
+
+  /* ── SEARCH/TAG BAR ── */
+  .search-btn:hover{border-color:#D4A853 !important;color:#D4A853 !important;}
+  .sbar{font-family:'Barlow Condensed',sans-serif!important;letter-spacing:0.06em;}
+  .tag-row{overflow-x:auto;padding-bottom:4px;}
+  .tag-row::-webkit-scrollbar{height:2px;}
+  .tag-row::-webkit-scrollbar-thumb{background:#141820;}
+
+  /* ── MOBILE ── */
+  .bottom-nav{display:none;}
   @media(max-width:640px){
-    .ex-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+    .ex-grid{grid-template-columns:repeat(2,1fr);}
     .cl-grid,.food-grid{grid-template-columns:1fr;}
-    .dash-stats{grid-template-columns:repeat(2,1fr);gap:10px;}
+    .dash-stats{grid-template-columns:repeat(2,1fr);}
     .dash-bottom{grid-template-columns:1fr;}
     .cf-grid{grid-template-columns:1fr;}
     .ex2-grid{grid-template-columns:1fr 1fr;}
     .food4-grid{grid-template-columns:1fr 1fr;}
-    .macro-grid{gap:4px;}
-    .pick-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;}
-    .pick-row{gap:8px;padding:10px 12px;}
+    .pick-row{gap:8px;padding:10px 14px;}
     .pick-row>div{min-width:calc(50% - 4px);}
     .pick-row>button{width:100%;margin-top:4px;}
     .step-nav button{padding:5px 7px!important;font-size:10px!important;}
@@ -83,65 +192,65 @@ export const RESPONSIVE_CSS = `
     .logout-label{display:none;}
     .header-pad{padding:10px 14px!important;}
     .content-pad{padding:16px 12px!important;}
-    .modal-inner{padding:14px!important;}
     .hsubtitle{display:none;}
-    .sbar{width:100%!important;}
-    .tag-row{overflow-x:auto;flex-wrap:nowrap!important;padding-bottom:4px;}
-    .tag-row::-webkit-scrollbar{height:3px;}
-    .tag-row::-webkit-scrollbar-thumb{background:#222838;border-radius:2px;}
     .day-btns{display:grid!important;grid-template-columns:repeat(4,1fr);gap:6px!important;}
     .meal-grid{grid-template-columns:1fr;}
+    .bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:#0C0E13;border-top:1px solid #141820;z-index:200;padding:6px 0 calc(6px + env(safe-area-inset-bottom));justify-content:space-around;align-items:center;}
+    .bottom-nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 10px;cursor:pointer;min-width:52px;transition:background .15s;}
+    .bottom-nav-item.active{background:rgba(212,168,83,0.1);}
+    .bottom-nav-icon{font-size:20px;line-height:1;}
+    .bottom-nav-label{font-size:9px;color:#505868;letter-spacing:0.06em;font-weight:600;text-transform:uppercase;}
+    .bottom-nav-item.active .bottom-nav-label{color:#D4A853;}
+    .content-pad{padding-bottom:calc(80px + env(safe-area-inset-bottom))!important;}
+    .header-nav-items{display:none!important;}
+    .sec-heading{font-size:32px!important;}
   }
   @media(min-width:641px) and (max-width:960px){
     .cl-grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));}
     .cf-grid{grid-template-columns:1fr;}
     .dash-stats{grid-template-columns:repeat(2,1fr);}
     .dash-bottom{grid-template-columns:1fr;}
-    .food4-grid{grid-template-columns:1fr 1fr;}
   }
   @media(hover:none){button{min-height:40px;}}
-  .bottom-nav{display:none;}
-  @media(max-width:640px){
-    .bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:#0F1118;border-top:1px solid #1E2330;z-index:200;padding:6px 0 calc(6px + env(safe-area-inset-bottom));justify-content:space-around;align-items:center;}
-    .bottom-nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 10px;cursor:pointer;border-radius:10px;transition:background .15s;min-width:52px;}
-    .bottom-nav-item.active{background:rgba(212,168,83,0.12);}
-    .bottom-nav-icon{font-size:20px;line-height:1;}
-    .bottom-nav-label{font-size:9px;color:#5A6070;letter-spacing:0.06em;font-weight:600;text-transform:uppercase;}
-    .bottom-nav-item.active .bottom-nav-label{color:#D4A853;}
-    .content-pad{padding-bottom:calc(80px + env(safe-area-inset-bottom)) !important;}
-    .header-nav-items{display:none !important;}
-  }
-  .stat-card{transition:transform .15s,border-color .15s;}
-  .stat-card:hover{transform:translateY(-2px);}
-  .glass-card{background:rgba(15,17,24,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);}
-  .search-btn:hover{border-color:#D4A853 !important;color:#D4A853 !important;}
-  @keyframes skelShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-  @keyframes aiPulse{0%,100%{transform:scale(1);opacity:0.4}50%{transform:scale(1.5);opacity:1}}
-  .nav-tab{transition:all .15s;}
-  .nav-tab:hover{color:#F0EBE0 !important;}
-  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
-  .gold-line{display:flex;align-items:center;gap:8px;}
 `;
 
-
+// ── STYLE HELPERS ────────────────────────────────────────
 export const css = {
   page:    {minHeight:"100vh",background:C.bg,color:C.text,fontFamily:FONT},
-  header:  {background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"12px 28px",display:"flex",alignItems:"center",gap:14},
-  logo:    {width:36,height:36,background:C.gold,borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:17,color:C.bg,flexShrink:0},
-  card:    {background:C.surface,borderRadius:16,border:`1px solid ${C.border}`,padding:24,backdropFilter:"blur(10px)"},
-  label:   {fontSize:11,color:C.muted,letterSpacing:"0.08em",marginBottom:6,display:"block",fontWeight:600,textTransform:"uppercase" as const},
-  input:   {width:"100%",background:C.faint,border:`1px solid ${C.border}`,borderRadius:8,padding:"11px 14px",color:C.text,fontFamily:FONT,fontSize:14,outline:"none",boxSizing:"border-box" as const},
-  select:  {width:"100%",background:C.faint,border:`1px solid ${C.border}`,borderRadius:8,padding:"11px 14px",color:C.text,fontFamily:FONT,fontSize:14,outline:"none",boxSizing:"border-box" as const},
-  navBtn:  (a:boolean)=>({padding:"7px 16px",borderRadius:8,border:"none",background:a?C.gold:"transparent",color:a?C.bg:C.muted,fontFamily:"'Inter',sans-serif",fontWeight:a?700:500,fontSize:13,cursor:"pointer",transition:"all 0.15s"}),
-  btnG:    {padding:"11px 22px",background:C.gold,color:C.bg,border:"none",borderRadius:8,fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:13,cursor:"pointer"},
-  btnGhost:{padding:"9px 16px",background:"transparent",color:C.muted,border:`1px solid ${C.border}`,borderRadius:6,fontFamily:"'Mulish',sans-serif",fontWeight:500,fontSize:12,cursor:"pointer"},
-  btnTeal: {padding:"8px 14px",background:C.tealSoft,color:C.teal,border:`1px solid ${C.tealBorder}`,borderRadius:7,fontFamily:"'Inter',sans-serif",fontSize:13,cursor:"pointer",fontWeight:600},
-  btnRed:  {padding:"8px 14px",background:C.redSoft,color:C.red,border:`1px solid ${C.redBorder}`,borderRadius:7,fontFamily:"'Inter',sans-serif",fontSize:13,cursor:"pointer",fontWeight:600},
-  btnGreen:{padding:"8px 14px",background:C.greenSoft,color:C.green,border:`1px solid ${C.greenBorder}`,borderRadius:7,fontFamily:"'Inter',sans-serif",fontSize:13,cursor:"pointer",fontWeight:600},
-  secTitle:{fontSize:10,color:C.teal,letterSpacing:"0.18em",marginBottom:14,display:"block",fontWeight:700,textTransform:"uppercase" as const},
-  overlay: {position:"fixed" as const,inset:0,background:"#00000099",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:8,backdropFilter:"blur(6px)"},
-  modal:   (w:number)=>({background:C.surface,borderRadius:16,border:`1px solid ${C.border}`,width:"100%",maxWidth:w||520,maxHeight:"93vh",display:"flex",flexDirection:"column" as const,overflow:"hidden",boxShadow:"0 32px 80px #00000066"}),
+  header:  {background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"0 32px",height:52,display:"flex",alignItems:"center",gap:14},
+  logo:    {width:34,height:34,background:C.gold,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:16,color:C.bg,flexShrink:0},
+  card:    {background:C.surface,border:`1px solid ${C.border}`,padding:24},
+  label:   {fontSize:9,color:"#A0B0C0",letterSpacing:"0.2em",marginBottom:6,display:"block",fontWeight:600,textTransform:"uppercase" as const,fontFamily:CONDENSED_FONT},
+  input:   {width:"100%",background:C.faint,borderTop:"none",borderLeft:"none",borderRight:"none",borderBottom:`1px solid ${C.border}`,padding:"10px 0",color:C.text,fontFamily:FONT,fontSize:14,outline:"none",boxSizing:"border-box" as const,transition:"border-color .2s"},
+  select:  {width:"100%",background:C.faint,border:`1px solid ${C.border}`,padding:"10px 14px",color:C.text,fontFamily:FONT,fontSize:14,outline:"none",boxSizing:"border-box" as const},
+  navBtn:  (a:boolean)=>({
+    fontFamily:CONDENSED_FONT,fontSize:11,fontWeight:600,letterSpacing:"0.16em",textTransform:"uppercase" as const,
+    padding:"6px 14px",background:a?C.gold:"transparent",color:a?C.bg:C.muted,
+    border:`1px solid ${a?C.gold:"transparent"}`,cursor:"pointer",transition:"all .15s",
+  }),
+  btnG:    {padding:"11px 20px",background:C.gold,color:C.bg,border:"none",fontFamily:CONDENSED_FONT,fontWeight:700,fontSize:11,cursor:"pointer",letterSpacing:"0.16em",textTransform:"uppercase" as const},
+  btnGhost:{padding:"10px 18px",background:"transparent",color:"#B0C0D0",border:`1px solid ${C.border}`,fontFamily:CONDENSED_FONT,fontWeight:600,fontSize:11,cursor:"pointer",letterSpacing:"0.12em",textTransform:"uppercase" as const},
+  btnTeal: {padding:"9px 14px",background:C.tealSoft,color:C.teal,border:`1px solid ${C.tealBorder}`,fontFamily:CONDENSED_FONT,fontSize:11,cursor:"pointer",fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase" as const},
+  btnRed:  {padding:"9px 14px",background:C.redSoft,color:C.red,border:`1px solid ${C.redBorder}`,fontFamily:CONDENSED_FONT,fontSize:11,cursor:"pointer",fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase" as const},
+  btnGreen:{padding:"9px 14px",background:C.greenSoft,color:C.green,border:`1px solid ${C.greenBorder}`,fontFamily:CONDENSED_FONT,fontSize:11,cursor:"pointer",fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase" as const},
+  secTitle:{fontFamily:DISPLAY_FONT,fontSize:36,color:C.text,letterSpacing:"0.04em",marginBottom:0,display:"block",lineHeight:1},
+  overlay: {position:"fixed" as const,inset:0,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:8,backdropFilter:"blur(8px)"},
+  modal:   (w:number)=>({background:C.surface,border:`1px solid ${C.border}`,width:"100%",maxWidth:w||520,maxHeight:"93vh",display:"flex",flexDirection:"column" as const,overflow:"hidden",boxShadow:"0 40px 100px rgba(0,0,0,0.8)"}),
 };
+
+// ── SECTION HEADER HELPER ────────────────────────────────
+export function SectionHead({num,title,action,actionLabel}:{num:string,title:string,action?:()=>void,actionLabel?:string}){
+  return(
+    <div style={{marginBottom:24}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+        <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:10,color:C.gold,letterSpacing:"0.3em"}}>{num}</span>
+        <div style={{width:24,height:1,background:C.gold}}/>
+        {action&&<button onClick={action} style={{...css.btnGhost,marginLeft:"auto",padding:"5px 12px",fontSize:10}}>{actionLabel}</button>}
+      </div>
+      <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:42,color:"#FFFFFF",letterSpacing:"0.04em",lineHeight:1}}>{title}</div>
+    </div>
+  );
+}
 
 export function calcBMI(w:string,h:string){if(!w||!h)return null;return parseFloat(w)/Math.pow(parseFloat(h)/100,2);}
 export function bmiCat(b:number){if(b<18.5)return{label:"Nepakankamas",color:"#60a5fa"};if(b<25)return{label:"Normalus",color:"#22c55e"};if(b<30)return{label:"Antsvoris",color:"#f59e0b"};return{label:"Nutukimas",color:"#ef4444"};}
@@ -158,67 +267,52 @@ export function calcNut(w:string,h:string,age:string,gender:string,act:number){
   return{tdee,lose,gain,protLose,protGain,fatLose,fatGain,carbLose,carbGain};
 }
 export function genToken(){return Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);}
+export function getCoachId():string|null{try{const s=JSON.parse(sessionStorage.getItem("dna_session")||"null");return s?.id||null;}catch{return null;}}
+export function getIsAdmin():boolean{try{const s=JSON.parse(sessionStorage.getItem("dna_session")||"null");return s?.role==="admin";}catch{return false;}}
 
-// Returns current coach ID from session (used for filtering queries)
-export function getCoachId():string|null{
-  try{const s=JSON.parse(sessionStorage.getItem("dna_session")||"null");return s?.id||null;}
-  catch{return null;}
-}
-// Returns true if current user is admin
-export function getIsAdmin():boolean{
-  try{const s=JSON.parse(sessionStorage.getItem("dna_session")||"null");return s?.role==="admin";}
-  catch{return false;}
-}
-
-// ── Shared UI components ──────────────────────────────────
 import { useState, useRef } from "react";
 
-export const Tag=({c,label,active,onClick}:any)=><button onClick={onClick} style={{padding:"5px 12px",borderRadius:20,border:active?`1px solid ${c}`:`1px solid ${C.border}`,background:active?c+"22":"transparent",color:active?c:C.muted,fontFamily:FONT,fontSize:11,cursor:"pointer",fontWeight:600,flexShrink:0}}>{label}</button>;
-export const Badge=({label,color}:any)=><span style={{background:color+"18",border:`1px solid ${color}44`,borderRadius:20,padding:"3px 11px",color,fontSize:11,fontWeight:700}}>{label}</span>;
-export const Spinner=()=><div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:60,color:C.muted,fontSize:14,gap:10}}><div style={{width:20,height:20,border:`2px solid ${C.border}`,borderTopColor:C.gold,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>Kraunama...</div>;
-export const Skeleton=({w="100%",h=16,radius=6}:{w?:string|number,h?:number,radius?:number})=>(
+export const Tag=({c,label,active,onClick}:any)=>(
+  <button onClick={onClick} style={{padding:"4px 12px",border:active?`1px solid ${c}`:`1px solid ${C.border}`,background:active?c+"18":"transparent",color:active?c:C.muted,fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,cursor:"pointer",fontWeight:700,flexShrink:0,letterSpacing:"0.12em",textTransform:"uppercase" as const,transition:"all .15s"}}>{label}</button>
+);
+export const Badge=({label,color}:any)=><span style={{background:color+"15",border:`1px solid ${color}40`,padding:"2px 10px",color,fontSize:10,fontWeight:700,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.1em",textTransform:"uppercase" as const}}>{label}</span>;
+export const Spinner=()=><div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:60,color:C.muted,fontSize:12,gap:12,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.14em",textTransform:"uppercase"}}><div style={{width:18,height:18,border:`1px solid ${C.border}`,borderTopColor:C.gold,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>Kraunama</div>;
+export const Skeleton=({w="100%",h=16,radius=2}:{w?:string|number,h?:number,radius?:number})=>(
   <div style={{width:w,height:h,borderRadius:radius,background:`linear-gradient(90deg,${C.border} 25%,${C.surface2} 50%,${C.border} 75%)`,backgroundSize:"200% 100%",animation:"skelShimmer 1.5s infinite"}}/>
 );
 export const SkeletonCard=()=>(
-  <div style={{background:C.surface,borderRadius:16,border:`1px solid ${C.border}`,overflow:"hidden",padding:0}}>
-    <div style={{height:3,background:C.border}}/>
-    <div style={{padding:"14px 16px 10px",display:"flex",gap:12}}>
-      <div style={{width:46,height:46,borderRadius:12,background:C.border}}/>
-      <div style={{flex:1,display:"flex",flexDirection:"column" as const,gap:6,paddingTop:4}}>
-        <Skeleton w="60%" h={14}/>
-        <Skeleton w="80%" h={10}/>
+  <div style={{background:C.surface,border:`1px solid ${C.border}`}}>
+    <div style={{height:120,background:C.border}}/>
+    <div style={{padding:"14px 16px",display:"flex",flexDirection:"column" as const,gap:8}}>
+      <Skeleton w="55%" h={12}/><Skeleton w="75%" h={8}/>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginTop:4}}>
+        {[0,1,2].map(i=><Skeleton key={i} w="100%" h={8}/>)}
       </div>
-    </div>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:0,borderTop:`1px solid ${C.border}`,borderBottom:`1px solid ${C.border}`}}>
-      {[0,1,2].map(i=><div key={i} style={{padding:"10px",borderRight:i<2?`1px solid ${C.border}`:"none",display:"flex",flexDirection:"column" as const,alignItems:"center",gap:4}}><Skeleton w={24} h={16}/><Skeleton w={32} h={8}/></div>)}
-    </div>
-    <div style={{padding:"10px 16px 12px",display:"flex",flexDirection:"column" as const,gap:6}}>
-      <Skeleton w="100%" h={4} radius={2}/>
     </div>
   </div>
 );
-export const Err=({msg}:any)=>msg?<div style={{background:C.redSoft,border:`1px solid ${C.redBorder}`,borderRadius:8,padding:"10px 14px",fontSize:13,color:C.red,marginBottom:14}}>{msg}</div>:null;
+export const Err=({msg}:any)=>msg?<div style={{background:C.redSoft,border:`1px solid ${C.redBorder}`,padding:"10px 16px",fontSize:12,color:C.red,marginBottom:14,fontFamily:"'Barlow',sans-serif",letterSpacing:"0.04em"}}>{msg}</div>:null;
 export const NutriBadge=({kcal,p,c,f}:any)=>(
   <div style={{display:"flex",gap:5,flexWrap:"wrap" as const}}>
-    {kcal&&<span style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:6,padding:"2px 7px",fontSize:10,fontWeight:700,color:C.gold}}>{kcal} kcal</span>}
-    {p&&<span style={{background:"#ef444418",border:"1px solid #ef444440",borderRadius:6,padding:"2px 7px",fontSize:10,fontWeight:600,color:"#f87171"}}>P:{p}g</span>}
-    {c&&<span style={{background:"#f9731618",border:"1px solid #f9731640",borderRadius:6,padding:"2px 7px",fontSize:10,fontWeight:600,color:"#fb923c"}}>C:{c}g</span>}
-    {f&&<span style={{background:C.purpleSoft,border:"1px solid #a78bfa40",borderRadius:6,padding:"2px 7px",fontSize:10,fontWeight:600,color:C.purple}}>F:{f}g</span>}
+    {kcal&&<span style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,padding:"2px 8px",fontSize:9,fontWeight:700,color:C.gold,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.1em"}}>{kcal} kcal</span>}
+    {p&&<span style={{background:"#ef444412",border:"1px solid #ef444438",padding:"2px 8px",fontSize:9,fontWeight:600,color:"#f87171",fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.1em"}}>P:{p}g</span>}
+    {c&&<span style={{background:"#f9731612",border:"1px solid #f9731638",padding:"2px 8px",fontSize:9,fontWeight:600,color:"#fb923c",fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.1em"}}>C:{c}g</span>}
+    {f&&<span style={{background:C.purpleSoft,border:"1px solid #a78bfa38",padding:"2px 8px",fontSize:9,fontWeight:600,color:C.purple,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.1em"}}>F:{f}g</span>}
   </div>
 );
 
-export function ImgGallery({imgs,height=145}:{imgs:string[],height?:number}){
+export function ImgGallery({imgs,height=140}:{imgs:string[],height?:number}){
   const [cur,setCur]=useState(0);
   const list=(imgs||[]).filter(Boolean);
-  if(!list.length)return<div style={{height,display:"flex",alignItems:"center",justifyContent:"center",color:"#333",fontSize:28,background:C.faint}}>📷</div>;
+  if(!list.length)return<div style={{height,display:"flex",alignItems:"center",justifyContent:"center",color:"#2A3040",fontSize:28,background:C.faint}}>📷</div>;
   return(
     <div style={{position:"relative",height,overflow:"hidden",background:C.faint}}>
       <img src={list[cur]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>(e.target as HTMLImageElement).style.display="none"}/>
       {list.length>1&&<>
-        <button onClick={e=>{e.stopPropagation();setCur(p=>(p-1+list.length)%list.length);}} style={{position:"absolute",left:6,top:"50%",transform:"translateY(-50%)",width:26,height:26,borderRadius:"50%",background:"#000a",border:"none",color:"white",fontSize:14,cursor:"pointer"}}>‹</button>
-        <button onClick={e=>{e.stopPropagation();setCur(p=>(p+1)%list.length);}} style={{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",width:26,height:26,borderRadius:"50%",background:"#000a",border:"none",color:"white",fontSize:14,cursor:"pointer"}}>›</button>
+        <button onClick={e=>{e.stopPropagation();setCur(p=>(p-1+list.length)%list.length);}} style={{position:"absolute",left:6,top:"50%",transform:"translateY(-50%)",width:24,height:24,background:"rgba(0,0,0,0.7)",border:"none",color:"white",fontSize:14,cursor:"pointer"}}>‹</button>
+        <button onClick={e=>{e.stopPropagation();setCur(p=>(p+1)%list.length);}} style={{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",width:24,height:24,background:"rgba(0,0,0,0.7)",border:"none",color:"white",fontSize:14,cursor:"pointer"}}>›</button>
         <div style={{position:"absolute",bottom:6,left:"50%",transform:"translateX(-50%)",display:"flex",gap:4}}>
-          {list.map((_,i)=><div key={i} onClick={e=>{e.stopPropagation();setCur(i);}} style={{width:6,height:6,borderRadius:"50%",background:i===cur?"white":"rgba(255,255,255,0.35)",cursor:"pointer"}}/>)}
+          {list.map((_,i)=><div key={i} onClick={e=>{e.stopPropagation();setCur(i);}} style={{width:5,height:5,background:i===cur?"white":"rgba(255,255,255,0.3)",cursor:"pointer"}}/>)}
         </div>
       </>}
     </div>
@@ -236,25 +330,25 @@ export function MultiImgUploader({imgs,onChange}:{imgs:string[],onChange:any}){
   return(
     <div>
       <span style={css.label}>Nuotraukos</span>
-      {imgs.length>0&&(<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
-        {imgs.map((src,i)=>(<div key={i} style={{position:"relative",width:90,height:72,borderRadius:8,overflow:"hidden",border:`2px solid ${i===0?C.gold:C.border}`,flexShrink:0}}>
+      {imgs.length>0&&(<div style={{display:"flex",gap:6,flexWrap:"wrap" as const,marginBottom:10}}>
+        {imgs.map((src,i)=>(<div key={i} style={{position:"relative",width:82,height:66,overflow:"hidden",border:`2px solid ${i===0?C.gold:C.border}`,flexShrink:0}}>
           <img src={src} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-          {i===0&&<div style={{position:"absolute",bottom:2,left:2,background:C.gold,borderRadius:3,padding:"1px 4px",fontSize:8,fontWeight:700,color:C.bg}}>COVER</div>}
+          {i===0&&<div style={{position:"absolute",bottom:2,left:2,background:C.gold,padding:"1px 4px",fontSize:7,fontWeight:700,color:C.bg,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.1em"}}>COVER</div>}
           <div style={{position:"absolute",top:2,right:2,display:"flex",gap:2}}>
-            {i>0&&<button onClick={()=>moveL(i)} style={{width:16,height:16,borderRadius:3,background:"#000a",border:"none",color:"white",fontSize:9,cursor:"pointer"}}>←</button>}
-            {i<imgs.length-1&&<button onClick={()=>moveR(i)} style={{width:16,height:16,borderRadius:3,background:"#000a",border:"none",color:"white",fontSize:9,cursor:"pointer"}}>→</button>}
-            <button onClick={()=>remove(i)} style={{width:16,height:16,borderRadius:3,background:"#ef4444aa",border:"none",color:"white",fontSize:9,cursor:"pointer"}}>×</button>
+            {i>0&&<button onClick={()=>moveL(i)} style={{width:14,height:14,background:"#000a",border:"none",color:"white",fontSize:8,cursor:"pointer"}}>←</button>}
+            {i<imgs.length-1&&<button onClick={()=>moveR(i)} style={{width:14,height:14,background:"#000a",border:"none",color:"white",fontSize:8,cursor:"pointer"}}>→</button>}
+            <button onClick={()=>remove(i)} style={{width:14,height:14,background:"#ef4444aa",border:"none",color:"white",fontSize:8,cursor:"pointer"}}>×</button>
           </div>
         </div>))}
-        <div onClick={()=>fileRef.current?.click()} style={{width:90,height:72,borderRadius:8,border:`2px dashed ${C.border}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",color:C.muted,fontSize:10,gap:3}}>
-          <span style={{fontSize:18}}>+</span><span>Pridėti</span>
+        <div onClick={()=>fileRef.current?.click()} style={{width:82,height:66,border:`1px dashed ${C.border}`,display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",cursor:"pointer",color:C.muted,fontSize:9,gap:2,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.1em"}}>
+          <span style={{fontSize:16}}>+</span>PRIDĖTI
         </div>
       </div>)}
-      {imgs.length===0&&<div onClick={()=>fileRef.current?.click()} style={{height:70,borderRadius:10,border:`2px dashed ${C.border}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:C.muted,gap:8,marginBottom:10,fontSize:13}}><span style={{fontSize:20}}>📷</span>Spustelėkite, kad įkeltumėte</div>}
+      {imgs.length===0&&<div onClick={()=>fileRef.current?.click()} style={{height:64,border:`1px dashed ${C.border}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:C.muted,gap:8,marginBottom:10,fontSize:11,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.12em"}}>📷 SPUSTELĖKITE, KAD ĮKELTUMĖTE</div>}
       <input ref={fileRef} type="file" accept="image/*" multiple onChange={addFile} style={{display:"none"}}/>
       <div style={{display:"flex",gap:8}}>
-        <input ref={urlRef} placeholder="Arba įklijuokite nuotraukos URL..." style={{...css.input,flex:1,fontSize:12}} onKeyDown={e=>e.key==="Enter"&&addUrl()}/>
-        <button onClick={addUrl} style={{...css.btnTeal,padding:"8px 14px",fontSize:16,fontWeight:800}}>+</button>
+        <input ref={urlRef} placeholder="Arba įklijuokite URL..." style={{...css.input,flex:1,fontSize:12}} onKeyDown={e=>e.key==="Enter"&&addUrl()}/>
+        <button onClick={addUrl} style={{...css.btnTeal,padding:"10px 14px",fontSize:16,fontWeight:800}}>+</button>
       </div>
     </div>
   );
