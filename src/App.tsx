@@ -1,6 +1,6 @@
 // ── App.tsx — Dashboard, Exercises, Clients, Share page ──
 import { useState, useCallback, useEffect } from "react";
-import { sb, C, FONT, RESPONSIVE_CSS, css, ALL_MUSCLES, GOALS, LEVELS, DAYS, REST_OPTIONS, ACTIVITY_LEVELS, calcBMI, bmiCat, calcNut, genToken, getCoachId, getIsAdmin, Tag, Badge, Spinner, Skeleton, SkeletonCard, Err, NutriBadge, ImgGallery, MultiImgUploader } from "./shared";
+import { sb, C, FONT, RESPONSIVE_CSS, css, ALL_MUSCLES, GOALS, LEVELS, DAYS, REST_OPTIONS, ACTIVITY_LEVELS, calcBMI, bmiCat, calcNut, genToken, getCoachId, getIsAdmin, Tag, Badge, Spinner, Skeleton, SkeletonCard, Err, NutriBadge, ImgGallery, MultiImgUploader, HERO_IMG, GYM_IMG2, DISPLAY_FONT, CONDENSED_FONT, SectionHead } from "./shared";
 import { LoginScreen, AuthProvider, UsersTab, useAuth, getSession, clearSession } from "./auth";
 import { FoodsTab, MealPlanBuilder, MealSharePage } from "./MealPlan";
 import { CalendarTab, BookingPage } from "./Calendar";
@@ -20,7 +20,14 @@ function getYouTubeEmbed(url:string):string|null{
 }
 
 const emptyExForm  = {name:"",muscle:"Krūtinė",equipment:"",sets:"3",reps:"10-12",description:"",video_url:"",imgs:[] as string[]};
-const emptyClient  = {name:"",age:"",weight:"",height:"",gender:"Vyras",goal:"",level:"",notes:"",training_days:[] as string[],activity_index:2};
+
+const MUSCLE_COLORS:Record<string,string> = {
+  "Krūtinė":"#5B8DB8","Nugara":"#4E9068","Kojos":"#D4A853",
+  "Pečiai":"#9B7DD4","Bicepsas":"#E07B5A","Tricepsas":"#5BA8A0",
+  "Pilvas":"#7DA84E","Visi":"#6B7280",
+};
+const muscleColor=(m:string)=>MUSCLE_COLORS[m]||C.teal;
+const emptyClient  = {name:"",age:"",weight:"",height:"",gender:"Vyras",goal:"",level:"",notes:"",training_days:[] as string[],activity_index:2,phone:""};
 
 // LoginScreen is now in auth.tsx
 
@@ -241,18 +248,25 @@ function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
 
   return(
     <div>
-      {/* Hero banner — cinematic photo */}
-      <div className="fu" style={{position:"relative",borderRadius:16,overflow:"hidden",marginBottom:22,minHeight:210}}>
-        <img src="https://images.unsplash.com/photo-1549476464-37392f717541?w=1400&q=85" alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",filter:"brightness(0.22) saturate(0.6)"}} onError={e=>(e.target as HTMLImageElement).style.display="none"}/>
-        <div style={{position:"absolute",inset:0,background:`linear-gradient(135deg,${C.bg}EE 0%,${C.bg}88 60%,${C.bg}00 100%)`}}/>
-        <div style={{position:"relative",padding:"32px 28px 28px"}}>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
-            <div style={{width:24,height:1,background:C.gold}}/>
-            <div style={{fontSize:10,color:C.gold,fontWeight:600,letterSpacing:"0.22em",textTransform:"uppercase"}}>Sporto sistema · {new Date().getFullYear()}</div>
+      {/* ── HERO ──────────────────────────────────────────── */}
+      <div className="fu" style={{position:"relative",overflow:"hidden",minHeight:280,borderBottom:`1px solid ${C.border}`}}>
+        <img src={HERO_IMG} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:"center 25%",filter:"brightness(0.28) saturate(0.35) contrast(1.2)"}}/>
+        <div style={{position:"absolute",inset:0,background:"linear-gradient(110deg,rgba(6,7,9,0.98) 28%,rgba(6,7,9,0.6) 58%,rgba(6,7,9,0.15) 100%)"}}/>
+        <div style={{position:"absolute",bottom:0,left:0,right:0,height:160,background:"linear-gradient(to top,#060709,transparent)"}}/>
+        <div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(rgba(212,168,83,0.055) 1px,transparent 1px),linear-gradient(90deg,rgba(212,168,83,0.055) 1px,transparent 1px)",backgroundSize:"56px 56px"}}/>
+        <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse 55% 60% at 72% 50%,rgba(212,168,83,0.07) 0%,transparent 65%)"}}/>
+        <div style={{position:"relative",padding:"44px 32px 36px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}>
+            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:10,color:C.gold,letterSpacing:"0.3em"}}>01</span>
+            <div style={{width:32,height:1,background:C.gold}}/>
+            <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:9,color:"#9AABB8",letterSpacing:"0.22em",textTransform:"uppercase" as const}}>Sporto sistema · {new Date().getFullYear()}</span>
           </div>
-          <div style={{fontSize:36,fontWeight:800,color:"#FFFFFF",marginBottom:4,letterSpacing:"-0.01em",fontFamily:"'Inter',sans-serif",lineHeight:1.1}}>Sveiki sugrįžę</div>
-          <div style={{fontSize:13,color:C.muted,marginBottom:22}}>{new Date().toLocaleDateString("lt-LT",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
-          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}> 
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",lineHeight:0.88,letterSpacing:"0.02em",marginBottom:18,textShadow:"0 4px 40px rgba(0,0,0,0.9)"}}>
+            <div style={{fontSize:"clamp(52px,7vw,80px)",color:C.text}}>SVEIKI</div>
+            <div style={{fontSize:"clamp(52px,7vw,80px)",color:C.gold}}>SUGRĮŽĘ</div>
+          </div>
+          <div style={{fontFamily:"'Barlow',sans-serif",fontSize:12,color:"#8A9AAA",fontWeight:300,marginBottom:24,letterSpacing:"0.06em"}}>{new Date().toLocaleDateString("lt-LT",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
             <button onClick={()=>onNav("clients",true)} style={css.btnG}>+ Naujas klientas</button>
             <button onClick={()=>onNav("exercises",true)} style={css.btnGhost}>+ Pratimas</button>
             <button onClick={()=>onNav("foods",true)} style={css.btnGhost}>+ Maistas</button>
@@ -260,26 +274,25 @@ function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
         </div>
       </div>
 
-      {/* Stats cards */}
-      <div className="dash-stats fu1" style={{}}>
-        {statCards.map(s=>(
-          <div key={s.label} onClick={()=>onNav(s.tab)} className="stat-card" style={{background:C.surface,borderRadius:16,border:`1px solid ${C.border}`,padding:"20px 18px",cursor:"pointer",position:"relative",overflow:"hidden"}}>
-            <div style={{position:"absolute",top:0,right:0,width:80,height:80,background:`radial-gradient(ellipse at 100% 0%,${s.color}22 0%,transparent 70%)`,pointerEvents:"none"}}/>
-            <div style={{position:"absolute",bottom:-8,left:-8,width:60,height:60,background:`radial-gradient(circle,${s.color}08 0%,transparent 70%)`,pointerEvents:"none"}}/>
-            <div style={{fontSize:30,marginBottom:10}}>{s.icon}</div>
-            <div style={{fontSize:36,fontWeight:900,color:s.color,lineHeight:1,marginBottom:7,fontFamily:"'Inter',sans-serif",letterSpacing:"-0.02em"}}>{loading?"—":s.val}</div>
-            <div style={{fontSize:10,color:C.muted,fontWeight:700,textTransform:"uppercase" as const,letterSpacing:"0.12em"}}>{s.label}</div>
-            <div style={{position:"absolute",bottom:0,left:0,right:0,height:2,background:`linear-gradient(to right,${s.color}00,${s.color}60,${s.color}00)`}}/>
+      {/* ── STATS BAR ──────────────────────────────────────── */}
+      <div className="dash-stats fu1">
+        {statCards.map((s,i)=>(
+          <div key={s.label} onClick={()=>onNav(s.tab)} className="arch-stat-block" style={{cursor:"pointer"}}>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:9,color:"#9AABB8",letterSpacing:"0.22em",textTransform:"uppercase" as const,marginBottom:8}}>{s.label}</div>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:50,color:s.color,lineHeight:1,letterSpacing:"0.04em"}}>{loading?"—":s.val}</div>
           </div>
         ))}
       </div>
 
       {/* Recent + Today */}
       <div className="dash-bottom fu2" style={{}}>
-        <div style={css.card}>
-          <div style={{display:"flex",alignItems:"center",marginBottom:14}}>
-            <span style={{...css.secTitle,marginBottom:0}}>Paskutiniai klientai</span>
-            <button onClick={()=>onNav("clients")} style={{...css.btnGhost,marginLeft:"auto",fontSize:11,padding:"5px 10px"}}>Visi →</button>
+        <div style={{background:"#0E1016",border:"1px solid #1E2430",borderTop:"none",padding:"24px 28px"}}>
+          <div style={{display:"flex",alignItems:"flex-end",marginBottom:20}}>
+            <div>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:9,color:C.gold,letterSpacing:"0.3em"}}>02</span><div style={{width:20,height:1,background:C.gold}}/></div>
+              <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:32,color:C.text,letterSpacing:"0.04em",lineHeight:1}}>PASKUTINIAI KLIENTAI</span>
+            </div>
+            <button onClick={()=>onNav("clients")} style={{...css.btnGhost,marginLeft:"auto",padding:"4px 10px",fontSize:9}}>Visi →</button>
           </div>
           {loading?<Spinner/>:recent.length===0?<div style={{textAlign:"center",color:C.muted,padding:"24px 0",fontSize:13}}>Klientų dar nėra</div>:(
             <div style={{display:"flex",flexDirection:"column",gap:7}}>
@@ -303,18 +316,21 @@ function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
             </div>
           )}
         </div>
-        <div style={css.card}>
-          <span style={css.secTitle}>Artimiausi užsiėmimai</span>
+        <div style={{background:"#0E1016",border:"1px solid #1E2430",borderTop:"none",borderLeft:"none",padding:"24px 24px"}}>
+          <div style={{marginBottom:18}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:9,color:C.gold,letterSpacing:"0.3em"}}>03</span><div style={{width:20,height:1,background:C.gold}}/></div>
+            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,color:C.text,letterSpacing:"0.04em",lineHeight:1}}>ARTIMIAUSI UŽSIĖMIMAI</span>
+          </div>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-            <div style={{fontSize:11,color:C.gold,fontWeight:600,letterSpacing:"0.08em"}}>{todayName}</div>
-            {todayBookings.length>0&&<span style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:20,padding:"1px 8px",fontSize:10,color:C.gold,fontWeight:700}}>{todayBookings.length} rezervacija</span>}
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,color:C.gold,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase" as const}}>{todayName}</div>
+            {todayBookings.length>0&&<span style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,padding:"1px 8px",fontSize:9,color:C.gold,fontWeight:700,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.1em"}}>{todayBookings.length} rezervacija</span>}
           </div>
           {loading?<Spinner/>:(
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
               {/* Calendar bookings today */}
               {todayBookings.map((b:any)=>(
                 <div key={b.id} style={{display:"flex",alignItems:"center",gap:10,background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:10,padding:"9px 12px"}}>
-                  <div style={{fontSize:20,fontWeight:800,color:C.gold,minWidth:52,fontFamily:"'Inter',sans-serif"}}>{b.time}</div>
+                  <div style={{fontSize:20,fontWeight:800,color:C.gold,minWidth:52,fontFamily:"'Barlow',sans-serif"}}>{b.time}</div>
                   <div style={{width:1,height:28,background:C.goldBorder}}/>
                   <div style={{flex:1}}>
                     <div style={{fontSize:12,fontWeight:700,color:C.text}}>{b.client_name}</div>
@@ -343,7 +359,7 @@ function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
               {upcomingBookings.filter(b=>b.date>todayISO).slice(0,3).map((b:any)=>(
                 <div key={b.id} style={{display:"flex",alignItems:"center",gap:10,background:C.faint,border:`1px solid ${C.border}`,borderRadius:10,padding:"8px 12px"}}>
                   <div style={{textAlign:"center",minWidth:38}}>
-                    <div style={{fontSize:14,fontWeight:900,color:C.gold,fontFamily:"'Inter',sans-serif"}}>{new Date(b.date+"T12:00:00").getDate()}</div>
+                    <div style={{fontSize:14,fontWeight:900,color:C.gold,fontFamily:"'Barlow',sans-serif"}}>{new Date(b.date+"T12:00:00").getDate()}</div>
                     <div style={{fontSize:8,color:C.muted,letterSpacing:"0.06em"}}>{new Date(b.date+"T12:00:00").toLocaleDateString("lt-LT",{month:"short"}).toUpperCase()}</div>
                   </div>
                   <div style={{width:1,height:28,background:C.border}}/>
@@ -408,35 +424,74 @@ function ExercisesTab({autoOpen=false}:{autoOpen?:boolean}){
           <button onClick={openNew} style={css.btnG}>+ Naujas pratimas</button>
         </div>
       </div>
-      <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
+      <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap" as const,alignItems:"center"}}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Ieškoti..." className="sbar" style={{...css.input,width:200}}/>
-        <div className="tag-row" style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          {["Visos",...ALL_MUSCLES].map(m=><Tag key={m} c={C.gold} label={m} active={muscle===m} onClick={()=>setMuscle(m)}/>)}
+        <div className="tag-row" style={{display:"flex",gap:6,flexWrap:"wrap" as const}}>
+          {["Visos",...ALL_MUSCLES].map(m=>{
+            const mc=muscleColor(m);
+            return(
+              <button key={m} onClick={()=>setMuscle(m)} style={{
+                padding:"5px 12px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0,
+                border:`1px solid ${muscle===m?mc:C.border}`,
+                background:muscle===m?mc+"22":"transparent",
+                color:muscle===m?mc:C.muted,
+                transition:"all .15s",
+              }}>{m}</button>
+            );
+          })}
         </div>
-        <button onClick={load} style={{...css.btnGhost,marginLeft:"auto",fontSize:11}}>↺</button>
+        <div style={{marginLeft:"auto",display:"flex",gap:6,alignItems:"center"}}>
+          <div style={{fontSize:11,color:C.muted,background:C.faint,border:`1px solid ${C.border}`,borderRadius:8,padding:"4px 10px"}}>{filtered.length} pratimų</div>
+          <button onClick={load} style={{...css.btnGhost,fontSize:11}}>↺</button>
+        </div>
       </div>
       <Err msg={error}/>
       {loading?<Spinner/>:(
         <div className="ex-grid" style={{}}>
-          {filtered.map(ex=>(
-            <div key={ex.id} style={{background:C.surface,borderRadius:14,border:`1px solid ${C.border}`,overflow:"hidden",display:"flex",flexDirection:"column"}}>
-              <div style={{position:"relative"}}><ImgGallery imgs={ex.imgs} height={140}/>
-                <div style={{position:"absolute",bottom:8,left:8,background:"rgba(0,0,0,0.55)",borderRadius:6,padding:"3px 9px",fontSize:11,color:C.teal,fontWeight:600}}>{ex.muscle}</div>
+          {filtered.map(ex=>{
+            const mc=muscleColor(ex.muscle);
+            const hasVideo=!!ex.video_url;
+            const embedUrl=getYouTubeEmbed(ex.video_url||"");
+            return(
+            <div key={ex.id} style={{background:C.surface,borderRadius:16,border:`1px solid ${C.border}`,overflow:"hidden",display:"flex",flexDirection:"column" as const,transition:"transform .15s,border-color .15s",cursor:"pointer"}} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.borderColor=mc+"60";}} onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.borderColor=C.border;}}>
+              {/* Colored top bar */}
+              <div style={{height:3,background:`linear-gradient(to right,${mc},${mc}60)`}}/>
+              {/* Image with overlays */}
+              <div style={{position:"relative" as const}}>
+                <ImgGallery imgs={ex.imgs} height={130}/>
+                {/* Muscle badge */}
+                <div style={{position:"absolute" as const,top:8,left:8,background:`${mc}DD`,backdropFilter:"blur(4px)",borderRadius:6,padding:"3px 9px",fontSize:10,color:"#fff",fontWeight:700,letterSpacing:"0.06em"}}>{ex.muscle}</div>
+                {/* Video badge */}
+                {hasVideo&&<div style={{position:"absolute" as const,top:8,right:8,background:"rgba(0,0,0,0.7)",borderRadius:6,padding:"3px 8px",fontSize:10,color:"#f87171",fontWeight:700}}>▶ VIDEO</div>}
               </div>
-              <div style={{padding:"12px 14px",flex:1,display:"flex",flexDirection:"column",gap:4}}>
-                <div style={{fontWeight:700,fontSize:15,color:"#FFFFFF"}}>{ex.name}</div>
-                <div style={{fontSize:12,color:C.muted}}>{ex.equipment}</div>
-                <div style={{fontSize:13,color:C.gold,fontWeight:600}}>{ex.sets} ser. · {ex.reps} kart.</div>
-                {ex.description&&<div style={{fontSize:11,color:C.muted,fontStyle:"italic"}}>{ex.description}</div>}
-                {ex.video_url&&<a href={ex.video_url} target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",gap:5,marginTop:4,background:"#ef444418",border:"1px solid #ef444440",borderRadius:7,padding:"3px 10px",fontSize:11,fontWeight:700,color:"#f87171",textDecoration:"none"}}>▶ Žiūrėti video</a>}
+              {/* Content */}
+              <div style={{padding:"12px 14px",flex:1,display:"flex",flexDirection:"column" as const,gap:5}}>
+                <div style={{fontWeight:700,fontSize:14,color:C.text,lineHeight:1.3}}>{ex.name}</div>
+                {ex.equipment&&<div style={{fontSize:11,color:C.muted}}>{ex.equipment}</div>}
+                {/* Sets/reps chips */}
+                <div style={{display:"flex",gap:6,marginTop:2}}>
+                  <div style={{background:`${mc}18`,border:`1px solid ${mc}40`,borderRadius:6,padding:"3px 9px",fontSize:11,fontWeight:700,color:mc}}>{ex.sets} ser.</div>
+                  <div style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:6,padding:"3px 9px",fontSize:11,fontWeight:700,color:C.gold}}>{ex.reps} kart.</div>
+                </div>
+                {ex.description&&<div style={{fontSize:10,color:C.muted,fontStyle:"italic",lineHeight:1.5,marginTop:2,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical" as const,overflow:"hidden"}}>{ex.description}</div>}
+                {/* Actions */}
                 <div style={{display:"flex",gap:7,marginTop:"auto",paddingTop:8}}>
-                  <button style={css.btnTeal} onClick={()=>openEdit(ex)}>✏️ Redaguoti</button>
-                  <button style={css.btnRed} onClick={()=>setConfirmDel(ex)}>🗑️</button>
+                  <button style={{...css.btnTeal,flex:1,fontSize:11,padding:"6px 8px"}} onClick={(e)=>{e.stopPropagation();openEdit(ex);}}>✏️ Redaguoti</button>
+                  {hasVideo&&<a href={ex.video_url!} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{...css.btnRed,padding:"6px 10px",fontSize:13,textDecoration:"none",display:"flex",alignItems:"center"}}>▶</a>}
+                  <button style={{...css.btnRed,padding:"6px 10px",fontSize:13}} onClick={(e)=>{e.stopPropagation();setConfirmDel(ex);}}>🗑️</button>
                 </div>
               </div>
             </div>
-          ))}
-          {filtered.length===0&&!loading&&<div style={{gridColumn:"1/-1",textAlign:"center",color:C.muted,padding:60}}>Pratimų nerasta</div>}
+            );
+          })}
+          {filtered.length===0&&!loading&&(
+            <div style={{gridColumn:"1/-1",textAlign:"center" as const,padding:"60px 32px"}}>
+              <div style={{fontSize:48,marginBottom:12}}>🏋️</div>
+              <div style={{fontSize:16,fontWeight:700,color:C.text,marginBottom:6}}>Pratimų nerasta</div>
+              <div style={{fontSize:13,color:C.muted,marginBottom:16}}>Pabandykite kitą paieškos užklausą arba pridėkite naują pratimą</div>
+              <button onClick={openNew} style={css.btnG}>+ Pridėti pratimą</button>
+            </div>
+          )}
         </div>
       )}
       {formOpen&&(<div style={css.overlay}><div style={css.modal(560)}>
@@ -734,7 +789,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
   };
   const openEdit=(c:any)=>{
     setEditClientId(c.id);
-    setClientForm({name:c.name||"",age:c.age||"",weight:c.weight||"",height:c.height||"",gender:c.gender||"Vyras",goal:c.goal||"",level:c.level||"",notes:c.notes||"",training_days:c.training_days||[],activity_index:c.activity_index??2});
+    setClientForm({name:c.name||"",age:c.age||"",weight:c.weight||"",height:c.height||"",gender:c.gender||"Vyras",goal:c.goal||"",level:c.level||"",notes:c.notes||"",training_days:c.training_days||[],activity_index:c.activity_index??2,phone:c.phone||""});
     setProgram(c.program||{});setProgramName(c.program_name||"");
     setMealPlan(c.meal_plan||{});setMealPlanName(c.meal_plan_name||"");
     setPlanType(c.meal_plan_name&&c.program_name?"both":c.meal_plan_name?"meal":"training");
@@ -972,6 +1027,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
                   <div style={{padding:"0 12px 12px",display:"flex",gap:6}} onClick={e=>e.stopPropagation()}>
                     <button onClick={()=>openView(c)} style={{...css.btnTeal,flex:1,fontSize:11,justifyContent:"center",padding:"7px 6px"}}>👁️ Peržiūrėti</button>
                     <button onClick={()=>openEdit(c)} style={{...css.btnG,flex:1,fontSize:11,padding:"7px 6px"}}>✏️ Redaguoti</button>
+                    {c.phone&&<a href={`https://wa.me/${(c.phone||"").replace(/\D/g,"")}?text=${encodeURIComponent(`Sveiki ${c.name}! 💪`)}`} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{...css.btnGreen,padding:"7px 10px",fontSize:16,textDecoration:"none",display:"flex",alignItems:"center"}} title="WhatsApp">💬</a>}
                     <button onClick={()=>openShareModal(c)} style={{...css.btnGhost,padding:"7px 10px",fontSize:13}} title="Nuoroda klientui">🔗</button>
                     <button onClick={()=>setConfirmDel(c)} style={{...css.btnRed,padding:"7px 10px",fontSize:13}}>🗑️</button>
                   </div>
@@ -1009,7 +1065,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
               {[["Amžius",view.age&&view.age+" m."],["Svoris",view.weight&&view.weight+" kg"],["Ūgis",view.height&&view.height+" cm"],["Lytis",view.gender],["Tikslas",view.goal],["Lygis",view.level]].filter(([,v])=>v).map(([l,v])=>(
                 <div key={l as string} style={{background:C.faint,borderRadius:7,padding:"6px 11px"}}>
                   <div style={{fontSize:9,color:C.muted,textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:2}}>{l}</div>
-                  <div style={{fontSize:13,fontWeight:600,color:C.text}}>{v}</div>
+                  <div style={{fontSize:13,fontWeight:600,color:"#FFFFFF"}}>{v}</div>
                 </div>
               ))}
               {(()=>{const b=calcBMI(view.weight,view.height);if(!b)return null;const bn=parseFloat(b.toFixed(1));const bc=bmiCat(bn);return(<div style={{background:C.faint,borderRadius:7,padding:"6px 11px"}}><div style={{fontSize:9,color:C.muted,textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:2}}>KMI</div><div style={{fontSize:13,fontWeight:700,color:bc.color}}>{bn} — {bc.label}</div></div>);})()}
@@ -1301,7 +1357,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
             <div className="cf-grid" style={{}}>
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
               <div><span style={css.label}>Lytis</span><div style={{display:"flex",gap:8}}>{["Vyras","Moteris"].map(g=>(<button key={g} onClick={()=>setClientForm(p=>({...p,gender:g}))} style={{flex:1,padding:"8px",borderRadius:8,border:clientForm.gender===g?`1px solid ${C.gold}`:`1px solid ${C.border}`,background:clientForm.gender===g?C.goldSoft:"transparent",color:clientForm.gender===g?C.gold:C.muted,fontFamily:FONT,fontSize:12,cursor:"pointer",fontWeight:600}}>{g==="Vyras"?"👨 Vyras":"👩 Moteris"}</button>))}</div></div>
-              {[["Vardas ir pavardė *","name","text"],["Amžius","age","number"],["Svoris (kg)","weight","number"],["Ūgis (cm)","height","number"]].map(([lb,k,t])=>(<div key={k}><span style={css.label}>{lb}</span><input type={t} value={(clientForm as any)[k]} onChange={e=>setClientForm(p=>({...p,[k]:e.target.value}))} style={css.input} placeholder={lb as string}/></div>))}
+              {[["Vardas ir pavardė *","name","text"],["Telefonas","phone","tel"],["Amžius","age","number"],["Svoris (kg)","weight","number"],["Ūgis (cm)","height","number"]].map(([lb,k,t])=>(<div key={k}><span style={css.label}>{lb}</span><input type={t} value={(clientForm as any)[k]} onChange={e=>setClientForm(p=>({...p,[k]:e.target.value}))} style={css.input} placeholder={lb as string}/></div>))}
               <div><span style={css.label}>Aktyvumo lygis</span><select value={clientForm.activity_index} onChange={e=>setClientForm(p=>({...p,activity_index:+e.target.value}))} style={css.select}>{ACTIVITY_LEVELS.map((a,i)=><option key={i} value={i}>{a.label}</option>)}</select></div>
               <div><span style={css.label}>Tikslas</span><select value={clientForm.goal} onChange={e=>setClientForm(p=>({...p,goal:e.target.value}))} style={css.select}><option value="">Pasirinkite</option>{GOALS.map(g=><option key={g}>{g}</option>)}</select></div>
               <div><span style={css.label}>Lygis</span><select value={clientForm.level} onChange={e=>setClientForm(p=>({...p,level:e.target.value}))} style={css.select}><option value="">Pasirinkite</option>{LEVELS.map(l=><option key={l}>{l}</option>)}</select></div>
@@ -1468,7 +1524,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
                 <div style={{width:36,height:36,background:`linear-gradient(135deg,${C.gold},#8B6520)`,borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:900,color:C.bg,flexShrink:0}}>{(c.name||"?")[0]}</div>
                 <div style={{flex:1}}>
                   <div style={{fontSize:13,fontWeight:700,color:C.text}}>{c.name}</div>
-                  <div style={{fontSize:11,color:C.muted,marginTop:2,display:"flex",gap:8}}>
+                  <div style={{fontSize:11,color:"#9AABB8",marginTop:2,display:"flex",gap:8}}>
                     {c.program_name&&<span>📋 {c.program_name} ({exCnt} prat.)</span>}
                     {c.meal_plan_name&&<span style={{color:C.green}}>🥗 {c.meal_plan_name}</span>}
                   </div>
@@ -1553,7 +1609,7 @@ function AdminStatsTab(){
           <div key={s.label} className="stat-card" style={{background:C.surface,borderRadius:16,border:`1px solid ${C.border}`,padding:"18px 16px",position:"relative",overflow:"hidden"}}>
             <div style={{position:"absolute",top:0,right:0,width:60,height:60,background:`radial-gradient(ellipse at 100% 0%,${s.color}20 0%,transparent 70%)`}}/>
             <div style={{fontSize:26,marginBottom:8}}>{s.icon}</div>
-            <div style={{fontSize:32,fontWeight:900,color:s.color,lineHeight:1,marginBottom:5,fontFamily:"'Inter',sans-serif"}}>{s.val}</div>
+            <div style={{fontSize:32,fontWeight:900,color:s.color,lineHeight:1,marginBottom:5,fontFamily:"'Barlow',sans-serif"}}>{s.val}</div>
             <div style={{fontSize:10,color:C.muted,fontWeight:600,textTransform:"uppercase" as const,letterSpacing:"0.1em"}}>{s.label}</div>
           </div>
         ))}
@@ -1605,7 +1661,7 @@ function AdminStatsTab(){
                     {label:"Su mityba",val:cWithMeal.length,color:C.green},
                   ].map(stat=>(
                     <div key={stat.label} style={{textAlign:"center" as const}}>
-                      <div style={{fontSize:20,fontWeight:800,color:stat.color,fontFamily:"'Inter',sans-serif",lineHeight:1}}>{stat.val}</div>
+                      <div style={{fontSize:20,fontWeight:800,color:stat.color,fontFamily:"'Barlow',sans-serif",lineHeight:1}}>{stat.val}</div>
                       <div style={{fontSize:9,color:C.muted,marginTop:3,letterSpacing:"0.06em"}}>{stat.label}</div>
                     </div>
                   ))}
@@ -1634,9 +1690,9 @@ function AdminStatsTab(){
             : <div style={{display:"flex",flexDirection:"column" as const,gap:8}}>
                 {todayBookings.map((b:any)=>(
                   <div key={b.id} style={{display:"flex",alignItems:"center",gap:10,background:C.faint,borderRadius:10,padding:"10px 12px",border:`1px solid ${C.border}`}}>
-                    <div style={{fontSize:15,fontWeight:800,color:C.gold,minWidth:46,fontFamily:"'Inter',sans-serif"}}>{b.time}</div>
+                    <div style={{fontSize:15,fontWeight:800,color:C.gold,minWidth:46,fontFamily:"'Barlow',sans-serif"}}>{b.time}</div>
                     <div style={{flex:1}}>
-                      <div style={{fontSize:13,fontWeight:600,color:C.text}}>{b.client_name}</div>
+                      <div style={{fontSize:13,fontWeight:600,color:"#FFFFFF"}}>{b.client_name}</div>
                       <div style={{fontSize:11,color:C.muted}}>{b.client_phone||"—"}</div>
                     </div>
                     <span style={{fontSize:9,background:b.status==="confirmed"?C.greenSoft:C.goldSoft,border:`1px solid ${b.status==="confirmed"?C.greenBorder:C.goldBorder}`,borderRadius:8,padding:"2px 8px",color:b.status==="confirmed"?C.green:C.gold,fontWeight:700}}>
@@ -1659,7 +1715,7 @@ function AdminStatsTab(){
                 {pendingBookings.slice(0,8).map((b:any)=>(
                   <div key={b.id} style={{display:"flex",alignItems:"center",gap:10,background:C.faint,borderRadius:10,padding:"9px 12px",border:`1px solid ${C.border}`}}>
                     <div style={{textAlign:"center" as const,minWidth:36}}>
-                      <div style={{fontSize:14,fontWeight:800,color:C.gold,fontFamily:"'Inter',sans-serif",lineHeight:1}}>{new Date(b.date+"T12:00").getDate()}</div>
+                      <div style={{fontSize:14,fontWeight:800,color:C.gold,fontFamily:"'Barlow',sans-serif",lineHeight:1}}>{new Date(b.date+"T12:00").getDate()}</div>
                       <div style={{fontSize:8,color:C.muted,letterSpacing:"0.06em"}}>{new Date(b.date+"T12:00").toLocaleDateString("lt-LT",{month:"short"}).toUpperCase()}</div>
                     </div>
                     <div style={{flex:1}}>
@@ -1672,6 +1728,195 @@ function AdminStatsTab(){
           }
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── NOTIFICATION BELL (#16) ──────────────────────────────
+function NotificationBell({upcomingBookings,clients}:any){
+  const [open,setOpen]=useState(false);
+  const todayISO=new Date().toISOString().slice(0,10);
+  const todayBookings=upcomingBookings.filter((b:any)=>b.date===todayISO);
+  const pendingBookings=upcomingBookings.filter((b:any)=>b.status==="pending");
+  const total=todayBookings.length+pendingBookings.length;
+
+  const notifs=[
+    ...todayBookings.map((b:any)=>({type:"today",icon:"📅",title:`Sesija šiandien ${b.time}`,sub:b.client_name,color:C.gold})),
+    ...pendingBookings.map((b:any)=>({type:"pending",icon:"⏳",title:`Laukia patvirtinimo`,sub:`${b.client_name} · ${b.date} ${b.time}`,color:C.teal})),
+  ].slice(0,8);
+
+  return(
+    <div style={{position:"relative" as const}}>
+      <button onClick={()=>setOpen(o=>!o)} style={{position:"relative" as const,width:34,height:34,background:C.faint,border:`1px solid ${C.border}`,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,cursor:"pointer",color:C.muted}}>
+        🔔
+        {total>0&&<div style={{position:"absolute" as const,top:-4,right:-4,width:16,height:16,background:C.red,borderRadius:"50%",fontSize:9,fontWeight:900,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",border:`2px solid ${C.bg}`}}>{total}</div>}
+      </button>
+      {open&&(
+        <div style={{position:"absolute" as const,top:40,right:0,width:290,background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,boxShadow:"0 8px 40px rgba(0,0,0,0.5)",zIndex:300,overflow:"hidden"}}>
+          <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <span style={{fontSize:12,fontWeight:700,color:C.text}}>🔔 Pranešimai</span>
+            <span style={{fontSize:10,color:C.muted}}>{total} naujų</span>
+          </div>
+          {notifs.length===0
+            ?<div style={{padding:"24px",textAlign:"center" as const,color:C.muted,fontSize:12}}>Pranešimų nėra ✓</div>
+            :<div>{notifs.map((n,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 16px",borderTop:i>0?`1px solid ${C.border}`:"none",background:"transparent"}}>
+                <div style={{fontSize:18,flexShrink:0}}>{n.icon}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:12,fontWeight:600,color:n.color}}>{n.title}</div>
+                  <div style={{fontSize:11,color:"#9AABB8",marginTop:2}}>{n.sub}</div>
+                </div>
+              </div>
+            ))}</div>
+          }
+          <div style={{padding:"8px 12px",borderTop:`1px solid ${C.border}`}}>
+            <button onClick={()=>setOpen(false)} style={{...css.btnGhost,width:"100%",fontSize:11,padding:"6px",textAlign:"center" as const}}>Uždaryti</button>
+          </div>
+        </div>
+      )}
+      {open&&<div style={{position:"fixed" as const,inset:0,zIndex:299}} onClick={()=>setOpen(false)}/>}
+    </div>
+  );
+}
+
+// ── REVENUE TRACKER (#11) ────────────────────────────────
+function RevenueTab({clients}:any){
+  const [payments,setPayments]=useState<any[]>(()=>{
+    try{return JSON.parse(localStorage.getItem("dna_payments")||"[]");}catch{return [];}
+  });
+  const [form,setForm]=useState({clientId:"",amount:"",month:new Date().toISOString().slice(0,7),notes:"",paid:true});
+  const [formOpen,setFormOpen]=useState(false);
+
+  const save=(p:any[])=>{setPayments(p);localStorage.setItem("dna_payments",JSON.stringify(p));};
+  const addPayment=()=>{
+    if(!form.clientId||!form.amount)return;
+    const client=clients.find((c:any)=>c.id===form.clientId);
+    save([...payments,{id:Date.now(),clientName:client?.name||"",...form,amount:parseFloat(form.amount)}]);
+    setForm({clientId:"",amount:"",month:new Date().toISOString().slice(0,7),notes:"",paid:true});
+    setFormOpen(false);
+  };
+  const togglePaid=(id:number)=>save(payments.map(p=>p.id===id?{...p,paid:!p.paid}:p));
+  const del=(id:number)=>save(payments.filter(p=>p.id!==id));
+
+  const thisMonth=new Date().toISOString().slice(0,7);
+  const thisMonthPay=payments.filter(p=>p.month===thisMonth);
+  const totalMonth=thisMonthPay.reduce((s,p)=>s+(p.paid?p.amount:0),0);
+  const unpaid=payments.filter(p=>!p.paid);
+  const totalUnpaid=unpaid.reduce((s,p)=>s+p.amount,0);
+  const totalAll=payments.filter(p=>p.paid).reduce((s,p)=>s+p.amount,0);
+
+  // Group by month
+  const byMonth=payments.reduce((acc:any,p:any)=>{acc[p.month]=(acc[p.month]||[]);acc[p.month].push(p);return acc;},{});
+  const sortedMonths=Object.keys(byMonth).sort().reverse();
+
+  return(
+    <div className="fu">
+      <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",marginBottom:24,flexWrap:"wrap" as const,gap:12}}>
+        <div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+            <div style={{width:3,height:18,background:C.gold,borderRadius:2}}/>
+            <span style={{fontSize:10,color:C.gold,fontWeight:700,letterSpacing:"0.18em",textTransform:"uppercase" as const}}>Pajamų sekimas</span>
+          </div>
+          <div style={{fontSize:26,fontWeight:800,color:C.text}}>Finansai</div>
+        </div>
+        <button onClick={()=>setFormOpen(true)} style={css.btnG}>+ Pridėti mokėjimą</button>
+      </div>
+
+      {/* Summary cards */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12,marginBottom:24}}>
+        {[
+          {label:"Šis mėnesis",val:`€${totalMonth.toFixed(0)}`,color:C.gold,icon:"📅"},
+          {label:"Iš viso gauta",val:`€${totalAll.toFixed(0)}`,color:C.green,icon:"✅"},
+          {label:"Nesumokėta",val:`€${totalUnpaid.toFixed(0)}`,color:C.red,icon:"⚠️"},
+          {label:"Klientų",val:new Set(payments.map(p=>p.clientId)).size,color:C.teal,icon:"👥"},
+        ].map(s=>(
+          <div key={s.label} style={{background:C.surface,borderRadius:14,border:`1px solid ${C.border}`,padding:"16px 14px",position:"relative" as const,overflow:"hidden"}}>
+            <div style={{position:"absolute" as const,top:0,right:0,width:60,height:60,background:`radial-gradient(circle at 100% 0%,${s.color}20,transparent 70%)`}}/>
+            <div style={{fontSize:22,marginBottom:8}}>{s.icon}</div>
+            <div style={{fontSize:26,fontWeight:900,color:s.color,lineHeight:1}}>{s.val}</div>
+            <div style={{fontSize:10,color:C.muted,marginTop:4,textTransform:"uppercase" as const,letterSpacing:"0.1em"}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Unpaid alert */}
+      {unpaid.length>0&&(
+        <div style={{background:C.redSoft,border:`1px solid ${C.redBorder}`,borderRadius:12,padding:"12px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:18}}>⚠️</span>
+          <div style={{flex:1}}>
+            <div style={{fontSize:13,fontWeight:700,color:C.red}}>{unpaid.length} nesumokėti mokėjimai — €{totalUnpaid.toFixed(0)}</div>
+            <div style={{fontSize:11,color:"#9AABB8",marginTop:2}}>{unpaid.map((p:any)=>p.clientName).join(", ")}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment history by month */}
+      {sortedMonths.length===0
+        ?<div style={{...css.card,textAlign:"center" as const,padding:"48px 32px"}}>
+            <div style={{fontSize:40,marginBottom:12}}>💰</div>
+            <div style={{fontSize:16,fontWeight:700,color:C.text,marginBottom:8}}>Mokėjimų istorija tuščia</div>
+            <div style={{fontSize:13,color:C.muted,marginBottom:16}}>Pridėkite pirmą mokėjimą</div>
+            <button onClick={()=>setFormOpen(true)} style={css.btnG}>+ Pridėti mokėjimą</button>
+          </div>
+        :sortedMonths.map(month=>{
+          const monthPay=byMonth[month];
+          const monthTotal=monthPay.filter((p:any)=>p.paid).reduce((s:any,p:any)=>s+p.amount,0);
+          return(
+            <div key={month} style={{...css.card,marginBottom:12}}>
+              <div style={{display:"flex",alignItems:"center",marginBottom:12}}>
+                <div style={{flex:1}}>
+                  <span style={{fontSize:14,fontWeight:700,color:C.text}}>{new Date(month+"-01").toLocaleDateString("lt-LT",{month:"long",year:"numeric"})}</span>
+                  <span style={{fontSize:12,color:C.muted,marginLeft:8}}>{monthPay.length} mokėjimų</span>
+                </div>
+                <span style={{fontSize:15,fontWeight:800,color:C.gold}}>€{monthTotal.toFixed(0)}</span>
+              </div>
+              <div style={{display:"flex",flexDirection:"column" as const,gap:6}}>
+                {monthPay.map((p:any)=>(
+                  <div key={p.id} style={{display:"flex",alignItems:"center",gap:10,background:C.faint,borderRadius:9,padding:"9px 12px"}}>
+                    <div style={{width:30,height:30,background:`linear-gradient(135deg,${C.gold},#8B6520)`,borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:900,color:C.bg,flexShrink:0}}>{(p.clientName||"?")[0]}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:600,color:C.text}}>{p.clientName}</div>
+                      {p.notes&&<div style={{fontSize:10,color:C.muted}}>{p.notes}</div>}
+                    </div>
+                    <div style={{fontSize:14,fontWeight:800,color:p.paid?C.green:C.red}}>€{p.amount}</div>
+                    <button onClick={()=>togglePaid(p.id)} style={{...p.paid?css.btnGreen:css.btnRed,padding:"4px 10px",fontSize:10,fontWeight:700}}>{p.paid?"✓ Sumokėta":"⏳ Nesumok."}</button>
+                    <button onClick={()=>del(p.id)} style={{...css.btnGhost,padding:"4px 7px",fontSize:12,color:C.muted}}>×</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })
+      }
+
+      {/* Add payment modal */}
+      {formOpen&&(<div style={css.overlay}><div style={{...css.modal(440)}}>
+        <div style={{padding:"14px 18px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center"}}>
+          <div style={{fontWeight:700,fontSize:14,color:C.gold}}>💰 Pridėti mokėjimą</div>
+          <button onClick={()=>setFormOpen(false)} style={{marginLeft:"auto",width:27,height:27,background:C.faint,border:`1px solid ${C.border}`,borderRadius:7,color:C.muted,cursor:"pointer",fontSize:14}}>×</button>
+        </div>
+        <div style={{padding:"16px 18px",display:"flex",flexDirection:"column" as const,gap:12}}>
+          <div><span style={css.label}>Klientas</span>
+            <select value={form.clientId} onChange={e=>setForm(p=>({...p,clientId:e.target.value}))} style={css.select}>
+              <option value="">— Pasirinkite klientą —</option>
+              {clients.map((c:any)=><option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div className="ex2-grid">
+            <div><span style={css.label}>Suma (€)</span><input type="number" value={form.amount} onChange={e=>setForm(p=>({...p,amount:e.target.value}))} placeholder="149" style={css.input}/></div>
+            <div><span style={css.label}>Mėnuo</span><input type="month" value={form.month} onChange={e=>setForm(p=>({...p,month:e.target.value}))} style={css.input}/></div>
+          </div>
+          <div><span style={css.label}>Pastabos</span><input value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} placeholder="pvz. Mėnesinis abonementas" style={css.input}/></div>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <input type="checkbox" id="paid" checked={form.paid} onChange={e=>setForm(p=>({...p,paid:e.target.checked}))} style={{width:16,height:16,accentColor:C.gold}}/>
+            <label htmlFor="paid" style={{fontSize:13,color:C.text,cursor:"pointer"}}>Jau sumokėta</label>
+          </div>
+        </div>
+        <div style={{padding:"12px 18px",borderTop:`1px solid ${C.border}`,display:"flex",gap:10,justifyContent:"flex-end"}}>
+          <button onClick={()=>setFormOpen(false)} style={css.btnGhost}>Atšaukti</button>
+          <button onClick={addPayment} style={{...css.btnG,opacity:form.clientId&&form.amount?1:0.4}}>💾 Išsaugoti</button>
+        </div>
+      </div></div>)}
     </div>
   );
 }
@@ -1728,7 +1973,7 @@ function GlobalSearchModal({clients,exercises,foods,onClose,onNav}:any){
               <div key={c.id} onClick={()=>onNav("clients")} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 18px",cursor:"pointer",transition:"background .1s"}} onMouseEnter={e=>(e.currentTarget.style.background=C.faint)} onMouseLeave={e=>(e.currentTarget.style.background="transparent")}>
                 <div style={{width:34,height:34,background:`linear-gradient(135deg,${C.gold},#8B6520)`,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:900,color:C.bg,flexShrink:0}}>{(c.name||"?")[0]}</div>
                 <div style={{flex:1}}>
-                  <div style={{fontSize:13,fontWeight:600,color:C.text}}>{c.name}</div>
+                  <div style={{fontSize:13,fontWeight:600,color:"#FFFFFF"}}>{c.name}</div>
                   <div style={{fontSize:11,color:C.muted}}>{c.goal||"—"} · {c.weight&&c.weight+"kg"}</div>
                 </div>
                 <span style={{fontSize:11,color:C.muted}}>→</span>
@@ -1744,7 +1989,7 @@ function GlobalSearchModal({clients,exercises,foods,onClose,onNav}:any){
                   {(e.imgs||[])[0]?<img src={e.imgs[0]} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<span style={{fontSize:16}}>🏋️</span>}
                 </div>
                 <div style={{flex:1}}>
-                  <div style={{fontSize:13,fontWeight:600,color:C.text}}>{e.name}</div>
+                  <div style={{fontSize:13,fontWeight:600,color:"#FFFFFF"}}>{e.name}</div>
                   <div style={{fontSize:11,color:C.teal}}>{e.muscle} · {e.sets} ser.</div>
                 </div>
                 <span style={{fontSize:11,color:C.muted}}>→</span>
@@ -1760,7 +2005,7 @@ function GlobalSearchModal({clients,exercises,foods,onClose,onNav}:any){
                   {(f.imgs||[])[0]?<img src={f.imgs[0]} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<span style={{fontSize:16}}>🥗</span>}
                 </div>
                 <div style={{flex:1}}>
-                  <div style={{fontSize:13,fontWeight:600,color:C.text}}>{f.name}</div>
+                  <div style={{fontSize:13,fontWeight:600,color:"#FFFFFF"}}>{f.name}</div>
                   <div style={{fontSize:11,color:C.green}}>{f.category} · {f.calories&&f.calories+" kcal"}</div>
                 </div>
                 <span style={{fontSize:11,color:C.muted}}>→</span>
@@ -1959,6 +2204,7 @@ function MainApp(){
   const [foods,setFoods]=useState<any[]>([]);
   const [globalSearch,setGlobalSearch]=useState(false);
   const [allClients,setAllClients]=useState<any[]>([]);
+  const [allBookings,setAllBookings]=useState<any[]>([]);
 
   const handleLogout=()=>{logout();};
 
@@ -1966,6 +2212,7 @@ function MainApp(){
     sb.get("exercises","?order=name").then(d=>setExercises(d)).catch(()=>{});
     sb.get("foods","?order=name").then(d=>setFoods(d)).catch(()=>{});
     sb.get("clients",`?coach_id=eq.${getCoachId()}&order=name`).then(d=>setAllClients(d)).catch(()=>{});
+    sb.get("bookings",`?coach_id=eq.${getCoachId()}&date=gte.${new Date().toISOString().slice(0,10)}&status=neq.cancelled&order=date.asc,time.asc&limit=20`).then(d=>setAllBookings(d)).catch(()=>{});
   },[]);
 
   const navigate=(t:string,open=false)=>{setTab(t);setAutoOpen(open);setTimeout(()=>setAutoOpen(false),100);};
@@ -1976,44 +2223,41 @@ function MainApp(){
     {id:"exercises",icon:"🏋️",label:"Pratimai"},
     {id:"foods",icon:"🥗",label:"Mityba"},
     {id:"calendar",icon:"📅",label:"Kalendorius"},
-    ...(isAdmin?[{id:"stats",icon:"📊",label:"Statistika"},{id:"users",icon:"⚙️",label:"Vartotojai"}]:[]),
+    ...(isAdmin?[{id:"stats",icon:"📊",label:"Statistika"},{id:"revenue",icon:"💰",label:"Pajamos"},{id:"users",icon:"⚙️",label:"Vartotojai"}]:[]),
   ];
 
   return(
     <div style={css.page}>
       <style>{RESPONSIVE_CSS}</style>
-      <div style={css.header} className="header-pad">
-        {/* Atom DNA Logo */}
-        <svg width="34" height="34" viewBox="0 0 48 48" fill="none" style={{flexShrink:0}}>
-          <circle cx="24" cy="24" r="22" stroke={C.text} strokeWidth="1" opacity={0.4}/>
-          <ellipse cx="24" cy="24" rx="12" ry="5.5" stroke={C.text} strokeWidth="1.1" fill="none" opacity={0.75}/>
-          <ellipse cx="24" cy="24" rx="12" ry="5.5" stroke={C.text} strokeWidth="1.1" fill="none" opacity={0.75} transform="rotate(60 24 24)"/>
-          <ellipse cx="24" cy="24" rx="12" ry="5.5" stroke={C.text} strokeWidth="1.1" fill="none" opacity={0.75} transform="rotate(120 24 24)"/>
-          <circle cx="24" cy="24" r="2.2" fill={C.gold}/>
-          <circle cx="36" cy="24" r="1.4" fill={C.text} opacity={0.85}/>
-          <circle cx="18" cy="14.5" r="1.4" fill={C.text} opacity={0.85}/>
-          <circle cx="18" cy="33.5" r="1.4" fill={C.text} opacity={0.85}/>
+      <div style={{...css.header,position:"fixed" as const,top:0,left:0,right:0,zIndex:100,background:"rgba(6,7,9,0.92)",backdropFilter:"blur(24px)"}} className="header-pad">
+        {/* Logo */}
+        <svg width="20" height="20" viewBox="0 0 48 48" fill="none" style={{flexShrink:0}}>
+          <circle cx="24" cy="24" r="21" stroke={C.gold} strokeWidth="1" opacity={0.5}/>
+          <ellipse cx="24" cy="24" rx="11" ry="5" stroke={C.gold} strokeWidth="1.2" fill="none"/>
+          <ellipse cx="24" cy="24" rx="11" ry="5" stroke={C.gold} strokeWidth="1.2" fill="none" transform="rotate(60 24 24)"/>
+          <ellipse cx="24" cy="24" rx="11" ry="5" stroke={C.gold} strokeWidth="1.2" fill="none" transform="rotate(120 24 24)"/>
+          <circle cx="24" cy="24" r="2" fill={C.gold}/>
         </svg>
-        {/* Divider */}
-        <div style={{width:1,height:26,background:C.border,flexShrink:0}}/>
         {/* Wordmark */}
         <div>
-          <div style={{fontWeight:300,fontSize:13,color:C.text,letterSpacing:"0.22em",fontFamily:"'Inter',sans-serif",textTransform:"uppercase"}}>DNA TRAINER</div>
-          <div style={{fontSize:9,color:C.muted,letterSpacing:"0.15em",textTransform:"uppercase",marginTop:1}} className="hsubtitle">Sporto sistema</div>
+          <div style={{fontFamily:CONDENSED_FONT,fontSize:12,fontWeight:700,color:C.text,letterSpacing:"0.22em",textTransform:"uppercase" as const}}>DNA TRAINER</div>
+          <div style={{fontFamily:CONDENSED_FONT,fontSize:8,color:"#607080",letterSpacing:"0.2em",textTransform:"uppercase" as const,marginTop:1}} className="hsubtitle">Coach Platform</div>
         </div>
-        {/* Global search button */}
-        <button onClick={()=>setGlobalSearch(true)} style={{marginLeft:8,display:"flex",alignItems:"center",gap:7,background:C.faint,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 12px",color:C.muted,fontSize:12,cursor:"pointer",transition:"all .15s"}} className="search-btn">
-          <span style={{fontSize:14}}>🔍</span>
-          <span className="logout-label" style={{fontSize:11,letterSpacing:"0.04em"}}>Ieškoti...</span>
-          <span className="logout-label" style={{fontSize:9,background:C.border,borderRadius:4,padding:"1px 5px",marginLeft:4}}>⌘K</span>
+        {/* Bell */}
+        <NotificationBell upcomingBookings={allBookings} clients={allClients}/>
+        {/* Search */}
+        <button onClick={()=>setGlobalSearch(true)} style={{display:"flex",alignItems:"center",gap:6,background:"transparent",border:`1px solid ${C.border}`,padding:"5px 12px",color:C.muted,fontSize:10,cursor:"pointer",fontFamily:CONDENSED_FONT,letterSpacing:"0.12em",textTransform:"uppercase" as const}} className="search-btn">
+          <span>🔍</span>
+          <span className="logout-label">Ieškoti</span>
+          <span className="logout-label" style={{fontSize:9,background:C.border,padding:"1px 5px",marginLeft:2}}>⌘K</span>
         </button>
-        <div style={{marginLeft:"auto",display:"flex",gap:4,alignItems:"center"}} className="header-nav-items">
+        <div style={{marginLeft:"auto",display:"flex",gap:2,alignItems:"center"}} className="header-nav-items">
           {NAV.map(n=>(
             <button key={n.id} style={css.navBtn(tab===n.id)} onClick={()=>navigate(n.id)}>
               <span>{n.icon}</span> <span className="logout-label">{n.label}</span>
             </button>
           ))}
-          <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:4,padding:"5px 10px",background:C.faint,borderRadius:8,border:`1px solid ${C.border}`}}>
+          <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:4,padding:"5px 10px",background:C.faint,border:`1px solid ${C.border}`}}>
             <div style={{width:26,height:26,background:`linear-gradient(135deg,${C.gold},#B06A08)`,borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:900,color:"#fff",flexShrink:0}}>{(coach?.full_name||"?")[0].toUpperCase()}</div>
             <span className="logout-label" style={{fontSize:11,fontWeight:600,color:C.text}}>{coach?.full_name}</span>
             {isAdmin&&<span style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:10,padding:"1px 6px",fontSize:9,color:C.gold,fontWeight:700}}>ADMIN</span>}
@@ -2023,7 +2267,7 @@ function MainApp(){
           </button>
         </div>
       </div>
-      <div className="content-pad" style={{maxWidth:1140,margin:"0 auto",padding:"24px 20px"}}>
+      <div className="content-pad" style={{maxWidth:1200,margin:"0 auto",padding:"72px 32px 24px"}}>
         {tab==="dashboard"  && <DashboardTab onNav={navigate}/>}
         {tab==="exercises"  && <ExercisesTab key={tab+autoOpen} autoOpen={autoOpen}/>}
         {tab==="foods"      && <FoodsTab key={tab+autoOpen} autoOpen={autoOpen} onFoodsLoaded={setFoods}/>}
@@ -2031,6 +2275,7 @@ function MainApp(){
         {tab==="calendar"   && <CalendarTab/>}
         {tab==="users"      && isAdmin && <UsersTab/>}
         {tab==="stats"      && isAdmin && <AdminStatsTab/>}
+        {tab==="revenue"    && isAdmin && <RevenueTab clients={allClients}/>}
       </div>
       {/* ── GLOBAL SEARCH MODAL ── */}
       {globalSearch&&<GlobalSearchModal
