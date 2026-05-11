@@ -250,7 +250,7 @@ function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
     <div>
       {/* ── HERO ──────────────────────────────────────────── */}
       <div className="fu" style={{position:"relative",overflow:"hidden",minHeight:280,borderBottom:`1px solid ${C.border}`}}>
-        <img src={HERO_IMG} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:"center 25%",filter:"brightness(0.28) saturate(0.35) contrast(1.2)"}}/>
+        <img src="https://i.pinimg.com/736x/e3/bc/16/e3bc16974256fb6913e37079fa4cb653.jpg" alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:"center 30%",filter:"brightness(0.3) saturate(0.4) contrast(1.15)"}}/>
         <div style={{position:"absolute",inset:0,background:"linear-gradient(110deg,rgba(6,7,9,0.98) 28%,rgba(6,7,9,0.6) 58%,rgba(6,7,9,0.15) 100%)"}}/>
         <div style={{position:"absolute",bottom:0,left:0,right:0,height:160,background:"linear-gradient(to top,#060709,transparent)"}}/>
         <div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(rgba(212,168,83,0.055) 1px,transparent 1px),linear-gradient(90deg,rgba(212,168,83,0.055) 1px,transparent 1px)",backgroundSize:"56px 56px"}}/>
@@ -2229,18 +2229,21 @@ function MainApp(){
   return(
     <div style={css.page}>
       <style>{RESPONSIVE_CSS}</style>
-      <div style={{...css.header,position:"fixed" as const,top:0,left:0,right:0,zIndex:100,background:"rgba(6,7,9,0.92)",backdropFilter:"blur(24px)"}} className="header-pad">
-        {/* Logo */}
-        <svg width="20" height="20" viewBox="0 0 48 48" fill="none" style={{flexShrink:0}}>
-          <circle cx="24" cy="24" r="21" stroke={C.gold} strokeWidth="1" opacity={0.5}/>
-          <ellipse cx="24" cy="24" rx="11" ry="5" stroke={C.gold} strokeWidth="1.2" fill="none"/>
-          <ellipse cx="24" cy="24" rx="11" ry="5" stroke={C.gold} strokeWidth="1.2" fill="none" transform="rotate(60 24 24)"/>
-          <ellipse cx="24" cy="24" rx="11" ry="5" stroke={C.gold} strokeWidth="1.2" fill="none" transform="rotate(120 24 24)"/>
-          <circle cx="24" cy="24" r="2" fill={C.gold}/>
+      <div style={{...css.header,position:"fixed" as const,top:0,left:0,right:0,zIndex:100,background:"rgba(6,7,9,0.94)",backdropFilter:"blur(24px)"}} className="header-pad">
+        {/* Logo — bigger */}
+        <svg width="32" height="32" viewBox="0 0 48 48" fill="none" style={{flexShrink:0}}>
+          <circle cx="24" cy="24" r="21" stroke={C.gold} strokeWidth="1.2" opacity={0.7}/>
+          <ellipse cx="24" cy="24" rx="11" ry="5" stroke={C.gold} strokeWidth="1.5" fill="none"/>
+          <ellipse cx="24" cy="24" rx="11" ry="5" stroke={C.gold} strokeWidth="1.5" fill="none" transform="rotate(60 24 24)"/>
+          <ellipse cx="24" cy="24" rx="11" ry="5" stroke={C.gold} strokeWidth="1.5" fill="none" transform="rotate(120 24 24)"/>
+          <circle cx="24" cy="24" r="2.5" fill={C.gold}/>
+          <circle cx="35" cy="24" r="1.6" fill={C.gold} opacity={0.7}/>
+          <circle cx="18.5" cy="14.8" r="1.6" fill={C.gold} opacity={0.7}/>
+          <circle cx="18.5" cy="33.2" r="1.6" fill={C.gold} opacity={0.7}/>
         </svg>
         {/* Wordmark */}
         <div>
-          <div style={{fontFamily:CONDENSED_FONT,fontSize:12,fontWeight:700,color:C.text,letterSpacing:"0.22em",textTransform:"uppercase" as const}}>DNA TRAINER</div>
+          <div style={{fontFamily:CONDENSED_FONT,fontSize:13,fontWeight:700,color:C.text,letterSpacing:"0.22em",textTransform:"uppercase" as const}}>DNA TRAINER</div>
           <div style={{fontFamily:CONDENSED_FONT,fontSize:8,color:"#607080",letterSpacing:"0.2em",textTransform:"uppercase" as const,marginTop:1}} className="hsubtitle">Coach Platform</div>
         </div>
         {/* Bell */}
@@ -2251,23 +2254,34 @@ function MainApp(){
           <span className="logout-label">Ieškoti</span>
           <span className="logout-label" style={{fontSize:9,background:C.border,padding:"1px 5px",marginLeft:2}}>⌘K</span>
         </button>
-        <div style={{marginLeft:"auto",display:"flex",gap:2,alignItems:"center"}} className="header-nav-items">
+        <div style={{marginLeft:"auto",display:"flex",gap:1,alignItems:"center"}} className="header-nav-items">
           {NAV.map(n=>(
-            <button key={n.id} style={css.navBtn(tab===n.id)} onClick={()=>navigate(n.id)}>
-              <span>{n.icon}</span> <span className="logout-label">{n.label}</span>
+            <button key={n.id} onClick={()=>navigate(n.id)} style={{
+              display:"flex",flexDirection:"column" as const,alignItems:"center",gap:3,
+              padding:"6px 12px",
+              background:tab===n.id?C.gold:"transparent",
+              color:tab===n.id?C.bg:C.muted,
+              border:"none",cursor:"pointer",
+              fontFamily:CONDENSED_FONT,fontSize:9,fontWeight:700,
+              letterSpacing:"0.12em",textTransform:"uppercase" as const,
+              transition:"all .15s",minWidth:52,
+            }}>
+              <span style={{fontSize:18,lineHeight:1}}>{n.icon}</span>
+              <span className="logout-label">{n.label}</span>
             </button>
           ))}
-          <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:4,padding:"5px 10px",background:C.faint,border:`1px solid ${C.border}`}}>
-            <div style={{width:26,height:26,background:`linear-gradient(135deg,${C.gold},#B06A08)`,borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:900,color:"#fff",flexShrink:0}}>{(coach?.full_name||"?")[0].toUpperCase()}</div>
+          <div style={{width:1,height:32,background:C.border,margin:"0 6px"}}/>
+          <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:C.faint,border:`1px solid ${C.border}`}}>
+            <div style={{width:28,height:28,background:`linear-gradient(135deg,${C.gold},#8B6520)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:900,color:"#060709",flexShrink:0}}>{(coach?.full_name||"?")[0].toUpperCase()}</div>
             <span className="logout-label" style={{fontSize:11,fontWeight:600,color:C.text}}>{coach?.full_name}</span>
-            {isAdmin&&<span style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:10,padding:"1px 6px",fontSize:9,color:C.gold,fontWeight:700}}>ADMIN</span>}
+            {isAdmin&&<span style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,padding:"1px 7px",fontSize:9,color:C.gold,fontWeight:700,fontFamily:CONDENSED_FONT,letterSpacing:"0.1em"}}>ADMIN</span>}
           </div>
-          <button onClick={handleLogout} style={{...css.btnGhost,fontSize:11,padding:"6px 10px",marginLeft:2}}>
+          <button onClick={handleLogout} style={{...css.btnGhost,fontSize:10,padding:"6px 10px",marginLeft:2}}>
             <span className="logout-label">🚪 </span>Atsijungti
           </button>
         </div>
       </div>
-      <div className="content-pad" style={{maxWidth:1200,margin:"0 auto",padding:"72px 32px 24px"}}>
+      <div className="content-pad" style={{maxWidth:1200,margin:"0 auto",padding:"82px 32px 24px"}}>
         {tab==="dashboard"  && <DashboardTab onNav={navigate}/>}
         {tab==="exercises"  && <ExercisesTab key={tab+autoOpen} autoOpen={autoOpen}/>}
         {tab==="foods"      && <FoodsTab key={tab+autoOpen} autoOpen={autoOpen} onFoodsLoaded={setFoods}/>}
