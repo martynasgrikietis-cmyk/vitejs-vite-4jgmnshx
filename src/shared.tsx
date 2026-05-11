@@ -217,7 +217,7 @@ export const RESPONSIVE_CSS = `
 // ── STYLE HELPERS ────────────────────────────────────────
 export const css = {
   page:    {minHeight:"100vh",background:C.bg,color:C.text,fontFamily:FONT},
-  header:  {background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"0 32px",height:52,display:"flex",alignItems:"center",gap:14},
+  header:  {background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"0 28px",height:62,display:"flex",alignItems:"center",gap:14},
   logo:    {width:34,height:34,background:C.gold,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:16,color:C.bg,flexShrink:0},
   card:    {background:C.surface,border:`1px solid ${C.border}`,padding:24},
   label:   {fontSize:9,color:"#A0B0C0",letterSpacing:"0.2em",marginBottom:6,display:"block",fontWeight:600,textTransform:"uppercase" as const,fontFamily:CONDENSED_FONT},
