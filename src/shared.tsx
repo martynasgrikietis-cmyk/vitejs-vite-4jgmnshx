@@ -304,51 +304,186 @@ export const NutriBadge=({kcal,p,c,f}:any)=>(
 export function ImgGallery({imgs,height=140}:{imgs:string[],height?:number}){
   const [cur,setCur]=useState(0);
   const list=(imgs||[]).filter(Boolean);
-  if(!list.length)return<div style={{height,display:"flex",alignItems:"center",justifyContent:"center",color:"#2A3040",fontSize:28,background:C.faint}}>📷</div>;
+  if(!list.length)return<div style={{height,display:"flex",alignItems:"center",justifyContent:"center",color:"#2A3040",fontSize:28,background:C.faint,flexDirection:"column" as const,gap:6}}><span>📷</span><span style={{fontSize:9,fontFamily:CONDENSED_FONT,letterSpacing:"0.1em",textTransform:"uppercase" as const,color:C.muted}}>Nuotraukų nėra</span></div>;
   return(
     <div style={{position:"relative",height,overflow:"hidden",background:C.faint}}>
-      <img src={list[cur]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>(e.target as HTMLImageElement).style.display="none"}/>
+      <img src={list[cur]} alt="" style={{width:"100%",height:"100%",objectFit:"cover",transition:"opacity .2s"}} onError={e=>(e.target as HTMLImageElement).style.opacity="0.2"}/>
       {list.length>1&&<>
-        <button onClick={e=>{e.stopPropagation();setCur(p=>(p-1+list.length)%list.length);}} style={{position:"absolute",left:6,top:"50%",transform:"translateY(-50%)",width:24,height:24,background:"rgba(0,0,0,0.7)",border:"none",color:"white",fontSize:14,cursor:"pointer"}}>‹</button>
-        <button onClick={e=>{e.stopPropagation();setCur(p=>(p+1)%list.length);}} style={{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",width:24,height:24,background:"rgba(0,0,0,0.7)",border:"none",color:"white",fontSize:14,cursor:"pointer"}}>›</button>
-        <div style={{position:"absolute",bottom:6,left:"50%",transform:"translateX(-50%)",display:"flex",gap:4}}>
-          {list.map((_,i)=><div key={i} onClick={e=>{e.stopPropagation();setCur(i);}} style={{width:5,height:5,background:i===cur?"white":"rgba(255,255,255,0.3)",cursor:"pointer"}}/>)}
+        {/* Counter badge */}
+        <div style={{position:"absolute" as const,top:8,right:8,background:"rgba(0,0,0,0.7)",padding:"2px 8px",fontSize:9,color:"white",fontFamily:CONDENSED_FONT,letterSpacing:"0.1em"}}>{cur+1}/{list.length}</div>
+        {/* Prev/next buttons */}
+        <button onClick={e=>{e.stopPropagation();setCur(p=>(p-1+list.length)%list.length);}} style={{position:"absolute" as const,left:0,top:0,bottom:0,width:36,background:"linear-gradient(to right,rgba(0,0,0,0.4),transparent)",border:"none",color:"white",fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"flex-start",paddingLeft:8}}>‹</button>
+        <button onClick={e=>{e.stopPropagation();setCur(p=>(p+1)%list.length);}} style={{position:"absolute" as const,right:0,top:0,bottom:0,width:36,background:"linear-gradient(to left,rgba(0,0,0,0.4),transparent)",border:"none",color:"white",fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:8}}>›</button>
+        {/* Dot indicators */}
+        <div style={{position:"absolute" as const,bottom:6,left:"50%",transform:"translateX(-50%)",display:"flex",gap:4}}>
+          {list.map((_,i)=>(
+            <div key={i} onClick={e=>{e.stopPropagation();setCur(i);}} style={{width:i===cur?16:5,height:5,background:i===cur?C.gold:"rgba(255,255,255,0.4)",cursor:"pointer",transition:"all .2s"}}/>
+          ))}
         </div>
       </>}
     </div>
   );
 }
 
-export function MultiImgUploader({imgs,onChange}:{imgs:string[],onChange:any}){
+export function MultiImgUploader({imgs,onChange,maxImgs=4}:{imgs:string[],onChange:any,maxImgs?:number}){
   const fileRef=useRef<HTMLInputElement>(null);
   const urlRef=useRef<HTMLInputElement>(null);
-  const addFile=(e:any)=>{Array.from(e.target.files).forEach((f:any)=>{const r=new FileReader();r.onload=ev=>onChange((p:string[])=>[...p,(ev.target as any).result]);r.readAsDataURL(f);});e.target.value="";};
-  const addUrl=()=>{const v=urlRef.current?.value?.trim();if(v&&!imgs.includes(v)){onChange((p:string[])=>[...p,v]);if(urlRef.current)urlRef.current.value="";}};
-  const remove=(i:number)=>onChange((p:string[])=>p.filter((_,j)=>j!==i));
-  const moveL=(i:number)=>{if(i===0)return;const a=[...imgs];[a[i-1],a[i]]=[a[i],a[i-1]];onChange(()=>a);};
-  const moveR=(i:number)=>{if(i===imgs.length-1)return;const a=[...imgs];[a[i],a[i+1]]=[a[i+1],a[i]];onChange(()=>a);};
+  const [showUrl,setShowUrl]=useState(false);
+  const [dragging,setDragging]=useState<number|null>(null);
+  const [dragOver,setDragOver]=useState<number|null>(null);
+
+  const addFile=(e:any)=>{
+    const files=Array.from(e.target.files) as File[];
+    const remaining=maxImgs-(imgs||[]).length;
+    files.slice(0,remaining).forEach((f:File)=>{
+      const r=new FileReader();
+      r.onload=ev=>onChange((p:string[])=>[...(p||[]),(ev.target as any).result]);
+      r.readAsDataURL(f);
+    });
+    e.target.value="";
+  };
+
+  const addUrl=()=>{
+    const v=urlRef.current?.value?.trim();
+    if(v&&!(imgs||[]).includes(v)&&(imgs||[]).length<maxImgs){
+      onChange((p:string[])=>[...(p||[]),v]);
+      if(urlRef.current)urlRef.current.value="";
+      setShowUrl(false);
+    }
+  };
+
+  const remove=(i:number)=>onChange((p:string[])=>p.filter((_:string,j:number)=>j!==i));
+
+  const moveL=(i:number)=>{if(i===0)return;const a=[...(imgs||[])];[a[i-1],a[i]]=[a[i],a[i-1]];onChange(()=>a);};
+  const moveR=(i:number)=>{if(i===(imgs||[]).length-1)return;const a=[...(imgs||[])];[a[i],a[i+1]]=[a[i+1],a[i]];onChange(()=>a);};
+
+  const handleDragStart=(i:number)=>setDragging(i);
+  const handleDragEnd=()=>{
+    if(dragging!==null&&dragOver!==null&&dragging!==dragOver){
+      const a=[...(imgs||[])];
+      const item=a.splice(dragging,1)[0];
+      a.splice(dragOver,0,item);
+      onChange(()=>a);
+    }
+    setDragging(null);setDragOver(null);
+  };
+
+  const list=imgs||[];
+  const slots=maxImgs;
+
   return(
     <div>
-      <span style={css.label}>Nuotraukos</span>
-      {imgs.length>0&&(<div style={{display:"flex",gap:6,flexWrap:"wrap" as const,marginBottom:10}}>
-        {imgs.map((src,i)=>(<div key={i} style={{position:"relative",width:82,height:66,overflow:"hidden",border:`2px solid ${i===0?C.gold:C.border}`,flexShrink:0}}>
-          <img src={src} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-          {i===0&&<div style={{position:"absolute",bottom:2,left:2,background:C.gold,padding:"1px 4px",fontSize:7,fontWeight:700,color:C.bg,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.1em"}}>COVER</div>}
-          <div style={{position:"absolute",top:2,right:2,display:"flex",gap:2}}>
-            {i>0&&<button onClick={()=>moveL(i)} style={{width:14,height:14,background:"#000a",border:"none",color:"white",fontSize:8,cursor:"pointer"}}>←</button>}
-            {i<imgs.length-1&&<button onClick={()=>moveR(i)} style={{width:14,height:14,background:"#000a",border:"none",color:"white",fontSize:8,cursor:"pointer"}}>→</button>}
-            <button onClick={()=>remove(i)} style={{width:14,height:14,background:"#ef4444aa",border:"none",color:"white",fontSize:8,cursor:"pointer"}}>×</button>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+        <span style={css.label as any}>Nuotraukos <span style={{color:C.muted,fontWeight:400,fontSize:9}}>({list.length}/{slots} · vilkite kad perrikiuotumėte)</span></span>
+        {list.length>0&&list.length<slots&&(
+          <div style={{display:"flex",gap:6}}>
+            <button onClick={()=>fileRef.current?.click()} style={{...css.btnTeal,padding:"3px 10px",fontSize:9}}>+ Įkelti</button>
+            <button onClick={()=>setShowUrl(s=>!s)} style={{...css.btnGhost,padding:"3px 10px",fontSize:9}}>+ URL</button>
           </div>
-        </div>))}
-        <div onClick={()=>fileRef.current?.click()} style={{width:82,height:66,border:`1px dashed ${C.border}`,display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",cursor:"pointer",color:C.muted,fontSize:9,gap:2,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.1em"}}>
-          <span style={{fontSize:16}}>+</span>PRIDĖTI
+        )}
+      </div>
+
+      {/* 4-slot image grid */}
+      <div style={{display:"grid",gridTemplateColumns:`repeat(${slots},1fr)`,gap:6,marginBottom:showUrl?10:0}}>
+        {Array.from({length:slots}).map((_,i)=>{
+          const src=list[i];
+          const isFirst=i===0;
+          const isDraggingThis=dragging===i;
+          const isDragTarget=dragOver===i;
+
+          if(src){
+            return(
+              <div key={i}
+                draggable
+                onDragStart={()=>handleDragStart(i)}
+                onDragOver={e=>{e.preventDefault();setDragOver(i);}}
+                onDragEnd={handleDragEnd}
+                style={{
+                  position:"relative" as const,
+                  aspectRatio:"1",
+                  border:`2px solid ${isFirst?C.gold:isDragTarget?"#5B8DB8":C.border}`,
+                  overflow:"hidden",
+                  cursor:"grab",
+                  opacity:isDraggingThis?0.5:1,
+                  transition:"all .15s",
+                  background:C.faint,
+                }}
+              >
+                <img src={src} alt={`Photo ${i+1}`} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} onError={e=>(e.target as HTMLImageElement).style.opacity="0.3"}/>
+                {/* Cover badge */}
+                {isFirst&&(
+                  <div style={{position:"absolute" as const,top:4,left:4,background:C.gold,padding:"1px 6px",fontSize:7,fontWeight:700,color:C.bg,fontFamily:CONDENSED_FONT,letterSpacing:"0.1em"}}>COVER</div>
+                )}
+                {/* Controls overlay */}
+                <div style={{position:"absolute" as const,inset:0,background:"rgba(0,0,0,0)",transition:"background .15s",display:"flex",alignItems:"flex-end",justifyContent:"center",gap:3,padding:4}}
+                  onMouseEnter={e=>(e.currentTarget.style.background="rgba(0,0,0,0.55)")}
+                  onMouseLeave={e=>(e.currentTarget.style.background="rgba(0,0,0,0)")}>
+                  <div style={{display:"flex",gap:3,opacity:0}} className="img-controls">
+                    {i>0&&<button onClick={()=>moveL(i)} title="Judinti kairėn" style={{width:20,height:20,background:"rgba(255,255,255,0.9)",border:"none",color:"#000",fontSize:10,cursor:"pointer",flexShrink:0}}>←</button>}
+                    {i<list.length-1&&<button onClick={()=>moveR(i)} title="Judinti dešinėn" style={{width:20,height:20,background:"rgba(255,255,255,0.9)",border:"none",color:"#000",fontSize:10,cursor:"pointer",flexShrink:0}}>→</button>}
+                    <button onClick={()=>remove(i)} title="Ištrinti" style={{width:20,height:20,background:"#ef4444",border:"none",color:"white",fontSize:11,cursor:"pointer",flexShrink:0}}>×</button>
+                  </div>
+                </div>
+                {/* Always visible delete button */}
+                <button onClick={()=>remove(i)} style={{position:"absolute" as const,top:2,right:2,width:18,height:18,background:"rgba(0,0,0,0.7)",border:"none",color:"white",fontSize:10,cursor:"pointer",flexShrink:0,lineHeight:1}}>×</button>
+              </div>
+            );
+          }else{
+            // Empty slot
+            return(
+              <div key={i}
+                onDragOver={e=>{e.preventDefault();setDragOver(i);}}
+                onDrop={()=>{}}
+                onClick={()=>fileRef.current?.click()}
+                style={{
+                  aspectRatio:"1",
+                  border:`1px dashed ${isDragTarget?C.teal:C.border}`,
+                  background:isDragTarget?C.tealSoft:C.faint,
+                  display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",
+                  cursor:"pointer",color:C.muted,gap:4,
+                  transition:"all .15s",
+                }}
+              >
+                <span style={{fontSize:22,opacity:0.4}}>📷</span>
+                {i===0&&list.length===0&&<span style={{fontSize:8,fontFamily:CONDENSED_FONT,letterSpacing:"0.1em",textTransform:"uppercase" as const,color:C.muted}}>Pridėti</span>}
+              </div>
+            );
+          }
+        })}
+      </div>
+
+      {/* CSS for hover controls */}
+      <style>{`.img-controls{opacity:0;transition:opacity .15s;}div:hover>.img-controls{opacity:1!important;}`}</style>
+
+      {/* Empty state big upload button */}
+      {list.length===0&&(
+        <div onClick={()=>fileRef.current?.click()} style={{border:`1px dashed ${C.border}`,padding:"18px",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:C.muted,gap:10,marginTop:6,fontSize:11,fontFamily:CONDENSED_FONT,letterSpacing:"0.12em",textTransform:"uppercase" as const,background:C.faint}}>
+          <span style={{fontSize:20}}>📷</span>SPUSTELĖKITE ARBA VILKITE NUOTRAUKAS
         </div>
-      </div>)}
-      {imgs.length===0&&<div onClick={()=>fileRef.current?.click()} style={{height:64,border:`1px dashed ${C.border}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:C.muted,gap:8,marginBottom:10,fontSize:11,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.12em"}}>📷 SPUSTELĖKITE, KAD ĮKELTUMĖTE</div>}
+      )}
+
+      {/* URL input */}
+      {showUrl&&(
+        <div style={{display:"flex",gap:8,marginTop:8}}>
+          <input ref={urlRef} placeholder="https://example.com/image.jpg" style={{...css.input,flex:1,fontSize:12}} onKeyDown={e=>e.key==="Enter"&&addUrl()} autoFocus/>
+          <button onClick={addUrl} style={{...css.btnG,padding:"8px 14px",fontSize:13,fontWeight:900}}>+</button>
+          <button onClick={()=>setShowUrl(false)} style={{...css.btnGhost,padding:"8px 10px",fontSize:13}}>×</button>
+        </div>
+      )}
+
+      {/* Add buttons when empty */}
+      {list.length===0&&(
+        <div style={{display:"flex",gap:8,marginTop:8}}>
+          <button onClick={()=>fileRef.current?.click()} style={{...css.btnTeal,flex:1,fontSize:11,justifyContent:"center",display:"flex",alignItems:"center",gap:6}}>📁 Pasirinkti failus</button>
+          <button onClick={()=>setShowUrl(s=>!s)} style={{...css.btnGhost,flex:1,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>🔗 Įklijuoti URL</button>
+        </div>
+      )}
+
       <input ref={fileRef} type="file" accept="image/*" multiple onChange={addFile} style={{display:"none"}}/>
-      <div style={{display:"flex",gap:8}}>
-        <input ref={urlRef} placeholder="Arba įklijuokite URL..." style={{...css.input,flex:1,fontSize:12}} onKeyDown={e=>e.key==="Enter"&&addUrl()}/>
-        <button onClick={addUrl} style={{...css.btnTeal,padding:"10px 14px",fontSize:16,fontWeight:800}}>+</button>
+
+      {/* Info text */}
+      <div style={{fontSize:9,color:C.muted,marginTop:6,fontFamily:CONDENSED_FONT,letterSpacing:"0.08em"}}>
+        Pirma nuotrauka — COVER (rodoma kortele ir PDF). Vilkite kad perrikiuotumėte.
       </div>
     </div>
   );
