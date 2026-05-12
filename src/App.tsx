@@ -27,7 +27,7 @@ const MUSCLE_COLORS:Record<string,string> = {
   "Pilvas":"#7DA84E","Visi":"#6B7280",
 };
 const muscleColor=(m:string)=>MUSCLE_COLORS[m]||C.teal;
-const emptyClient  = {name:"",age:"",weight:"",height:"",gender:"Vyras",goal:"",level:"",notes:"",training_days:[] as string[],activity_index:2,phone:""};
+const emptyClient  = {name:"",age:"",weight:"",height:"",gender:"Vyras",goal:"",level:"",notes:"",training_days:[] as string[],activity_index:2,phone:"",birthday:""};
 
 // LoginScreen is now in auth.tsx
 
@@ -213,7 +213,7 @@ function CalendarNotesWidget({upcomingBookings}:{upcomingBookings:any[]}){
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────
-function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
+function DashboardTab({onNav,allClients=[],allBookings=[]}:{onNav:(t:string,open?:boolean)=>void,allClients?:any[],allBookings?:any[]}){
   const [stats,setStats]=useState({clients:0,exercises:0,foods:0,mealplans:0});
   const [recent,setRecent]=useState<any[]>([]);
   const [upcomingBookings,setUpcomingBookings]=useState<any[]>([]);
@@ -273,6 +273,10 @@ function DashboardTab({onNav}:{onNav:(t:string,open?:boolean)=>void}){
           </div>
         </div>
       </div>
+
+      {/* ── BIRTHDAY + INACTIVITY ALERTS ── */}
+      {allClients.length>0&&<BirthdayAlerts clients={allClients}/>}
+      {allClients.length>0&&allBookings.length>=0&&<InactivityAlerts clients={allClients} bookings={allBookings}/>}
 
       {/* ── STATS BAR ──────────────────────────────────────── */}
       <div className="dash-stats fu1">
@@ -398,7 +402,16 @@ function ExercisesTab({autoOpen=false}:{autoOpen?:boolean}){
 
   const load=useCallback(async()=>{
     setLoading(true);setError("");
-    try{setExercises(await sb.get("exercises","?order=name"));}
+    try{
+      const coachId=getCoachId();
+      const isAdmin=getIsAdmin();
+      const [allEx,blocks]=await Promise.all([
+        sb.get("exercises","?order=name"),
+        isAdmin?Promise.resolve([]):sb.get("coach_exercise_blocks",`?coach_id=eq.${coachId}&select=exercise_id`).catch(()=>[]),
+      ]);
+      const blockedIds=new Set((blocks as any[]).map((b:any)=>b.exercise_id));
+      setExercises(isAdmin?allEx:allEx.filter((e:any)=>!blockedIds.has(e.id)));
+    }
     catch(e:any){setError("Klaida: "+e.message);}
     finally{setLoading(false);}
   },[]);
@@ -789,7 +802,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
   };
   const openEdit=(c:any)=>{
     setEditClientId(c.id);
-    setClientForm({name:c.name||"",age:c.age||"",weight:c.weight||"",height:c.height||"",gender:c.gender||"Vyras",goal:c.goal||"",level:c.level||"",notes:c.notes||"",training_days:c.training_days||[],activity_index:c.activity_index??2,phone:c.phone||""});
+    setClientForm({name:c.name||"",age:c.age||"",weight:c.weight||"",height:c.height||"",gender:c.gender||"Vyras",goal:c.goal||"",level:c.level||"",notes:c.notes||"",training_days:c.training_days||[],activity_index:c.activity_index??2,phone:c.phone||"",birthday:c.birthday||""});
     setProgram(c.program||{});setProgramName(c.program_name||"");
     setMealPlan(c.meal_plan||{});setMealPlanName(c.meal_plan_name||"");
     setPlanType(c.meal_plan_name&&c.program_name?"both":c.meal_plan_name?"meal":"training");
@@ -1110,7 +1123,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
           {/* Progress */}
           <div style={{...css.card,marginBottom:12}}>
             <div style={{display:"flex",alignItems:"center",marginBottom:14}}>
-              <span style={{...css.secTitle,marginBottom:0}}>📈 Pažangos istorija</span>
+              <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:C.text,letterSpacing:"0.04em",marginBottom:0}}>📈 PAŽANGOS ISTORIJA</span>
               <button onClick={()=>setProgFormOpen(true)} style={{...css.btnTeal,marginLeft:"auto",fontSize:11}}>+ Pridėti</button>
             </div>
             {progLoading?<Spinner/>:progressList.length===0
@@ -1341,6 +1354,13 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
             })}
           </>}
         </div>
+
+        {/* ── SESSION NOTES ── */}
+        {view&&<SessionNotesPanel clientId={view.id} clientName={view.name}/>}
+
+        {/* ── BEFORE/AFTER PHOTOS ── */}
+        {view&&<BeforeAfterPanel clientId={view.id}/>}
+
       </div></div>)}
 
       {/* Progress modal */}
@@ -1395,7 +1415,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
             <div className="cf-grid" style={{}}>
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
               <div><span style={css.label}>Lytis</span><div style={{display:"flex",gap:8}}>{["Vyras","Moteris"].map(g=>(<button key={g} onClick={()=>setClientForm(p=>({...p,gender:g}))} style={{flex:1,padding:"8px",borderRadius:8,border:clientForm.gender===g?`1px solid ${C.gold}`:`1px solid ${C.border}`,background:clientForm.gender===g?C.goldSoft:"transparent",color:clientForm.gender===g?C.gold:C.muted,fontFamily:FONT,fontSize:12,cursor:"pointer",fontWeight:600}}>{g==="Vyras"?"👨 Vyras":"👩 Moteris"}</button>))}</div></div>
-              {[["Vardas ir pavardė *","name","text"],["Telefonas","phone","tel"],["Amžius","age","number"],["Svoris (kg)","weight","number"],["Ūgis (cm)","height","number"]].map(([lb,k,t])=>(<div key={k}><span style={css.label}>{lb}</span><input type={t} value={(clientForm as any)[k]} onChange={e=>setClientForm(p=>({...p,[k]:e.target.value}))} style={css.input} placeholder={lb as string}/></div>))}
+              {[["Vardas ir pavardė *","name","text"],["Telefonas","phone","tel"],["Gimtadienis","birthday","date"],["Amžius","age","number"],["Svoris (kg)","weight","number"],["Ūgis (cm)","height","number"]].map(([lb,k,t])=>(<div key={k}><span style={css.label}>{lb}</span><input type={t} value={(clientForm as any)[k]} onChange={e=>setClientForm(p=>({...p,[k]:e.target.value}))} style={css.input} placeholder={lb as string}/></div>))}
               <div><span style={css.label}>Aktyvumo lygis</span><select value={clientForm.activity_index} onChange={e=>setClientForm(p=>({...p,activity_index:+e.target.value}))} style={css.select}>{ACTIVITY_LEVELS.map((a,i)=><option key={i} value={i}>{a.label}</option>)}</select></div>
               <div><span style={css.label}>Tikslas</span><select value={clientForm.goal} onChange={e=>setClientForm(p=>({...p,goal:e.target.value}))} style={css.select}><option value="">Pasirinkite</option>{GOALS.map(g=><option key={g}>{g}</option>)}</select></div>
               <div><span style={css.label}>Lygis</span><select value={clientForm.level} onChange={e=>setClientForm(p=>({...p,level:e.target.value}))} style={css.select}><option value="">Pasirinkite</option>{LEVELS.map(l=><option key={l}>{l}</option>)}</select></div>
@@ -1444,6 +1464,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
           {step===2&&planType!=="meal"&&(<div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap" as const}}>
               <div style={{flex:1}}><span style={css.label}>Programos pavadinimas</span><input value={programName} onChange={e=>setProgramName(e.target.value)} placeholder="pvz. Tomo 3 dienų programa" style={{...css.input,maxWidth:380}}/></div>
+              <ProgramTemplateButton exercises={exercises} onApply={(prog,name)=>{setProgram(prog);setProgramName(name);}}/>
             </div>
             {trainingDays.length===0?<div style={{...css.card,textAlign:"center",color:C.muted,padding:36}}>Grįžkite į 1 žingsnį ir pasirinkite treniruočių dienas.</div>:trainingDays.map(day=>(<div key={day} style={{...css.card,marginBottom:12}}>
               <div style={{display:"flex",alignItems:"center",marginBottom:10,gap:8}}>
@@ -1877,6 +1898,9 @@ function RevenueTab({clients}:any){
         ))}
       </div>
 
+      {/* Revenue chart */}
+      <RevenueChart payments={payments}/>
+
       {/* Unpaid alert */}
       {unpaid.length>0&&(
         <div style={{background:C.redSoft,border:`1px solid ${C.redBorder}`,borderRadius:12,padding:"12px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:10}}>
@@ -2232,6 +2256,351 @@ Atsakyk trumpai ir konkrečiai (iki 150 žodžių).`;
   );
 }
 
+// ── SESSION NOTES (#1) ───────────────────────────────────
+function SessionNotesPanel({clientId,clientName}:{clientId:string,clientName:string}){
+  const [notes,setNotes]=useState<any[]>([]);
+  const [loading,setLoading]=useState(true);
+  const [input,setInput]=useState("");
+  const [date,setDate]=useState(new Date().toISOString().slice(0,10));
+  const [saving,setSaving]=useState(false);
+
+  // Load from Supabase
+  useEffect(()=>{
+    if(!clientId)return;
+    setLoading(true);
+    sb.get("session_notes",`?client_id=eq.${clientId}&order=date.desc,created_at.desc`)
+      .then(data=>setNotes(data))
+      .catch(()=>{
+        // Fallback to localStorage if table doesn't exist yet
+        try{
+          const stored=JSON.parse(localStorage.getItem(`dna_notes_${clientId}`)||"[]");
+          setNotes(stored);
+        }catch{}
+      })
+      .finally(()=>setLoading(false));
+  },[clientId]);
+
+  const add=async()=>{
+    if(!input.trim()||saving)return;
+    setSaving(true);
+    const newNote={client_id:clientId,date,text:input.trim(),coach_id:getCoachId()};
+    try{
+      const saved=await sb.insert("session_notes",newNote);
+      setNotes(p=>[saved[0]||{...newNote,id:Date.now()},...p]);
+      setInput("");
+    }catch{
+      // Fallback to localStorage
+      const fallback={id:Date.now(),date,text:input.trim()};
+      const updated=[fallback,...notes];
+      setNotes(updated);
+      try{localStorage.setItem(`dna_notes_${clientId}`,JSON.stringify(updated));}catch{}
+      setInput("");
+    }finally{setSaving(false);}
+  };
+
+  const del=async(note:any)=>{
+    setNotes(p=>p.filter(n=>n.id!==note.id));
+    try{
+      if(typeof note.id==="string")await sb.delete("session_notes",note.id);
+      else{
+        // localStorage fallback
+        const updated=notes.filter(n=>n.id!==note.id);
+        try{localStorage.setItem(`dna_notes_${clientId}`,JSON.stringify(updated));}catch{}
+      }
+    }catch{}
+  };
+
+  return(
+    <div style={{...css.card,marginBottom:12}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+        <div style={{width:2,height:16,background:C.teal}}/>
+        <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:C.text,letterSpacing:"0.04em"}}>SESIJŲ UŽRAŠAI</span>
+        <span style={{marginLeft:"auto",fontFamily:"'Barlow Condensed',sans-serif",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>{notes.length} užrašai · Išsaugomi nuolat</span>
+      </div>
+      {/* Add note form */}
+      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap" as const}}>
+        <input type="date" value={date} onChange={e=>setDate(e.target.value)} style={{...css.input,width:140,flexShrink:0}}/>
+        <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&add()}
+          placeholder={`Sesijos pastabos — ${clientName}...`}
+          style={{...css.input,flex:1,minWidth:200}}/>
+        <button onClick={add} disabled={saving||!input.trim()} style={{...css.btnTeal,padding:"10px 16px",flexShrink:0,opacity:saving||!input.trim()?0.5:1}}>
+          {saving?"...":"+ Pridėti"}
+        </button>
+      </div>
+      {/* Notes list */}
+      {loading
+        ?<div style={{textAlign:"center" as const,color:C.muted,padding:"16px 0",fontSize:12}}>Kraunama...</div>
+        :notes.length===0
+          ?<div style={{textAlign:"center" as const,color:C.muted,padding:"20px 0",fontSize:12}}>
+              Sesijų užrašų dar nėra. Pridėkite po kiekvienos treniruotės.
+            </div>
+          :<div style={{display:"flex",flexDirection:"column" as const,gap:8,maxHeight:320,overflowY:"auto" as const}}>
+            {notes.map(n=>(
+              <div key={n.id} style={{background:C.faint,border:`1px solid ${C.border}`,padding:"10px 14px",display:"flex",gap:12,alignItems:"flex-start"}}>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:11,color:C.gold,letterSpacing:"0.04em",flexShrink:0,marginTop:2,minWidth:80}}>
+                  {new Date((n.date||"")+"T12:00").toLocaleDateString("lt-LT",{month:"short",day:"numeric",year:"numeric"})}
+                </div>
+                <div style={{flex:1,fontSize:12,color:C.text,lineHeight:1.6}}>{n.text}</div>
+                <button onClick={()=>del(n)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:14,flexShrink:0,padding:0}}>×</button>
+              </div>
+            ))}
+          </div>
+      }
+    </div>
+  );
+}
+
+// ── BEFORE/AFTER PHOTOS (#5) ─────────────────────────────
+function BeforeAfterPanel({clientId}:{clientId:string}){
+  const storageKey=`dna_photos_${clientId}`;
+  const [photos,setPhotos]=useState<{id:number,date:string,url:string,label:string}[]>(()=>{
+    try{return JSON.parse(localStorage.getItem(storageKey)||"[]");}catch{return [];}
+  });
+  const [label,setLabel]=useState("Prieš");
+  const [date,setDate]=useState(new Date().toISOString().slice(0,10));
+  const fileRef=useState<any>(null);
+
+  const save=(p:any[])=>{setPhotos(p);localStorage.setItem(storageKey,JSON.stringify(p));};
+  const addFile=(e:any)=>{
+    Array.from(e.target.files).forEach((f:any)=>{
+      const r=new FileReader();
+      r.onload=ev=>save([...photos,{id:Date.now(),date,url:(ev.target as any).result,label}]);
+      r.readAsDataURL(f);
+    });
+    e.target.value="";
+  };
+  const del=(id:number)=>save(photos.filter(p=>p.id!==id));
+
+  return(
+    <div style={{...css.card,marginBottom:12}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+        <div style={{width:2,height:16,background:C.purple}}/>
+        <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:C.text,letterSpacing:"0.04em"}}>PRIEŠ / PO NUOTRAUKOS</span>
+      </div>
+      {/* Upload controls */}
+      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap" as const,alignItems:"flex-end"}}>
+        <div><span style={css.label}>Data</span><input type="date" value={date} onChange={e=>setDate(e.target.value)} style={{...css.input,width:140}}/></div>
+        <div><span style={css.label}>Tipas</span>
+          <select value={label} onChange={e=>setLabel(e.target.value)} style={{...css.select,width:120}}>
+            {["Prieš","Po","Priekis","Šonas","Nugara","Progresas"].map(l=><option key={l}>{l}</option>)}
+          </select>
+        </div>
+        <label style={{...css.btnG,cursor:"pointer",display:"flex",alignItems:"center",gap:6,padding:"10px 16px"}}>
+          📷 Įkelti nuotrauką
+          <input type="file" accept="image/*" onChange={addFile} style={{display:"none"}}/>
+        </label>
+      </div>
+      {/* Photo grid */}
+      {photos.length===0
+        ?<div style={{textAlign:"center" as const,color:C.muted,padding:"24px 0",fontSize:12}}>
+            <div style={{fontSize:32,marginBottom:8}}>📸</div>
+            Nuotraukų dar nėra. Pridėkite pirmą progreso nuotrauką.
+          </div>
+        :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8}}>
+            {photos.map(p=>(
+              <div key={p.id} style={{position:"relative" as const,background:C.faint,border:`1px solid ${C.border}`}}>
+                <img src={p.url} alt={p.label} style={{width:"100%",aspectRatio:"3/4",objectFit:"cover",display:"block"}}/>
+                <div style={{padding:"6px 8px",borderTop:`1px solid ${C.border}`}}>
+                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:700,color:C.gold,letterSpacing:"0.08em"}}>{p.label}</div>
+                  <div style={{fontSize:10,color:C.muted}}>{new Date(p.date+"T12:00").toLocaleDateString("lt-LT")}</div>
+                </div>
+                <button onClick={()=>del(p.id)} style={{position:"absolute" as const,top:4,right:4,width:20,height:20,background:"rgba(0,0,0,0.7)",border:"none",color:"white",fontSize:11,cursor:"pointer"}}>×</button>
+              </div>
+            ))}
+          </div>
+      }
+    </div>
+  );
+}
+
+// ── PROGRAM TEMPLATES LIBRARY (#6) ───────────────────────
+function ProgramTemplateButton({exercises,onApply}:{exercises:any[],onApply:(prog:any,name:string)=>void}){
+  const [open,setOpen]=useState(false);
+  const TEMPLATES=[
+    {
+      name:"Pilno kūno 3 dienų (PPL)",
+      days:["Pirmadienis","Trečiadienis","Penktadienis"],
+      desc:"Push/Pull/Legs split — klasikinis hipertrofijos planas",
+      color:C.gold,
+    },
+    {
+      name:"Jėgos 4 dienų programa",
+      days:["Pirmadienis","Antradienis","Ketvirtadienis","Penktadienis"],
+      desc:"Upper/Lower split — jėgos ir masės ugdymas",
+      color:C.teal,
+    },
+    {
+      name:"Pradedantiesiems 3 dienų",
+      days:["Pirmadienis","Trečiadienis","Šeštadienis"],
+      desc:"Pilno kūno treniruotės — pradedantiesiems",
+      color:C.green,
+    },
+    {
+      name:"Intensyvus 5 dienų",
+      days:["Pirmadienis","Antradienis","Trečiadienis","Ketvirtadienis","Penktadienis"],
+      desc:"5 dienų split — pažengusiems sportininkams",
+      color:C.purple,
+    },
+  ];
+
+  const applyTemplate=(t:typeof TEMPLATES[0])=>{
+    // Build empty program with correct days
+    const prog:any={};
+    t.days.forEach(d=>{prog[d]=[];});
+    onApply(prog,t.name);
+    setOpen(false);
+  };
+
+  return(
+    <>
+      <button onClick={()=>setOpen(true)} style={{...css.btnGhost,fontSize:11,display:"flex",alignItems:"center",gap:6}}>
+        📋 Šablonai
+      </button>
+      {open&&(
+        <div style={css.overlay}>
+          <div style={{...css.modal(500)}}>
+            <div style={{padding:"14px 18px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center"}}>
+              <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:C.gold,letterSpacing:"0.04em"}}>PROGRAMŲ ŠABLONAI</span>
+              <button onClick={()=>setOpen(false)} style={{marginLeft:"auto",width:27,height:27,background:C.faint,border:`1px solid ${C.border}`,color:C.muted,cursor:"pointer",fontSize:14}}>×</button>
+            </div>
+            <div style={{padding:16,display:"flex",flexDirection:"column" as const,gap:10,maxHeight:400,overflowY:"auto" as const}}>
+              <div style={{fontSize:12,color:C.muted,marginBottom:4}}>Pasirinkite šabloną — dienų struktūra bus pritaikyta automatiškai. Pratimus pridėsite patys.</div>
+              {TEMPLATES.map((t,i)=>(
+                <div key={i} onClick={()=>applyTemplate(t)} style={{display:"flex",alignItems:"center",gap:14,padding:"14px 16px",background:C.faint,border:`1px solid ${C.border}`,cursor:"pointer",transition:"border-color .15s"}} onMouseEnter={e=>(e.currentTarget.style.borderColor=t.color+"60")} onMouseLeave={e=>(e.currentTarget.style.borderColor=C.border)}>
+                  <div style={{width:4,height:44,background:t.color,flexShrink:0}}/>
+                  <div style={{flex:1}}>
+                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:15,fontWeight:700,color:C.text,letterSpacing:"0.04em"}}>{t.name}</div>
+                    <div style={{fontSize:11,color:C.muted,marginTop:3}}>{t.desc}</div>
+                    <div style={{fontSize:10,color:t.color,marginTop:4,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.08em"}}>{t.days.join(" · ")}</div>
+                  </div>
+                  <span style={{fontSize:18,color:t.color}}>→</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ── REVENUE CHART (#17) ──────────────────────────────────
+function RevenueChart({payments}:{payments:any[]}){
+  if(!payments.length)return null;
+  // Last 6 months
+  const months:string[]=[];
+  for(let i=5;i>=0;i--){
+    const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);
+    months.push(d.toISOString().slice(0,7));
+  }
+  const data=months.map(m=>({
+    month:m,
+    total:payments.filter(p=>p.month===m&&p.paid).reduce((s:number,p:any)=>s+p.amount,0),
+    label:new Date(m+"-01").toLocaleDateString("lt-LT",{month:"short"}),
+  }));
+  const maxVal=Math.max(...data.map(d=>d.total),1);
+  const chartH=120;
+
+  return(
+    <div style={{...css.card,marginBottom:16}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+        <div style={{width:2,height:16,background:C.gold}}/>
+        <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:C.text,letterSpacing:"0.04em"}}>MĖNESIO PAJAMOS</span>
+        <span style={{marginLeft:"auto",fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,color:C.muted,letterSpacing:"0.1em"}}>PASKUTINIAI 6 MĖNESIAI</span>
+      </div>
+      <div style={{display:"flex",alignItems:"flex-end",gap:6,height:chartH,paddingBottom:0}}>
+        {data.map((d,i)=>{
+          const barH=maxVal>0?Math.max(4,(d.total/maxVal)*chartH):4;
+          const isCurrentMonth=d.month===new Date().toISOString().slice(0,7);
+          return(
+            <div key={i} style={{flex:1,display:"flex",flexDirection:"column" as const,alignItems:"center",gap:0,height:"100%",justifyContent:"flex-end"}}>
+              {d.total>0&&<div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:11,color:isCurrentMonth?C.gold:C.muted,marginBottom:3,letterSpacing:"0.04em"}}>€{d.total}</div>}
+              <div style={{
+                width:"100%",
+                height:barH,
+                background:isCurrentMonth?`linear-gradient(to top,${C.gold},${C.gold}80)`:`linear-gradient(to top,${C.border},${C.surface2})`,
+                transition:"height .4s ease",
+                position:"relative" as const,
+              }}/>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,color:isCurrentMonth?C.gold:C.muted,letterSpacing:"0.1em",textTransform:"uppercase" as const,marginTop:6}}>{d.label}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── BIRTHDAY + INACTIVITY DASHBOARD WIDGETS (#4 #8) ──────
+function BirthdayAlerts({clients}:{clients:any[]}){
+  const today=new Date();
+  const alerts=clients.filter(c=>{
+    if(!c.birthday)return false;
+    const bday=new Date(c.birthday);
+    const next=new Date(today.getFullYear(),bday.getMonth(),bday.getDate());
+    if(next<today)next.setFullYear(today.getFullYear()+1);
+    const diff=Math.ceil((next.getTime()-today.getTime())/(1000*60*60*24));
+    return diff<=7;
+  }).map(c=>{
+    const bday=new Date(c.birthday);
+    const next=new Date(today.getFullYear(),bday.getMonth(),bday.getDate());
+    if(next<today)next.setFullYear(today.getFullYear()+1);
+    const diff=Math.ceil((next.getTime()-today.getTime())/(1000*60*60*24));
+    const age=today.getFullYear()-bday.getFullYear()+(next.getFullYear()>today.getFullYear()?0:0);
+    return{...c,daysUntil:diff,turnsAge:age};
+  }).sort((a,b)=>a.daysUntil-b.daysUntil);
+
+  if(!alerts.length)return null;
+  return(
+    <div style={{background:C.surface,border:`1px solid ${C.goldBorder}`,padding:"14px 16px",marginBottom:12}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+        <span style={{fontSize:18}}>🎂</span>
+        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:700,color:C.gold,letterSpacing:"0.14em",textTransform:"uppercase" as const}}>Artėjantys gimtadieniai</span>
+      </div>
+      {alerts.map(c=>(
+        <div key={c.id} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0",borderTop:`1px solid ${C.border}`}}>
+          <div style={{width:28,height:28,background:`linear-gradient(135deg,${C.gold},#8B6520)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:900,color:C.bg,flexShrink:0}}>{(c.name||"?")[0]}</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12,fontWeight:600,color:C.text}}>{c.name}</div>
+            <div style={{fontSize:10,color:C.muted}}>{c.daysUntil===0?"Šiandien! 🎉":c.daysUntil===1?"Rytoj":` Už ${c.daysUntil} dienų`}</div>
+          </div>
+          {c.phone&&<a href={`https://wa.me/${(c.phone||"").replace(/\D/g,"")}?text=${encodeURIComponent(`Sveiki ${c.name}! 🎂 Sveikiname su gimtadieniu! Linkime sveikatos ir sėkmės! 💪`)}`} target="_blank" rel="noopener noreferrer" style={{...css.btnGreen,padding:"4px 10px",fontSize:10,textDecoration:"none",display:"flex",alignItems:"center",gap:4}}>💬 Sveikinti</a>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function InactivityAlerts({clients,bookings}:{clients:any[],bookings:any[]}){
+  const cutoff=new Date();cutoff.setDate(cutoff.getDate()-14);
+  const cutoffStr=cutoff.toISOString().slice(0,10);
+
+  const inactive=clients.filter(c=>{
+    const lastBooking=bookings.filter(b=>b.coach_id===c.coach_id||true).filter(b=>b.client_name===c.name&&b.status==="confirmed").sort((a:any,b:any)=>b.date.localeCompare(a.date))[0];
+    return!lastBooking||lastBooking.date<cutoffStr;
+  }).slice(0,4);
+
+  if(!inactive.length)return null;
+  return(
+    <div style={{background:C.surface,border:`1px solid ${C.redBorder}`,padding:"14px 16px",marginBottom:12}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+        <span style={{fontSize:18}}>⚠️</span>
+        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:700,color:C.red,letterSpacing:"0.14em",textTransform:"uppercase" as const}}>Neaktyvūs klientai (14+ dienų)</span>
+      </div>
+      {inactive.map(c=>(
+        <div key={c.id} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0",borderTop:`1px solid ${C.border}`}}>
+          <div style={{width:28,height:28,background:C.redSoft,border:`1px solid ${C.redBorder}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:900,color:C.red,flexShrink:0}}>{(c.name||"?")[0]}</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12,fontWeight:600,color:C.text}}>{c.name}</div>
+            <div style={{fontSize:10,color:C.muted}}>{c.goal||"—"}</div>
+          </div>
+          {c.phone&&<a href={`https://wa.me/${(c.phone||"").replace(/\D/g,"")}?text=${encodeURIComponent(`Sveiki ${c.name}! Kaip sekasi? Ar galėtume suplanuoti kitą treniruotę? 💪`)}`} target="_blank" rel="noopener noreferrer" style={{...css.btnRed,padding:"4px 10px",fontSize:10,textDecoration:"none",display:"flex",alignItems:"center",gap:4}}>💬 Susisiekti</a>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── MAIN APP ──────────────────────────────────────────────
 // MainApp: shown when logged in
 function MainApp(){
@@ -2320,7 +2689,7 @@ function MainApp(){
         </div>
       </div>
       <div className="content-pad" style={{maxWidth:1200,margin:"0 auto",padding:"82px 32px 24px"}}>
-        {tab==="dashboard"  && <DashboardTab onNav={navigate}/>}
+        {tab==="dashboard"  && <DashboardTab onNav={navigate} allClients={allClients} allBookings={allBookings}/>}
         {tab==="exercises"  && <ExercisesTab key={tab+autoOpen} autoOpen={autoOpen}/>}
         {tab==="foods"      && <FoodsTab key={tab+autoOpen} autoOpen={autoOpen} onFoodsLoaded={setFoods}/>}
         {tab==="clients"    && <ClientsTab key={tab+autoOpen} exercises={exercises} foods={foods} autoOpen={autoOpen}/>}
