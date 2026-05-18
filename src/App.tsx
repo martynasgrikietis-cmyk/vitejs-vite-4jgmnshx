@@ -3,6 +3,27 @@ import { useState, useCallback, useEffect } from "react";
 import { sb, C, FONT, RESPONSIVE_CSS, css, ALL_MUSCLES, GOALS, LEVELS, DAYS, REST_OPTIONS, ACTIVITY_LEVELS, calcBMI, bmiCat, calcNut, genToken, getCoachId, getIsAdmin, Tag, Badge, Spinner, Skeleton, SkeletonCard, Err, NutriBadge, ImgGallery, MultiImgUploader, HERO_IMG, GYM_IMG2, DISPLAY_FONT, CONDENSED_FONT, SectionHead } from "./shared";
 import { LoginScreen, AuthProvider, UsersTab, useAuth, getSession, clearSession } from "./auth";
 import { FoodsTab, MealPlanBuilder, MealSharePage } from "./MealPlan";
+
+// ── NATIVE APP INITIALIZATION ─────────────────────────────
+async function initNative() {
+  // Only runs inside Capacitor native app
+  if (typeof (window as any).Capacitor === "undefined") return;
+  if (!(window as any).Capacitor?.isNativePlatform?.()) return;
+  try {
+    const cap = (window as any).Capacitor;
+    // Status bar via Capacitor plugins if available
+    const plugins = cap.Plugins || {};
+    if (plugins.StatusBar) {
+      await plugins.StatusBar.setStyle({ style: "DARK" }).catch(()=>{});
+      await plugins.StatusBar.setBackgroundColor({ color: "#060709" }).catch(()=>{});
+    }
+    // Hide splash screen
+    if (plugins.SplashScreen) {
+      setTimeout(() => plugins.SplashScreen.hide({ fadeOutDuration: 400 }).catch(()=>{}), 800);
+    }
+  } catch {}
+}
+
 import { CalendarTab, BookingPage } from "./Calendar";
 import { CSVImportModal, ExerciseLibraryModal } from "./ExerciseImport";
 
@@ -2616,6 +2637,8 @@ function MainApp(){
   const handleLogout=()=>{logout();};
 
   useEffect(()=>{
+    // Initialize native features (status bar, splash screen)
+    initNative();
     sb.get("exercises","?order=name").then(d=>setExercises(d)).catch(()=>{});
     sb.get("foods","?order=name").then(d=>setFoods(d)).catch(()=>{});
     sb.get("clients",`?coach_id=eq.${getCoachId()}&order=name`).then(d=>setAllClients(d)).catch(()=>{});
