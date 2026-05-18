@@ -74,18 +74,70 @@ export function LoginScreen({ onLogin }: { onLogin: (coach: Coach) => void }) {
   };
 
   return (
-    <div style={{ minHeight:"100vh", background:C.bg, display:"flex", fontFamily:"'Barlow','Helvetica Neue',sans-serif", overflow:"hidden" }}>
-      {/* Left — wallpaper */}
-      <div style={{ flex:1, position:"relative", display:"flex" }} className="login-left">
+    <div style={{ minHeight:"100vh", background:C.bg, display:"flex", flexDirection:"column" as const, fontFamily:"'Barlow','Helvetica Neue',sans-serif", overflow:"hidden", position:"relative" as const }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@300;400&display=swap');
+        *{box-sizing:border-box;}
+        body{margin:0;background:#060709;}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        .login-fu{animation:fadeUp .5s ease both;}
+        .login-fu1{animation:fadeUp .5s .1s ease both;}
+        .login-fu2{animation:fadeUp .5s .2s ease both;}
+        .login-fu3{animation:fadeUp .5s .3s ease both;}
+        .login-input{
+          width:100%;background:rgba(255,255,255,0.06);
+          border:1px solid rgba(255,255,255,0.1);
+          border-radius:12px;
+          padding:16px 18px;
+          color:#F5F0E8;
+          font-family:'Barlow',sans-serif;
+          font-size:16px;
+          outline:none;
+          transition:border-color .2s, background .2s;
+          -webkit-appearance:none;
+          box-sizing:border-box;
+        }
+        .login-input:focus{
+          border-color:#D4A853;
+          background:rgba(212,168,83,0.08);
+        }
+        .login-input::placeholder{color:rgba(255,255,255,0.2);}
+        .login-btn{
+          width:100%;padding:17px;
+          background:linear-gradient(135deg,#D4A853,#B8902A);
+          color:#060709;border:none;border-radius:14px;
+          font-family:'Barlow Condensed',sans-serif;
+          font-weight:700;font-size:14px;
+          letter-spacing:0.18em;text-transform:uppercase;
+          cursor:pointer;
+          transition:opacity .2s, transform .1s;
+          -webkit-appearance:none;
+        }
+        .login-btn:active{transform:scale(0.98);}
+        @media(min-width:641px){
+          .login-left{display:flex!important;}
+          .login-mobile-bg{display:none!important;}
+        }
+      `}</style>
+
+      {/* ── FULL SCREEN WALLPAPER (mobile) ── */}
+      <div className="login-mobile-bg" style={{ position:"absolute" as const, inset:0, zIndex:0 }}>
+        <img src="https://i.pinimg.com/736x/e3/bc/16/e3bc16974256fb6913e37079fa4cb653.jpg" alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 30%", filter:"brightness(0.18) saturate(0.3) contrast(1.2)" }}/>
+        <div style={{ position:"absolute" as const, inset:0, background:"linear-gradient(to bottom, rgba(6,7,9,0.3) 0%, rgba(6,7,9,0.7) 40%, rgba(6,7,9,0.97) 70%)" }}/>
+        <div style={{ position:"absolute" as const, inset:0, backgroundImage:"linear-gradient(rgba(212,168,83,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(212,168,83,0.04) 1px,transparent 1px)", backgroundSize:"48px 48px" }}/>
+      </div>
+
+      {/* ── DESKTOP: Left wallpaper panel ── */}
+      <div className="login-left" style={{ display:"none", flex:1, position:"relative" as const }}>
         <img src="https://i.pinimg.com/736x/e3/bc/16/e3bc16974256fb6913e37079fa4cb653.jpg" alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 30%", filter:"brightness(0.22) saturate(0.3) contrast(1.2)" }}/>
-        <div style={{ position:"absolute", inset:0, background:"linear-gradient(to right, rgba(6,7,9,0.1), rgba(6,7,9,0.8))" }}/>
+        <div style={{ position:"absolute", inset:0, background:"linear-gradient(to right, rgba(6,7,9,0.1), rgba(6,7,9,0.85))" }}/>
         <div style={{ position:"absolute", inset:0, backgroundImage:"linear-gradient(rgba(212,168,83,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(212,168,83,0.05) 1px,transparent 1px)", backgroundSize:"56px 56px" }}/>
         <div style={{ position:"relative", padding:"48px", display:"flex", flexDirection:"column" as const, justifyContent:"flex-end" }}>
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
             <div style={{ width:24, height:1, background:"#D4A853" }}/>
             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, color:"#D4A853", letterSpacing:"0.3em" }}>DNA TRAINER</span>
           </div>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:56, color:"#F5F0E8", lineHeight:0.9, letterSpacing:"0.02em", textShadow:"0 4px 40px rgba(0,0,0,0.9)" }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:60, color:"#F5F0E8", lineHeight:0.9, letterSpacing:"0.02em", textShadow:"0 4px 40px rgba(0,0,0,0.9)" }}>
             SPORTO<br/><span style={{ color:"#D4A853" }}>SISTEMA</span>
           </div>
           <div style={{ fontFamily:"'Barlow',sans-serif", fontSize:12, color:"#505868", fontWeight:300, marginTop:14, letterSpacing:"0.08em" }}>
@@ -94,36 +146,85 @@ export function LoginScreen({ onLogin }: { onLogin: (coach: Coach) => void }) {
         </div>
       </div>
 
-      {/* Right — login form */}
-      <div style={{ width:380, background:C.surface, borderLeft:`1px solid ${C.border}`, display:"flex", flexDirection:"column" as const, justifyContent:"center", padding:"48px 40px" }}>
-        <svg width="44" height="44" viewBox="0 0 48 48" fill="none" style={{ marginBottom:28 }}>
-          <circle cx="24" cy="24" r="21" stroke="#D4A853" strokeWidth="1" opacity="0.5"/>
-          <ellipse cx="24" cy="24" rx="11" ry="5" stroke="#D4A853" strokeWidth="1.2" fill="none"/>
-          <ellipse cx="24" cy="24" rx="11" ry="5" stroke="#D4A853" strokeWidth="1.2" fill="none" transform="rotate(60 24 24)"/>
-          <ellipse cx="24" cy="24" rx="11" ry="5" stroke="#D4A853" strokeWidth="1.2" fill="none" transform="rotate(120 24 24)"/>
-          <circle cx="24" cy="24" r="2.2" fill="#D4A853"/>
-        </svg>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:38, color:"#F5F0E8", letterSpacing:"0.04em", lineHeight:1, marginBottom:6 }}>PRISIJUNGTI</div>
-        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, color:"#505868", letterSpacing:"0.22em", textTransform:"uppercase", marginBottom:36 }}>Coach platforma</div>
-        <Err msg={err} />
-        <div style={{ marginBottom:24 }}>
-          <span style={css.label}>Vartotojo vardas</span>
-          <input value={username} onChange={e => setUsername(e.target.value)} onKeyDown={e => e.key === "Enter" && submit()} style={css.input} placeholder="vardas" autoFocus autoCapitalize="none" autoCorrect="off" />
+      {/* ── LOGIN FORM — mobile centered, desktop right panel ── */}
+      <div style={{
+        position:"relative" as const, zIndex:1,
+        flex:1,
+        display:"flex", flexDirection:"column" as const,
+        justifyContent:"flex-end",
+        padding:"0 24px calc(40px + env(safe-area-inset-bottom))",
+        maxWidth:480,
+        width:"100%",
+        margin:"0 auto",
+      }}>
+        {/* Logo + title — top of form */}
+        <div className="login-fu" style={{ textAlign:"center" as const, marginBottom:40 }}>
+          <svg width="64" height="64" viewBox="0 0 48 48" fill="none" style={{ margin:"0 auto 16px", display:"block" }}>
+            <circle cx="24" cy="24" r="21" stroke="#D4A853" strokeWidth="1.2" opacity="0.7"/>
+            <ellipse cx="24" cy="24" rx="11" ry="5" stroke="#D4A853" strokeWidth="1.5" fill="none"/>
+            <ellipse cx="24" cy="24" rx="11" ry="5" stroke="#D4A853" strokeWidth="1.5" fill="none" transform="rotate(60 24 24)"/>
+            <ellipse cx="24" cy="24" rx="11" ry="5" stroke="#D4A853" strokeWidth="1.5" fill="none" transform="rotate(120 24 24)"/>
+            <circle cx="24" cy="24" r="3" fill="#D4A853"/>
+            <circle cx="35" cy="24" r="1.8" fill="#D4A853" opacity="0.6"/>
+            <circle cx="18.5" cy="14.8" r="1.8" fill="#D4A853" opacity="0.6"/>
+            <circle cx="18.5" cy="33.2" r="1.8" fill="#D4A853" opacity="0.6"/>
+          </svg>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, color:"#FFFFFF", letterSpacing:"0.08em", lineHeight:1 }}>DNA TRAINER</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:10, color:"#505868", letterSpacing:"0.22em", textTransform:"uppercase" as const, marginTop:4 }}>Coach platforma</div>
         </div>
-        <div style={{ marginBottom:32 }}>
-          <span style={css.label}>Slaptažodis</span>
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && submit()} style={{ ...css.input, letterSpacing:4 }} placeholder="••••••••" />
-        </div>
-        <button onClick={submit} disabled={loading} style={{ ...css.btnG, width:"100%", padding:"14px", fontSize:11, letterSpacing:"0.18em", opacity: username && password ? 1 : 0.4 }}>
-          {loading ? "JUNGIAMASI..." : "PRISIJUNGTI →"}
-        </button>
-        <div style={{ fontFamily:"'Barlow',sans-serif", fontSize:11, color:"#303848", marginTop:20, letterSpacing:"0.04em" }}>Kreipkitės į administratorių dėl prieigos.</div>
-      </div>
 
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400&family=Barlow+Condensed:wght@600&display=swap');
-        @media(max-width:600px){ .login-left{display:none!important;} }
-      `}</style>
+        {/* Error */}
+        {err && (
+          <div className="login-fu" style={{ background:"rgba(192,80,80,0.15)", border:"1px solid rgba(192,80,80,0.4)", borderRadius:10, padding:"12px 16px", fontSize:13, color:"#ef8080", marginBottom:16, textAlign:"center" as const }}>
+            {err}
+          </div>
+        )}
+
+        {/* Username */}
+        <div className="login-fu1" style={{ marginBottom:14 }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, color:"#8A9AAA", letterSpacing:"0.2em", textTransform:"uppercase" as const, marginBottom:8 }}>Vartotojo vardas</div>
+          <input
+            className="login-input"
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && submit()}
+            placeholder="vardas"
+            autoCapitalize="none"
+            autoCorrect="off"
+            autoComplete="username"
+          />
+        </div>
+
+        {/* Password */}
+        <div className="login-fu2" style={{ marginBottom:28 }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, color:"#8A9AAA", letterSpacing:"0.2em", textTransform:"uppercase" as const, marginBottom:8 }}>Slaptažodis</div>
+          <input
+            type="password"
+            className="login-input"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && submit()}
+            placeholder="••••••••"
+            autoComplete="current-password"
+            style={{ letterSpacing: password ? "0.2em" : "normal" }}
+          />
+        </div>
+
+        {/* Submit button */}
+        <div className="login-fu3">
+          <button
+            className="login-btn"
+            onClick={submit}
+            disabled={loading || !username || !password}
+            style={{ opacity: loading || !username || !password ? 0.5 : 1 }}
+          >
+            {loading ? "JUNGIAMASI..." : "PRISIJUNGTI"}
+          </button>
+          <div style={{ fontFamily:"'Barlow',sans-serif", fontSize:11, color:"#303848", marginTop:16, textAlign:"center" as const, letterSpacing:"0.04em" }}>
+            Kreipkitės į administratorių dėl prieigos.
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
