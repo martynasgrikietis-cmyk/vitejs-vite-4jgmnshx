@@ -90,7 +90,7 @@ export function BookingPage({coachId}:{coachId:string|null}){
     if(!name.trim()||!phone.trim()||!selectedDate||!selectedTime){ setError("Užpildykite visus laukus."); return; }
     setSubmitting(true); setError("");
     try{
-      await sb.insert("bookings",{date:selectedDate,time:selectedTime,client_name:name.trim(),client_phone:phone.trim(),client_email:email.trim()||null,goal:"",notes:"",status:"pending",coach_id:coachId||null});
+      await sb.insert("bookings",{date:selectedDate,time:selectedTime,client_name:name.trim(),client_phone:phone.trim(),client_email:email.trim()||null,goal:"",notes:"",status:"confirmed",coach_id:coachId||null});
 
       // Fetch this coach's telegram_chat_id
       let coachTgChat = "";
@@ -117,7 +117,7 @@ export function BookingPage({coachId}:{coachId:string|null}){
         }).catch(()=>{});
       }
 
-      // Send confirmation email to client via Edge Function
+      // Notify coach (Telegram + email to coach)
       fetch(`${SUPABASE_URL}/functions/v1/notify-booking`,{
         method:"POST",
         headers:{"Content-Type":"application/json","Authorization":`Bearer ${SUPABASE_KEY}`},
@@ -129,6 +129,22 @@ export function BookingPage({coachId}:{coachId:string|null}){
           date_formatted:dateFormatted,
         }),
       }).catch(()=>{});
+
+      // Send instant confirmation email to client
+      if(email.trim()){
+        fetch(`${SUPABASE_URL}/functions/v1/notify-booking`,{
+          method:"POST",
+          headers:{"Content-Type":"application/json","Authorization":`Bearer ${SUPABASE_KEY}`},
+          body:JSON.stringify({
+            type:"confirm_client",
+            client_email:email.trim(),
+            client_name:name.trim(),
+            client_phone:phone.trim(),
+            date:selectedDate, time:selectedTime,
+            date_formatted:dateFormatted,
+          }),
+        }).catch(()=>{});
+      }
 
       setDone(true);
     }catch(e:any){ setError("Klaida: "+e.message); }
@@ -143,18 +159,65 @@ export function BookingPage({coachId}:{coachId:string|null}){
   );
 
   if(done) return(
-    <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:FONT,padding:20}}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');*{box-sizing:border-box;}body{margin:0;}@keyframes spin{to{transform:rotate(360deg)}}@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}.fu{animation:fadeUp .4s ease both;}`}</style>
-      <div className="fu" style={{background:C.surface,borderRadius:24,border:`1px solid ${C.greenBorder}`,boxShadow:"0 8px 40px #00000014",padding:"40px 32px",maxWidth:400,width:"100%",textAlign:"center",boxShadow:"0 8px 40px #00000014"}}>
-        <div style={{fontSize:56,marginBottom:16}}>✅</div>
-        <div style={{fontSize:22,fontWeight:900,color:C.green,marginBottom:8}}>Rezervacija patvirtinta!</div>
-        <div style={{fontSize:14,color:C.muted,marginBottom:20}}>Jūsų treniruotė užregistruota</div>
-        <div style={{background:C.faint,borderRadius:12,padding:"16px 20px",marginBottom:24}}>
-          <div style={{fontSize:13,color:C.muted,marginBottom:4}}>📅 Data ir laikas</div>
-          <div style={{fontSize:18,fontWeight:800,color:C.text}}>{new Date(selectedDate+"T12:00:00").toLocaleDateString("lt-LT",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
-          <div style={{fontSize:24,fontWeight:900,color:C.gold,marginTop:4}}>{selectedTime}</div>
+    <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:FONT,padding:20,position:"relative",overflow:"hidden"}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@300;400&display=swap');*{box-sizing:border-box;}body{margin:0;}@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}.fu{animation:fadeUp .4s ease both;}.fu1{animation:fadeUp .4s .1s ease both;}.fu2{animation:fadeUp .4s .2s ease both;}.fu3{animation:fadeUp .4s .3s ease both;}`}</style>
+      {/* Background glow */}
+      <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse 60% 50% at 50% 50%,rgba(78,144,104,0.08) 0%,transparent 70%)",pointerEvents:"none"}}/>
+      <div style={{maxWidth:440,width:"100%"}}>
+        {/* Logo */}
+        <div className="fu" style={{textAlign:"center" as const,marginBottom:32}}>
+          <svg width="52" height="52" viewBox="0 0 48 48" fill="none" style={{margin:"0 auto",display:"block"}}>
+            <circle cx="24" cy="24" r="21" stroke={C.gold} strokeWidth="1.2" opacity={0.6}/>
+            <ellipse cx="24" cy="24" rx="11" ry="5" stroke={C.gold} strokeWidth="1.4" fill="none"/>
+            <ellipse cx="24" cy="24" rx="11" ry="5" stroke={C.gold} strokeWidth="1.4" fill="none" transform="rotate(60 24 24)"/>
+            <ellipse cx="24" cy="24" rx="11" ry="5" stroke={C.gold} strokeWidth="1.4" fill="none" transform="rotate(120 24 24)"/>
+            <circle cx="24" cy="24" r="2.5" fill={C.gold}/>
+          </svg>
         </div>
-        <div style={{fontSize:13,color:C.muted}}>DNA Trainer susisieks su jumis patvirtindamas rezervaciją.</div>
+
+        {/* Confirmed badge */}
+        <div className="fu1" style={{textAlign:"center" as const,marginBottom:20}}>
+          <div style={{display:"inline-flex",alignItems:"center",gap:8,background:C.greenSoft,border:`1px solid ${C.greenBorder}`,padding:"6px 20px",marginBottom:16}}>
+            <span style={{fontSize:14}}>✅</span>
+            <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:700,color:C.green,letterSpacing:"0.18em",textTransform:"uppercase" as const}}>Patvirtinta automatiškai</span>
+          </div>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:48,color:"#FFFFFF",lineHeight:0.9,letterSpacing:"0.03em"}}>
+            REZERVACIJA<br/><span style={{color:C.gold}}>PATVIRTINTA</span>
+          </div>
+          <div style={{fontFamily:"'Barlow',sans-serif",fontSize:13,color:C.muted,fontWeight:300,marginTop:12}}>
+            Jūsų treniruotė sėkmingai užregistruota
+          </div>
+        </div>
+
+        {/* Date/time card */}
+        <div className="fu2" style={{background:C.surface,border:`1px solid ${C.border}`,padding:"20px 24px",marginBottom:12}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+            <div style={{width:2,height:14,background:C.gold}}/>
+            <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:9,color:C.muted,letterSpacing:"0.2em",textTransform:"uppercase" as const}}>Data ir laikas</span>
+          </div>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,color:C.text,letterSpacing:"0.04em",lineHeight:1}}>
+            {new Date(selectedDate+"T12:00:00").toLocaleDateString("lt-LT",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}
+          </div>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:44,color:C.gold,lineHeight:1,marginTop:4}}>
+            {selectedTime}
+          </div>
+        </div>
+
+        {/* Email notice */}
+        {email&&(
+          <div className="fu3" style={{background:C.surface,border:`1px solid ${C.border}`,padding:"14px 20px",marginBottom:12,display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:18}}>📧</span>
+            <div>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:700,color:C.green,letterSpacing:"0.12em",textTransform:"uppercase" as const}}>Patvirtinimas išsiųstas</div>
+              <div style={{fontFamily:"'Barlow',sans-serif",fontSize:12,color:C.muted,marginTop:2}}>{email}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Note */}
+        <div className="fu3" style={{fontFamily:"'Barlow',sans-serif",fontSize:12,color:C.muted,textAlign:"center" as const,lineHeight:1.7,padding:"0 10px"}}>
+          Jei reikia pakeisti laiką arba atšaukti — susisiekite su treneriu.
+        </div>
       </div>
     </div>
   );
