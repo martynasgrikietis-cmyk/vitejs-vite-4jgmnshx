@@ -250,7 +250,7 @@ function DashboardTab({onNav,allClients=[],allBookings=[]}:{onNav:(t:string,open
     <div>
       {/* ── HERO ──────────────────────────────────────────── */}
       <div className="fu" style={{position:"relative",overflow:"hidden",minHeight:280,borderBottom:`1px solid ${C.border}`}}>
-        <img src="https://i.pinimg.com/736x/e3/bc/16/e3bc16974256fb6913e37079fa4cb653.jpg" alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:"center 30%",filter:"brightness(0.3) saturate(0.4) contrast(1.15)"}}/>
+        <img src="https://i.pinimg.com/736x/e3/bc/16/e3bc16974256fb6913e37079fa4cb653.jpg" alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:"center 30%",filter:"brightness(0.35) saturate(0.4) contrast(1.15)"}} loading="eager"/>
         <div style={{position:"absolute",inset:0,background:"linear-gradient(110deg,rgba(6,7,9,0.98) 28%,rgba(6,7,9,0.6) 58%,rgba(6,7,9,0.15) 100%)"}}/>
         <div style={{position:"absolute",bottom:0,left:0,right:0,height:160,background:"linear-gradient(to top,#060709,transparent)"}}/>
         <div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(rgba(212,168,83,0.055) 1px,transparent 1px),linear-gradient(90deg,rgba(212,168,83,0.055) 1px,transparent 1px)",backgroundSize:"56px 56px"}}/>
@@ -266,10 +266,10 @@ function DashboardTab({onNav,allClients=[],allBookings=[]}:{onNav:(t:string,open
             <div style={{fontSize:"clamp(52px,7vw,80px)",color:C.gold}}>SUGRĮŽĘ</div>
           </div>
           <div style={{fontFamily:"'Barlow',sans-serif",fontSize:12,color:"#8A9AAA",fontWeight:300,marginBottom:24,letterSpacing:"0.06em"}}>{new Date().toLocaleDateString("lt-LT",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
-          <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
-            <button onClick={()=>onNav("clients",true)} style={css.btnG}>+ Naujas klientas</button>
-            <button onClick={()=>onNav("exercises",true)} style={css.btnGhost}>+ Pratimas</button>
-            <button onClick={()=>onNav("foods",true)} style={css.btnGhost}>+ Maistas</button>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}} className="hero-actions">
+            <button onClick={()=>onNav("clients",true)} style={{...css.btnG,flex:1,minWidth:140,justifyContent:"center",display:"flex",alignItems:"center"}}>+ Naujas klientas</button>
+            <button onClick={()=>onNav("exercises",true)} style={{...css.btnGhost,flex:1,minWidth:120,justifyContent:"center",display:"flex",alignItems:"center"}}>+ Pratimas</button>
+            <button onClick={()=>onNav("foods",true)} style={{...css.btnGhost,flex:1,minWidth:100,justifyContent:"center",display:"flex",alignItems:"center"}}>+ Maistas</button>
           </div>
         </div>
       </div>
@@ -2711,9 +2711,17 @@ function MainApp(){
       {/* ── AI ASSISTANT FLOATING BUTTON ── */}
       <AIAssistantButton clients={allClients} exercises={exercises}/>
 
-      {/* Mobile bottom navigation */}
+      {/* Mobile bottom navigation — max 5 items */}
       <nav className="bottom-nav">
-        {NAV.map(n=>(
+        {[
+          {id:"dashboard",icon:"🏠",label:"Pradžia"},
+          {id:"clients",icon:"👥",label:"Klientai"},
+          {id:"exercises",icon:"🏋️",label:"Pratimai"},
+          {id:"calendar",icon:"📅",label:"Kalend."},
+          isAdmin
+            ? {id:"users",icon:"⚙️",label:"Admin"}
+            : {id:"foods",icon:"🥗",label:"Mityba"},
+        ].map(n=>(
           <div key={n.id} className={`bottom-nav-item${tab===n.id?" active":""}`} onClick={()=>navigate(n.id)}>
             <span className="bottom-nav-icon">{n.icon}</span>
             <span className="bottom-nav-label">{n.label}</span>
