@@ -283,8 +283,8 @@ function DashboardTab({onNav,allClients=[],allBookings=[]}:{onNav:(t:string,open
             <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:9,color:"#9AABB8",letterSpacing:"0.22em",textTransform:"uppercase" as const}}>Sporto sistema · {new Date().getFullYear()}</span>
           </div>
           <div style={{fontFamily:"'Bebas Neue',sans-serif",lineHeight:0.88,letterSpacing:"0.02em",marginBottom:18,textShadow:"0 4px 40px rgba(0,0,0,0.9)"}}>
-            <div style={{fontSize:"clamp(52px,7vw,80px)",color:C.text}}>SVEIKI</div>
-            <div style={{fontSize:"clamp(52px,7vw,80px)",color:C.gold}}>SUGRĮŽĘ</div>
+            <div style={{fontSize:"clamp(52px,7vw,88px)",color:C.text,textShadow:"0 4px 30px rgba(0,0,0,0.8)"}}>SVEIKI</div>
+            <div style={{fontSize:"clamp(52px,7vw,88px)",color:C.gold,textShadow:`0 4px 30px rgba(212,168,83,0.3)`}}>SUGRĮŽĘ</div>
           </div>
           <div style={{fontFamily:"'Barlow',sans-serif",fontSize:12,color:"#8A9AAA",fontWeight:300,marginBottom:24,letterSpacing:"0.06em"}}>{new Date().toLocaleDateString("lt-LT",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}} className="hero-actions">
@@ -2684,27 +2684,32 @@ function MainApp(){
           <span className="logout-label">Ieškoti</span>
           <span className="logout-label" style={{fontSize:9,background:C.border,padding:"1px 5px",marginLeft:2}}>⌘K</span>
         </button>
-        <div style={{marginLeft:"auto",display:"flex",gap:1,alignItems:"center"}} className="header-nav-items">
+        <div style={{marginLeft:"auto",display:"flex",gap:2,alignItems:"center"}} className="header-nav-items">
           {NAV.map(n=>(
             <button key={n.id} onClick={()=>navigate(n.id)} style={{
-              display:"flex",flexDirection:"column" as const,alignItems:"center",gap:3,
-              padding:"6px 12px",
-              background:tab===n.id?C.gold:"transparent",
-              color:tab===n.id?C.bg:C.muted,
+              display:"flex",flexDirection:"column" as const,alignItems:"center",gap:2,
+              padding:"5px 10px",
+              background:tab===n.id?"linear-gradient(145deg,#E8BE6A,#B8902A)":"transparent",
+              color:tab===n.id?"#1A0E00":C.muted,
               border:"none",cursor:"pointer",
               fontFamily:CONDENSED_FONT,fontSize:9,fontWeight:700,
-              letterSpacing:"0.12em",textTransform:"uppercase" as const,
-              transition:"all .15s",minWidth:52,
+              letterSpacing:"0.1em",textTransform:"uppercase" as const,
+              borderRadius:"8px",
+              boxShadow:tab===n.id?"0 4px 0 #7A5A10,0 6px 12px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.2)":"none",
+              transition:"all .12s ease",
+              minWidth:50,
+              position:"relative" as const,
+              top:0,
             }}>
-              <span style={{fontSize:18,lineHeight:1}}>{n.icon}</span>
+              <span style={{fontSize:16,lineHeight:1,filter:tab===n.id?"none":`drop-shadow(0 0 0 transparent)`,transition:"filter .2s"}}>{n.icon}</span>
               <span className="logout-label">{n.label}</span>
             </button>
           ))}
           <div style={{width:1,height:32,background:C.border,margin:"0 6px"}}/>
-          <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:C.faint,border:`1px solid ${C.border}`}}>
-            <div style={{width:28,height:28,background:`linear-gradient(135deg,${C.gold},#8B6520)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:900,color:"#060709",flexShrink:0}}>{(coach?.full_name||"?")[0].toUpperCase()}</div>
+          <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:"linear-gradient(145deg,#1A2030,#0E1420)",border:`1px solid ${C.border}`,borderRadius:"10px",boxShadow:"0 4px 0 #040608,inset 0 1px 0 rgba(255,255,255,0.05)"}}>
+            <div style={{width:28,height:28,borderRadius:"8px",background:`linear-gradient(135deg,${C.gold},#8B6520)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:900,color:"#060709",flexShrink:0,boxShadow:`0 3px 8px rgba(212,168,83,0.4)`}}>{(coach?.full_name||"?")[0].toUpperCase()}</div>
             <span className="logout-label" style={{fontSize:11,fontWeight:600,color:C.text}}>{coach?.full_name}</span>
-            {isAdmin&&<span style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,padding:"1px 7px",fontSize:9,color:C.gold,fontWeight:700,fontFamily:CONDENSED_FONT,letterSpacing:"0.1em"}}>ADMIN</span>}
+            {isAdmin&&<span style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,padding:"2px 8px",fontSize:9,color:C.gold,fontWeight:700,fontFamily:CONDENSED_FONT,letterSpacing:"0.1em",borderRadius:"4px"}}>ADMIN</span>}
           </div>
           <button onClick={handleLogout} style={{...css.btnGhost,fontSize:10,padding:"6px 10px",marginLeft:2}}>
             <span className="logout-label">🚪 </span>Atsijungti
