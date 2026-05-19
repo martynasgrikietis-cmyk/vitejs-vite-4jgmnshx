@@ -108,11 +108,16 @@ export const RESPONSIVE_CSS = `
     position:relative;top:0;
   }
   .arch-nav-btn:not(.active){background:transparent;color:#6A7A8A;}
-  .arch-nav-btn:not(.active):hover{background:rgba(212,168,83,0.1);color:#D4A853;}
+  .arch-nav-btn:not(.active):hover{
+    background:rgba(212,168,83,0.06);
+    color:#D4A853;
+    clip-path:polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%,8px 50%);
+  }
   .arch-nav-btn.active{
-    background:linear-gradient(145deg,#E8BE6A,#B8902A);
-    color:#1A0E00;
-    box-shadow:0 4px 0 #7A5A10,0 6px 12px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.2);
+    background:linear-gradient(135deg,rgba(212,168,83,0.18),rgba(212,168,83,0.06));
+    color:#F5D87A;
+    clip-path:polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%,10px 50%);
+    text-shadow:0 0 12px rgba(212,168,83,0.8);
   }
 
   /* ── TABLE/LIST ROWS ── */
