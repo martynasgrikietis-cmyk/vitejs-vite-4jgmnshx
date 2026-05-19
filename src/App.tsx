@@ -2809,6 +2809,7 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
   }):[];
 
   // Food log
+  const [catFilter, setCatFilter] = useState("Visi");
   const logTotals=log.reduce((a,f)=>({kcal:a.kcal+f.kcal,prot:a.prot+f.prot,fat:a.fat+f.fat,carbs:a.carbs+f.carbs}),{kcal:0,prot:0,fat:0,carbs:0});
   const filteredFoods = (foodSearch.length > 1
     ? FOOD_DB.filter(f =>
@@ -2817,8 +2818,6 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
       )
     : catFilter === "Visi" ? FOOD_DB : FOOD_DB.filter(f => f.cat === catFilter)
   ).slice(0, 12);
-
-  const [catFilter, setCatFilter] = useState("Visi");
 
   const addFood=()=>{
     if(!selectedFood||!foodWeight)return;
