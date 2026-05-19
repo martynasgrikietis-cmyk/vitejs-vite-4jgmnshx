@@ -2622,6 +2622,93 @@ function InactivityAlerts({clients,bookings}:{clients:any[],bookings:any[]}){
   );
 }
 
+// ── BUILT-IN FOOD DATABASE (per 100g) ────────────────────
+const FOOD_DB = [
+  // MEAT
+  {id:"f1",  name:"Vištienos krūtinėlė (virta)",  cat:"🥩 Mėsa",     kcal:165, prot:31.0, fat:3.6,  carbs:0.0},
+  {id:"f2",  name:"Vištienos šlaunelė (virta)",    cat:"🥩 Mėsa",     kcal:209, prot:26.0, fat:11.0, carbs:0.0},
+  {id:"f3",  name:"Jautiena, liesa (virta)",       cat:"🥩 Mėsa",     kcal:215, prot:26.1, fat:11.8, carbs:0.0},
+  {id:"f4",  name:"Kiauliena, nugarinė (virta)",   cat:"🥩 Mėsa",     kcal:242, prot:27.0, fat:14.0, carbs:0.0},
+  {id:"f5",  name:"Kalakutienos krūtinėlė",        cat:"🥩 Mėsa",     kcal:157, prot:29.9, fat:3.6,  carbs:0.0},
+  {id:"f6",  name:"Jautienos faršas (5% riebalų)", cat:"🥩 Mėsa",     kcal:137, prot:21.4, fat:5.5,  carbs:0.0},
+  {id:"f7",  name:"Ėriena (virta)",                cat:"🥩 Mėsa",     kcal:258, prot:25.6, fat:16.5, carbs:0.0},
+  // FISH
+  {id:"f8",  name:"Lašiša (kepta)",               cat:"🐟 Žuvis",    kcal:208, prot:20.4, fat:13.4, carbs:0.0},
+  {id:"f9",  name:"Tunas (konservuotas vandenyje)",cat:"🐟 Žuvis",    kcal:116, prot:25.5, fat:0.8,  carbs:0.0},
+  {id:"f10", name:"Menkė (virta)",                cat:"🐟 Žuvis",    kcal:105, prot:22.8, fat:0.9,  carbs:0.0},
+  {id:"f11", name:"Tilapija (kepta)",             cat:"🐟 Žuvis",    kcal:128, prot:26.2, fat:2.7,  carbs:0.0},
+  {id:"f12", name:"Silkė (rūkyta)",               cat:"🐟 Žuvis",    kcal:217, prot:24.6, fat:12.4, carbs:0.0},
+  {id:"f13", name:"Krevetės (virtos)",             cat:"🐟 Žuvis",    kcal:99,  prot:24.0, fat:0.3,  carbs:0.2},
+  {id:"f14", name:"Skumbrė (virta)",               cat:"🐟 Žuvis",    kcal:262, prot:23.9, fat:17.8, carbs:0.0},
+  // EGGS & DAIRY
+  {id:"f15", name:"Kiaušinis, visas (virintas)",  cat:"🥚 Kiaušiniai",kcal:155, prot:12.6, fat:10.6, carbs:1.1},
+  {id:"f16", name:"Kiaušinio baltymas",           cat:"🥚 Kiaušiniai",kcal:52,  prot:10.9, fat:0.2,  carbs:0.7},
+  {id:"f17", name:"Graikų jogurtas 0%",           cat:"🥛 Pieno pr.", kcal:59,  prot:10.0, fat:0.4,  carbs:3.6},
+  {id:"f18", name:"Varškė 0% riebalų",            cat:"🥛 Pieno pr.", kcal:72,  prot:12.4, fat:0.3,  carbs:3.4},
+  {id:"f19", name:"Pienas 1.5%",                  cat:"🥛 Pieno pr.", kcal:46,  prot:3.4,  fat:1.5,  carbs:4.8},
+  {id:"f20", name:"Sūris čederis",                cat:"🥛 Pieno pr.", kcal:402, prot:25.0, fat:33.1, carbs:1.3},
+  {id:"f21", name:"Mozzarella (liesa)",           cat:"🥛 Pieno pr.", kcal:254, prot:28.0, fat:15.9, carbs:2.0},
+  {id:"f22", name:"Kefyras 1%",                   cat:"🥛 Pieno pr.", kcal:40,  prot:3.3,  fat:1.0,  carbs:4.7},
+  // GRAINS
+  {id:"f23", name:"Ryžiai balti (virti)",         cat:"🌾 Grūdai",   kcal:130, prot:2.7,  fat:0.3,  carbs:28.2},
+  {id:"f24", name:"Ryžiai ruduoti (virti)",       cat:"🌾 Grūdai",   kcal:112, prot:2.3,  fat:0.9,  carbs:23.5},
+  {id:"f25", name:"Makaronai (virti)",            cat:"🌾 Grūdai",   kcal:131, prot:5.0,  fat:1.1,  carbs:25.0},
+  {id:"f26", name:"Avižos (sausos)",              cat:"🌾 Grūdai",   kcal:389, prot:16.9, fat:6.9,  carbs:66.3},
+  {id:"f27", name:"Quinoa (virta)",               cat:"🌾 Grūdai",   kcal:120, prot:4.4,  fat:1.9,  carbs:21.3},
+  {id:"f28", name:"Duona ruginė",                 cat:"🌾 Grūdai",   kcal:259, prot:8.5,  fat:3.3,  carbs:48.3},
+  {id:"f29", name:"Bulvės (virtos)",              cat:"🌾 Grūdai",   kcal:87,  prot:1.9,  fat:0.1,  carbs:20.1},
+  {id:"f30", name:"Saldžiosios bulvės (virtos)",  cat:"🌾 Grūdai",   kcal:86,  prot:1.6,  fat:0.1,  carbs:20.1},
+  {id:"f31", name:"Kukurūzų košė (virta)",        cat:"🌾 Grūdai",   kcal:96,  prot:2.3,  fat:0.5,  carbs:21.0},
+  // VEGETABLES
+  {id:"f32", name:"Brokoliai (virti)",            cat:"🥦 Daržovės",  kcal:35,  prot:2.4,  fat:0.4,  carbs:7.2},
+  {id:"f33", name:"Špinatai (šviežiai)",          cat:"🥦 Daržovės",  kcal:23,  prot:2.9,  fat:0.4,  carbs:3.6},
+  {id:"f34", name:"Pomidorai",                    cat:"🥦 Daržovės",  kcal:18,  prot:0.9,  fat:0.2,  carbs:3.9},
+  {id:"f35", name:"Agurkai",                      cat:"🥦 Daržovės",  kcal:15,  prot:0.7,  fat:0.1,  carbs:3.6},
+  {id:"f36", name:"Paprika raudona",              cat:"🥦 Daržovės",  kcal:31,  prot:1.0,  fat:0.3,  carbs:6.0},
+  {id:"f37", name:"Morkos (šviežiai)",            cat:"🥦 Daržovės",  kcal:41,  prot:0.9,  fat:0.2,  carbs:9.6},
+  {id:"f38", name:"Salierai",                     cat:"🥦 Daržovės",  kcal:16,  prot:0.7,  fat:0.2,  carbs:3.0},
+  {id:"f39", name:"Kopūstai (balti)",             cat:"🥦 Daržovės",  kcal:25,  prot:1.3,  fat:0.1,  carbs:5.8},
+  {id:"f40", name:"Cukinijos",                    cat:"🥦 Daržovės",  kcal:17,  prot:1.2,  fat:0.3,  carbs:3.1},
+  {id:"f41", name:"Žirniai žalieji (šaldyti)",   cat:"🥦 Daržovės",  kcal:77,  prot:5.4,  fat:0.4,  carbs:14.0},
+  // FRUITS
+  {id:"f42", name:"Bananas",                      cat:"🍎 Vaisiai",   kcal:89,  prot:1.1,  fat:0.3,  carbs:22.8},
+  {id:"f43", name:"Obuolys",                      cat:"🍎 Vaisiai",   kcal:52,  prot:0.3,  fat:0.2,  carbs:13.8},
+  {id:"f44", name:"Apelsinas",                    cat:"🍎 Vaisiai",   kcal:47,  prot:0.9,  fat:0.1,  carbs:11.8},
+  {id:"f45", name:"Braškės",                      cat:"🍎 Vaisiai",   kcal:32,  prot:0.7,  fat:0.3,  carbs:7.7},
+  {id:"f46", name:"Vynuogės",                     cat:"🍎 Vaisiai",   kcal:67,  prot:0.6,  fat:0.4,  carbs:17.2},
+  {id:"f47", name:"Mėlynės",                      cat:"🍎 Vaisiai",   kcal:57,  prot:0.7,  fat:0.3,  carbs:14.5},
+  {id:"f48", name:"Avoakadas",                    cat:"🍎 Vaisiai",   kcal:160, prot:2.0,  fat:14.7, carbs:8.5},
+  // LEGUMES
+  {id:"f49", name:"Lęšiai (virti)",               cat:"🫘 Ankštiniai",kcal:116, prot:9.0,  fat:0.4,  carbs:20.1},
+  {id:"f50", name:"Avinžirniai (virti)",          cat:"🫘 Ankštiniai",kcal:164, prot:8.9,  fat:2.6,  carbs:27.4},
+  {id:"f51", name:"Juodosios pupelės (virtos)",   cat:"🫘 Ankštiniai",kcal:132, prot:8.9,  fat:0.5,  carbs:23.7},
+  {id:"f52", name:"Baltosios pupelės (virtos)",   cat:"🫘 Ankštiniai",kcal:139, prot:9.7,  fat:0.5,  carbs:25.1},
+  {id:"f53", name:"Edamame (virta)",              cat:"🫘 Ankštiniai",kcal:121, prot:11.9, fat:5.2,  carbs:8.9},
+  // NUTS & SEEDS
+  {id:"f54", name:"Migdolai",                     cat:"🥜 Riešutai",  kcal:579, prot:21.2, fat:49.9, carbs:21.6},
+  {id:"f55", name:"Graikiniai riešutai",          cat:"🥜 Riešutai",  kcal:654, prot:15.2, fat:65.2, carbs:13.7},
+  {id:"f56", name:"Žemės riešutų sviestas",       cat:"🥜 Riešutai",  kcal:588, prot:25.1, fat:50.4, carbs:20.0},
+  {id:"f57", name:"Čia sėklos",                   cat:"🥜 Riešutai",  kcal:486, prot:16.5, fat:30.7, carbs:42.1},
+  {id:"f58", name:"Saulėgrąžų sėklos",            cat:"🥜 Riešutai",  kcal:584, prot:20.8, fat:51.5, carbs:20.0},
+  // FATS & OILS
+  {id:"f59", name:"Alyvuogių aliejus",            cat:"🫙 Riebalai",  kcal:884, prot:0.0,  fat:100.0,carbs:0.0},
+  {id:"f60", name:"Sviesto sviestas",             cat:"🫙 Riebalai",  kcal:717, prot:0.9,  fat:81.1, carbs:0.1},
+  {id:"f61", name:"Kokosų aliejus",               cat:"🫙 Riebalai",  kcal:892, prot:0.0,  fat:99.1, carbs:0.0},
+  // PROTEIN SUPPLEMENTS
+  {id:"f62", name:"Išrūgų baltymų milteliai",    cat:"💊 Papildai",  kcal:352, prot:75.0, fat:3.5,  carbs:10.0},
+  {id:"f63", name:"Kazeino baltymas",             cat:"💊 Papildai",  kcal:375, prot:80.0, fat:2.0,  carbs:8.0},
+  {id:"f64", name:"Augaliniai baltymų milteliai", cat:"💊 Papildai",  kcal:365, prot:70.0, fat:5.0,  carbs:12.0},
+  // SNACKS / OTHER
+  {id:"f65", name:"Ryžių tortilija",              cat:"🍞 Kita",      kcal:390, prot:7.1,  fat:2.8,  carbs:85.0},
+  {id:"f66", name:"Graikiška duona (pita)",       cat:"🍞 Kita",      kcal:275, prot:9.1,  fat:1.2,  carbs:55.7},
+  {id:"f67", name:"Avokado aliejus",              cat:"🍞 Kita",      kcal:884, prot:0.0,  fat:100.0,carbs:0.0},
+  {id:"f68", name:"Medus",                        cat:"🍞 Kita",      kcal:304, prot:0.3,  fat:0.0,  carbs:82.4},
+  {id:"f69", name:"Šokoladas juodas 85%",         cat:"🍞 Kita",      kcal:598, prot:8.0,  fat:42.6, carbs:45.9},
+  {id:"f70", name:"Krekersai ryžiniai",           cat:"🍞 Kita",      kcal:381, prot:7.3,  fat:3.4,  carbs:81.5},
+];
+
+const FOOD_CATS = ["Visi",...Array.from(new Set(FOOD_DB.map(f=>f.cat)))];
+
 // ── MACRO CALCULATOR TAB ─────────────────────────────────
 function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
   const [clientId,setClientId]=useState("");
@@ -2723,16 +2810,33 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
 
   // Food log
   const logTotals=log.reduce((a,f)=>({kcal:a.kcal+f.kcal,prot:a.prot+f.prot,fat:a.fat+f.fat,carbs:a.carbs+f.carbs}),{kcal:0,prot:0,fat:0,carbs:0});
-  const filteredFoods=foods.filter(f=>f.name?.toLowerCase().includes(foodSearch.toLowerCase())).slice(0,8);
+  const filteredFoods = (foodSearch.length > 1
+    ? FOOD_DB.filter(f =>
+        f.name.toLowerCase().includes(foodSearch.toLowerCase()) ||
+        f.cat.toLowerCase().includes(foodSearch.toLowerCase())
+      )
+    : catFilter === "Visi" ? FOOD_DB : FOOD_DB.filter(f => f.cat === catFilter)
+  ).slice(0, 12);
+
+  const [catFilter, setCatFilter] = useState("Visi");
 
   const addFood=()=>{
     if(!selectedFood||!foodWeight)return;
     const w=parseFloat(foodWeight)/100;
-    setLog(p=>[...p,{id:Date.now(),name:selectedFood.name,weight:parseFloat(foodWeight),
-      kcal:Math.round((selectedFood.kcal_per_100g||0)*w),
-      prot:Math.round((selectedFood.protein_per_100g||0)*w*10)/10,
-      fat:Math.round((selectedFood.fat_per_100g||0)*w*10)/10,
-      carbs:Math.round((selectedFood.carbs_per_100g||0)*w*10)/10,
+    const src = selectedFood.kcal !== undefined ? selectedFood : {
+      kcal: selectedFood.kcal_per_100g||0,
+      prot: selectedFood.prot||selectedFood.protein_per_100g||0,
+      fat: selectedFood.fat_per_100g||0,
+      carbs: selectedFood.carbs_per_100g||0,
+    };
+    setLog(p=>[...p,{
+      id:Date.now(),
+      name:selectedFood.name,
+      weight:parseFloat(foodWeight),
+      kcal:Math.round(src.kcal*w),
+      prot:Math.round(src.prot*w*10)/10,
+      fat:Math.round(src.fat*w*10)/10,
+      carbs:Math.round(src.carbs*w*10)/10,
     }]);
     setSelectedFood(null);setFoodSearch("");setFoodWeight("100");
   };
@@ -3001,17 +3105,32 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
               <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:C.text,letterSpacing:"0.04em",marginBottom:14}}>PRIDĖTI MAISTĄ</div>
               <div style={{marginBottom:10}}>
                 <span style={css.label}>Ieškoti maisto produkto</span>
-                <input value={foodSearch} onChange={e=>{setFoodSearch(e.target.value);setSelectedFood(null);}} style={css.input} placeholder="pvz. Vištiena, ryžiai, kiaušinis..."/>
+                <input value={foodSearch} onChange={e=>{setFoodSearch(e.target.value);setSelectedFood(null);}} style={css.input} placeholder="pvz. Vištiena, lašiša, ryžiai..."/>
               </div>
-              {foodSearch&&!selectedFood&&(
-                <div style={{background:C.faint,border:`1px solid ${C.border}`,marginBottom:10,maxHeight:220,overflowY:"auto" as const}}>
+              {/* Category filter */}
+              {!foodSearch&&(
+                <div style={{display:"flex",gap:4,flexWrap:"wrap" as const,marginBottom:10}}>
+                  {FOOD_CATS.map(c=>(
+                    <button key={c} onClick={()=>setCatFilter(c)} style={{padding:"3px 10px",background:catFilter===c?"linear-gradient(145deg,#E8BE6A,#B8902A)":"linear-gradient(145deg,#1E2535,#141820)",color:catFilter===c?"#1A0E00":C.muted,border:catFilter===c?"none":`1px solid ${C.border}`,fontFamily:CONDENSED_FONT,fontSize:9,fontWeight:700,letterSpacing:"0.1em",cursor:"pointer",borderRadius:"8px",boxShadow:catFilter===c?"0 3px 0 #7A5A10":"0 2px 0 #0A0E14"}}>{c}</button>
+                  ))}
+                </div>
+              )}
+              {/* Food list */}
+              {!selectedFood&&(
+                <div style={{background:C.faint,border:`1px solid ${C.border}`,marginBottom:10,maxHeight:260,overflowY:"auto" as const}}>
                   {filteredFoods.length===0
-                    ?<div style={{padding:"12px 16px",color:C.muted,fontSize:12,fontFamily:CONDENSED_FONT}}>Nerasta produktų</div>
+                    ?<div style={{padding:"12px 16px",color:C.muted,fontSize:12,fontFamily:CONDENSED_FONT}}>Nerasta</div>
                     :filteredFoods.map(f=>(
                       <div key={f.id} onClick={()=>{setSelectedFood(f);setFoodSearch(f.name);}} style={{padding:"9px 14px",borderTop:`1px solid ${C.border}`,cursor:"pointer",transition:"background .15s"}} onMouseEnter={e=>(e.currentTarget.style.background=C.goldSoft)} onMouseLeave={e=>(e.currentTarget.style.background="transparent")}>
-                        <div style={{fontFamily:CONDENSED_FONT,fontSize:12,fontWeight:600,color:C.text}}>{f.name}</div>
-                        <div style={{fontSize:10,color:C.muted,marginTop:1,fontFamily:CONDENSED_FONT}}>
-                          {f.kcal_per_100g||0} kcal · B:{f.protein_per_100g||0}g · R:{f.fat_per_100g||0}g · A:{f.carbs_per_100g||0}g
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                          <div>
+                            <div style={{fontFamily:CONDENSED_FONT,fontSize:12,fontWeight:600,color:C.text}}>{f.name}</div>
+                            <div style={{fontSize:9,color:C.muted,marginTop:1,fontFamily:CONDENSED_FONT,letterSpacing:"0.06em"}}>{f.cat}</div>
+                          </div>
+                          <div style={{textAlign:"right" as const,flexShrink:0}}>
+                            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:C.gold,lineHeight:1}}>{f.kcal} kcal</div>
+                            <div style={{fontSize:9,color:C.muted,fontFamily:CONDENSED_FONT}}>B:{f.prot}g R:{f.fat}g A:{f.carbs}g</div>
+                          </div>
                         </div>
                       </div>
                     ))
@@ -3028,10 +3147,10 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
                     <div style={{fontFamily:CONDENSED_FONT,fontSize:9,color:C.gold,letterSpacing:"0.12em",textTransform:"uppercase" as const,marginBottom:8}}>{foodWeight}g · {selectedFood.name}</div>
                     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,textAlign:"center" as const}}>
                       {[
-                        {l:"Kcal",v:Math.round((selectedFood.kcal_per_100g||0)*parseFloat(foodWeight||"0")/100),c:C.gold},
-                        {l:"Baltymai",v:Math.round((selectedFood.protein_per_100g||0)*parseFloat(foodWeight||"0")/100*10)/10+"g",c:"#4E9068"},
-                        {l:"Riebalai",v:Math.round((selectedFood.fat_per_100g||0)*parseFloat(foodWeight||"0")/100*10)/10+"g",c:"#7B6DB0"},
-                        {l:"Angliavandeniai",v:Math.round((selectedFood.carbs_per_100g||0)*parseFloat(foodWeight||"0")/100*10)/10+"g",c:"#D4A853"},
+                        {l:"Kcal",v:Math.round((selectedFood.kcal||selectedFood.kcal_per_100g||0)*parseFloat(foodWeight||"0")/100),c:C.gold},
+                        {l:"Baltymai",v:Math.round((selectedFood.prot||selectedFood.protein_per_100g||0)*parseFloat(foodWeight||"0")/100*10)/10+"g",c:"#4E9068"},
+                        {l:"Riebalai",v:Math.round((selectedFood.fat||selectedFood.fat_per_100g||0)*parseFloat(foodWeight||"0")/100*10)/10+"g",c:"#7B6DB0"},
+                        {l:"Angliavandeniai",v:Math.round((selectedFood.carbs||selectedFood.carbs_per_100g||0)*parseFloat(foodWeight||"0")/100*10)/10+"g",c:"#D4A853"},
                       ].map(x=>(
                         <div key={x.l}>
                           <div style={{fontFamily:CONDENSED_FONT,fontSize:8,color:C.muted,letterSpacing:"0.1em",textTransform:"uppercase" as const}}>{x.l}</div>
