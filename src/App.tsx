@@ -3135,7 +3135,7 @@ function MainApp(){
   return(
     <div style={css.page}>
       <style>{RESPONSIVE_CSS}</style>
-      <div style={{...css.header,position:"fixed" as const,top:0,left:0,right:0,zIndex:100,background:"rgba(6,7,9,0.94)",backdropFilter:"blur(24px)"}} className="header-pad">
+      <div style={{...css.header,position:"fixed" as const,top:0,left:0,right:0,zIndex:100,background:"rgba(4,6,9,0.97)",backdropFilter:"blur(28px)",borderBottom:"1px solid rgba(212,168,83,0.12)",boxShadow:"0 1px 0 rgba(212,168,83,0.08),0 4px 20px rgba(0,0,0,0.6)"}} className="header-pad">
         {/* Logo — bigger */}
         <svg width="32" height="32" viewBox="0 0 48 48" fill="none" style={{flexShrink:0}}>
           <circle cx="24" cy="24" r="21" stroke={C.gold} strokeWidth="1.2" opacity={0.7}/>
@@ -3161,33 +3161,66 @@ function MainApp(){
           <span className="logout-label" style={{fontSize:9,background:C.border,padding:"1px 5px",marginLeft:2}}>⌘K</span>
         </button>
         <div style={{marginLeft:"auto",display:"flex",gap:2,alignItems:"center"}} className="header-nav-items">
-          {NAV.map(n=>(
-            <button key={n.id} onClick={()=>navigate(n.id)} style={{
-              display:"flex",flexDirection:"column" as const,alignItems:"center",gap:2,
-              padding:"5px 10px",
-              background:tab===n.id?"linear-gradient(145deg,#E8BE6A,#B8902A)":"transparent",
-              color:tab===n.id?"#1A0E00":C.muted,
-              border:"none",cursor:"pointer",
-              fontFamily:CONDENSED_FONT,fontSize:9,fontWeight:700,
-              letterSpacing:"0.1em",textTransform:"uppercase" as const,
-              borderRadius:"8px",
-              boxShadow:tab===n.id?"0 4px 0 #7A5A10,0 6px 12px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.2)":"none",
-              transition:"all .12s ease",
-              minWidth:50,
-              position:"relative" as const,
-              top:0,
-            }}>
-              <span style={{fontSize:16,lineHeight:1,filter:tab===n.id?"none":`drop-shadow(0 0 0 transparent)`,transition:"filter .2s"}}>{n.icon}</span>
-              <span className="logout-label">{n.label}</span>
-            </button>
-          ))}
+          {NAV.map(n=>{
+            const a=tab===n.id;
+            return(
+              <button key={n.id} onClick={()=>navigate(n.id)} style={{
+                display:"flex",alignItems:"center",gap:a?8:0,
+                padding:"9px 14px",
+                background:a?"linear-gradient(135deg,rgba(212,168,83,0.18) 0%,rgba(212,168,83,0.06) 100%)":"transparent",
+                border:"none",cursor:"pointer",
+                position:"relative" as const,
+                transition:"all .2s ease",
+                clipPath:a?"polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%,10px 50%)":"none",
+              }}>
+                {/* Left glow edge */}
+                {a&&<div style={{position:"absolute" as const,left:0,top:0,bottom:0,width:3,background:"linear-gradient(180deg,transparent,#D4A853,transparent)",filter:"blur(2px)",zIndex:1}}/>}
+                {/* Top edge highlight */}
+                {a&&<div style={{position:"absolute" as const,top:0,left:"10%",right:"15%",height:1,background:"linear-gradient(90deg,transparent,rgba(212,168,83,0.6),transparent)"}}/>}
+                {/* Bottom 3D face */}
+                {a&&<div style={{position:"absolute" as const,bottom:-3,left:10,right:10,height:3,background:"linear-gradient(180deg,#8A6018,#3A2505)",transform:"skewX(-3deg)",borderRadius:"0 0 2px 2px"}}/>}
+                {/* Right 3D face */}
+                {a&&<div style={{position:"absolute" as const,right:-4,top:"15%",bottom:"15%",width:5,background:"linear-gradient(90deg,#9A7020,#2A1803)"}}/>}
+                {/* Icon */}
+                <span style={{
+                  fontSize:18,lineHeight:1,
+                  filter:a?"drop-shadow(0 0 8px rgba(212,168,83,0.9))":"opacity(0.4)",
+                  transition:"all .2s",
+                  position:"relative" as const,zIndex:2,
+                  opacity:a?1:0.45,
+                }}>{n.icon}</span>
+                {/* Label — only shows when active */}
+                <span style={{
+                  fontFamily:CONDENSED_FONT,fontSize:10,fontWeight:800,
+                  color:a?"#F5D87A":"transparent",
+                  letterSpacing:"0.14em",textTransform:"uppercase" as const,
+                  maxWidth:a?90:0,overflow:"hidden",
+                  transition:"all .2s ease",
+                  whiteSpace:"nowrap" as const,
+                  position:"relative" as const,zIndex:2,
+                  textShadow:a?"0 0 12px rgba(212,168,83,0.8)":"none",
+                }}>{n.label}</span>
+              </button>
+            );
+          })}
           <div style={{width:1,height:32,background:C.border,margin:"0 6px"}}/>
-          <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:"linear-gradient(145deg,#1A2030,#0E1420)",border:`1px solid ${C.border}`,borderRadius:"10px",boxShadow:"0 4px 0 #040608,inset 0 1px 0 rgba(255,255,255,0.05)"}}>
-            <div style={{width:28,height:28,borderRadius:"8px",background:`linear-gradient(135deg,${C.gold},#8B6520)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:900,color:"#060709",flexShrink:0,boxShadow:`0 3px 8px rgba(212,168,83,0.4)`}}>{(coach?.full_name||"?")[0].toUpperCase()}</div>
-            <span className="logout-label" style={{fontSize:11,fontWeight:600,color:C.text}}>{coach?.full_name}</span>
-            {isAdmin&&<span style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,padding:"2px 8px",fontSize:9,color:C.gold,fontWeight:700,fontFamily:CONDENSED_FONT,letterSpacing:"0.1em",borderRadius:"4px"}}>ADMIN</span>}
+          {/* User info */}
+          <div style={{
+            display:"flex",alignItems:"center",gap:6,padding:"6px 12px",
+            background:"linear-gradient(135deg,rgba(212,168,83,0.08),rgba(212,168,83,0.02))",
+            border:`1px solid ${C.goldBorder}`,
+            position:"relative" as const,
+            clipPath:"polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%,8px 50%)",
+          }}>
+            <div style={{position:"absolute" as const,left:0,top:0,bottom:0,width:2,background:"linear-gradient(180deg,transparent,#D4A853,transparent)"}}/>
+            <div style={{width:26,height:26,background:`linear-gradient(135deg,${C.gold},#8B6520)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:900,color:"#060709",flexShrink:0,borderRadius:"4px",boxShadow:`0 0 10px rgba(212,168,83,0.4)`}}>{(coach?.full_name||"?")[0].toUpperCase()}</div>
+            <span className="logout-label" style={{fontSize:10,fontWeight:700,color:C.gold,letterSpacing:"0.08em"}}>{coach?.full_name}</span>
+            {isAdmin&&<span style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,padding:"1px 6px",fontSize:8,color:C.gold,fontWeight:800,fontFamily:CONDENSED_FONT,letterSpacing:"0.12em"}}>ADMIN</span>}
           </div>
-          <button onClick={handleLogout} style={{...css.btnGhost,fontSize:10,padding:"6px 10px",marginLeft:2}}>
+          <button onClick={handleLogout} style={{
+            ...css.btnGhost,fontSize:10,padding:"6px 10px",marginLeft:2,
+            clipPath:"polygon(0 0,calc(100% - 6px) 0,100% 50%,calc(100% - 6px) 100%,0 100%,6px 50%)",
+          }}>
             <span className="logout-label">🚪 </span>Atsijungti
           </button>
         </div>
@@ -3216,8 +3249,8 @@ function MainApp(){
       {/* ── AI ASSISTANT FLOATING BUTTON ── */}
       <AIAssistantButton clients={allClients} exercises={exercises}/>
 
-      {/* Mobile bottom navigation — max 5 items */}
-      <nav className="bottom-nav">
+      {/* Mobile bottom navigation — Holographic Prism */}
+      <nav className="bottom-nav" style={{background:"rgba(4,6,9,0.97)",borderTop:"1px solid rgba(212,168,83,0.15)",boxShadow:"0 -4px 20px rgba(0,0,0,0.6)"}}>
         {[
           {id:"dashboard",icon:"🏠",label:"Pradžia"},
           {id:"clients",icon:"👥",label:"Klientai"},
@@ -3226,12 +3259,17 @@ function MainApp(){
           isAdmin
             ? {id:"users",icon:"⚙️",label:"Admin"}
             : {id:"exercises",icon:"🏋️",label:"Pratimai"},
-        ].map(n=>(
-          <div key={n.id} className={`bottom-nav-item${tab===n.id?" active":""}`} onClick={()=>navigate(n.id)}>
-            <span className="bottom-nav-icon">{n.icon}</span>
-            <span className="bottom-nav-label">{n.label}</span>
-          </div>
-        ))}
+        ].map(n=>{
+          const a=tab===n.id;
+          return(
+            <div key={n.id} className={`bottom-nav-item${a?" active":""}`} onClick={()=>navigate(n.id)} style={{position:"relative" as const}}>
+              {/* Active: prism glow top */}
+              {a&&<div style={{position:"absolute" as const,top:0,left:"15%",right:"15%",height:2,background:"linear-gradient(90deg,transparent,#D4A853,transparent)",boxShadow:"0 0 8px rgba(212,168,83,0.8)"}}/>}
+              <span className="bottom-nav-icon" style={{filter:a?"drop-shadow(0 0 6px rgba(212,168,83,0.9))":"none",transition:"filter .2s"}}>{n.icon}</span>
+              <span className="bottom-nav-label" style={{color:a?"#D4A853":"#3A4A5A"}}>{n.label}</span>
+            </div>
+          );
+        })}
       </nav>
     </div>
   );
