@@ -2810,14 +2810,67 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
 
   // Food log
   const [catFilter, setCatFilter] = useState("Visi");
-  const logTotals=log.reduce((a,f)=>({kcal:a.kcal+f.kcal,prot:a.prot+f.prot,fat:a.fat+f.fat,carbs:a.carbs+f.carbs}),{kcal:0,prot:0,fat:0,carbs:0});
-  const filteredFoods = (foodSearch.length > 1
+  const [apiResults, setApiResults] = useState<any[]>([]);
+  const [apiLoading, setApiLoading] = useState(false);
+  const [searchMode, setSearchMode] = useState<"local"|"api">("local");
+  const [searchTimer, setSearchTimer] = useState<any>(null);
+
+  // Search Open Food Facts API
+  const searchAPI = async (query: string) => {
+    if (!query || query.length < 2) return;
+    setApiLoading(true);
+    try {
+      const res = await fetch(
+        `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=12&fields=product_name,nutriments,brands`
+      );
+      const data = await res.json();
+      const mapped = (data.products || [])
+        .filter((p: any) => p.product_name && p.nutriments?.["energy-kcal_100g"])
+        .map((p: any) => ({
+          id: "api_" + Math.random(),
+          name: p.product_name,
+          brand: p.brands || "",
+          cat: "🌐 Open Food Facts",
+          kcal: Math.round(p.nutriments["energy-kcal_100g"] || 0),
+          prot: Math.round((p.nutriments["proteins_100g"] || 0) * 10) / 10,
+          fat: Math.round((p.nutriments["fat_100g"] || 0) * 10) / 10,
+          carbs: Math.round((p.nutriments["carbohydrates_100g"] || 0) * 10) / 10,
+        }));
+      setApiResults(mapped);
+    } catch {
+      setApiResults([]);
+    } finally {
+      setApiLoading(false);
+    }
+  };
+
+  // Debounced search
+  const handleFoodSearch = (val: string) => {
+    setFoodSearch(val);
+    setSelectedFood(null);
+    if (searchTimer) clearTimeout(searchTimer);
+    if (val.length > 1 && searchMode === "api") {
+      const t = setTimeout(() => searchAPI(val), 600);
+      setSearchTimer(t);
+    }
+  };
+
+  const logTotals = log.reduce((a, f) => ({
+    kcal: a.kcal + f.kcal, prot: a.prot + f.prot,
+    fat: a.fat + f.fat, carbs: a.carbs + f.carbs,
+  }), { kcal: 0, prot: 0, fat: 0, carbs: 0 });
+
+  const localFiltered = (foodSearch.length > 1
     ? FOOD_DB.filter(f =>
         f.name.toLowerCase().includes(foodSearch.toLowerCase()) ||
         f.cat.toLowerCase().includes(foodSearch.toLowerCase())
       )
     : catFilter === "Visi" ? FOOD_DB : FOOD_DB.filter(f => f.cat === catFilter)
   ).slice(0, 12);
+
+  const filteredFoods = searchMode === "api" && foodSearch.length > 1
+    ? apiResults
+    : localFiltered;
 
   const addFood=()=>{
     if(!selectedFood||!foodWeight)return;
@@ -3104,35 +3157,73 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
               <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:C.text,letterSpacing:"0.04em",marginBottom:14}}>PRIDĖTI MAISTĄ</div>
               <div style={{marginBottom:10}}>
                 <span style={css.label}>Ieškoti maisto produkto</span>
-                <input value={foodSearch} onChange={e=>{setFoodSearch(e.target.value);setSelectedFood(null);}} style={css.input} placeholder="pvz. Vištiena, lašiša, ryžiai..."/>
+                <div style={{display:"flex",gap:6,marginBottom:8}}>
+                  {[["local","📦 Vietinė DB"],["api","🌐 Open Food Facts"]].map(([v,l])=>(
+                    <button key={v} onClick={()=>{setSearchMode(v as any);setFoodSearch("");setSelectedFood(null);setApiResults([]);}} style={{
+                      flex:1,padding:"6px 10px",
+                      background:searchMode===v?"linear-gradient(145deg,#E8BE6A,#B8902A)":"linear-gradient(145deg,#1E2535,#141820)",
+                      color:searchMode===v?"#1A0E00":C.muted,
+                      border:searchMode===v?"none":`1px solid ${C.border}`,
+                      fontFamily:CONDENSED_FONT,fontSize:9,fontWeight:700,letterSpacing:"0.1em",
+                      cursor:"pointer",borderRadius:"8px",
+                      boxShadow:searchMode===v?"0 3px 0 #7A5A10":"0 2px 0 #0A0E14",
+                    }}>{l}</button>
+                  ))}
+                </div>
+                <div style={{position:"relative" as const}}>
+                  <input
+                    value={foodSearch}
+                    onChange={e=>handleFoodSearch(e.target.value)}
+                    style={{...css.input,paddingRight:36}}
+                    placeholder={searchMode==="api"?"Ieškoti visame internete (EN/LT)...":"Ieškoti vietinėje duomenų bazėje..."}
+                  />
+                  {apiLoading&&<div style={{position:"absolute" as const,right:12,top:"50%",transform:"translateY(-50%)",width:14,height:14,border:"2px solid #D4A853",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>}
+                </div>
+                {searchMode==="api"&&foodSearch.length<2&&(
+                  <div style={{fontFamily:CONDENSED_FONT,fontSize:9,color:C.muted,marginTop:4,letterSpacing:"0.08em"}}>
+                    Įveskite bent 2 simbolius — ieškos Open Food Facts duomenų bazėje (2M+ produktų)
+                  </div>
+                )}
               </div>
-              {/* Category filter */}
-              {!foodSearch&&(
+
+              {/* Category filter — only for local mode */}
+              {searchMode==="local"&&!foodSearch&&(
                 <div style={{display:"flex",gap:4,flexWrap:"wrap" as const,marginBottom:10}}>
                   {FOOD_CATS.map(c=>(
                     <button key={c} onClick={()=>setCatFilter(c)} style={{padding:"3px 10px",background:catFilter===c?"linear-gradient(145deg,#E8BE6A,#B8902A)":"linear-gradient(145deg,#1E2535,#141820)",color:catFilter===c?"#1A0E00":C.muted,border:catFilter===c?"none":`1px solid ${C.border}`,fontFamily:CONDENSED_FONT,fontSize:9,fontWeight:700,letterSpacing:"0.1em",cursor:"pointer",borderRadius:"8px",boxShadow:catFilter===c?"0 3px 0 #7A5A10":"0 2px 0 #0A0E14"}}>{c}</button>
                   ))}
                 </div>
               )}
+
               {/* Food list */}
-              {!selectedFood&&(
-                <div style={{background:C.faint,border:`1px solid ${C.border}`,marginBottom:10,maxHeight:260,overflowY:"auto" as const}}>
-                  {filteredFoods.length===0
-                    ?<div style={{padding:"12px 16px",color:C.muted,fontSize:12,fontFamily:CONDENSED_FONT}}>Nerasta</div>
-                    :filteredFoods.map(f=>(
-                      <div key={f.id} onClick={()=>{setSelectedFood(f);setFoodSearch(f.name);}} style={{padding:"9px 14px",borderTop:`1px solid ${C.border}`,cursor:"pointer",transition:"background .15s"}} onMouseEnter={e=>(e.currentTarget.style.background=C.goldSoft)} onMouseLeave={e=>(e.currentTarget.style.background="transparent")}>
-                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                          <div>
-                            <div style={{fontFamily:CONDENSED_FONT,fontSize:12,fontWeight:600,color:C.text}}>{f.name}</div>
-                            <div style={{fontSize:9,color:C.muted,marginTop:1,fontFamily:CONDENSED_FONT,letterSpacing:"0.06em"}}>{f.cat}</div>
-                          </div>
-                          <div style={{textAlign:"right" as const,flexShrink:0}}>
-                            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:C.gold,lineHeight:1}}>{f.kcal} kcal</div>
-                            <div style={{fontSize:9,color:C.muted,fontFamily:CONDENSED_FONT}}>B:{f.prot}g R:{f.fat}g A:{f.carbs}g</div>
+              {!selectedFood&&(foodSearch.length>1||searchMode==="local")&&(
+                <div style={{background:C.faint,border:`1px solid ${C.border}`,marginBottom:10,maxHeight:300,overflowY:"auto" as const}}>
+                  {apiLoading
+                    ?<div style={{padding:"16px",textAlign:"center" as const,color:C.muted,fontFamily:CONDENSED_FONT,fontSize:11}}>
+                        🔍 Ieškoma Open Food Facts duomenų bazėje...
+                      </div>
+                    :filteredFoods.length===0
+                      ?<div style={{padding:"12px 16px",color:C.muted,fontSize:12,fontFamily:CONDENSED_FONT,textAlign:"center" as const}}>
+                          {searchMode==="api"&&foodSearch.length>1
+                            ?"Nerasta. Pabandykite anglų kalba (pvz. chicken breast)"
+                            :"Nerasta vietinėje duomenų bazėje"}
+                        </div>
+                      :filteredFoods.map((f:any)=>(
+                        <div key={f.id} onClick={()=>{setSelectedFood(f);}} style={{padding:"9px 14px",borderTop:`1px solid ${C.border}`,cursor:"pointer",transition:"background .15s"}} onMouseEnter={e=>(e.currentTarget.style.background=C.goldSoft)} onMouseLeave={e=>(e.currentTarget.style.background="transparent")}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{fontFamily:CONDENSED_FONT,fontSize:12,fontWeight:600,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{f.name}</div>
+                              <div style={{fontSize:9,color:C.muted,marginTop:1,fontFamily:CONDENSED_FONT,letterSpacing:"0.06em"}}>
+                                {f.brand?`${f.brand} · `:""}{f.cat}
+                              </div>
+                            </div>
+                            <div style={{textAlign:"right" as const,flexShrink:0}}>
+                              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:C.gold,lineHeight:1}}>{f.kcal} kcal</div>
+                              <div style={{fontSize:9,color:C.muted,fontFamily:CONDENSED_FONT}}>B:{f.prot}g R:{f.fat}g A:{f.carbs}g</div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))
+                      ))
                   }
                 </div>
               )}
