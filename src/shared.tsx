@@ -54,6 +54,7 @@ export const RESPONSIVE_CSS = `
   @keyframes spin{to{transform:rotate(360deg)}}
   @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes spin{from{transform:translateY(-50%) rotate(0deg)}to{transform:translateY(-50%) rotate(360deg)}}
   @keyframes skelShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
   @keyframes aiPulse{0%,100%{opacity:.4}50%{opacity:1}}
 
