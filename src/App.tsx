@@ -442,7 +442,7 @@ function ExercisesTab({autoOpen=false}:{autoOpen?:boolean}){
   const openEdit=(ex:any)=>{setEditId(ex.id);setForm({name:ex.name,muscle:ex.muscle||"Krūtinė",equipment:ex.equipment||"",sets:ex.sets||"3",reps:ex.reps||"10-12",description:ex.description||"",video_url:ex.video_url||"",imgs:ex.imgs||[]});setFormOpen(true);};
   const save=async()=>{
     if(!form.name.trim())return;setSaving(true);
-    try{if(editId)await sb.update("exercises",editId,form);else await sb.insert("exercises",form);setFormOpen(false);await load();}
+    try{const saveData={...form,cover_img:form.imgs?.[0]||""};if(editId)await sb.update("exercises",editId,saveData);else await sb.insert("exercises",saveData);setFormOpen(false);await load();}
     catch(e:any){alert("Klaida: "+e.message);}finally{setSaving(false);}
   };
   const del=async(id:any)=>{try{await sb.delete("exercises",id);setConfirmDel(null);await load();}catch(e:any){alert("Klaida: "+e.message);}};
@@ -492,7 +492,7 @@ function ExercisesTab({autoOpen=false}:{autoOpen?:boolean}){
               <div style={{height:3,background:`linear-gradient(to right,${mc},${mc}60)`}}/>
               {/* Image with overlays */}
               <div style={{position:"relative" as const}}>
-                <ImgGallery imgs={ex.imgs} height={130}/>
+                <ImgGallery imgs={ex.cover_img?[ex.cover_img]:(ex.imgs||[])} height={130}/>
                 {/* Muscle badge */}
                 <div style={{position:"absolute" as const,top:8,left:8,background:`${mc}DD`,backdropFilter:"blur(4px)",borderRadius:6,padding:"3px 9px",fontSize:10,color:"#fff",fontWeight:700,letterSpacing:"0.06em"}}>{ex.muscle}</div>
                 {/* Video badge */}
