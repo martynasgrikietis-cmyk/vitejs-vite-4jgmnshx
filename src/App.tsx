@@ -427,7 +427,7 @@ function ExercisesTab({autoOpen=false}:{autoOpen?:boolean}){
       const coachId=getCoachId();
       const isAdmin=getIsAdmin();
       const [allEx,blocks]=await Promise.all([
-        sb.get("exercises","?order=name"),
+        sb.get("exercises","?order=name&select=id,name,muscle,equipment,sets,reps,description,imgs,video_url"),
         isAdmin?Promise.resolve([]):sb.get("coach_exercise_blocks",`?coach_id=eq.${coachId}&select=exercise_id`).catch(()=>[]),
       ]);
       const blockedIds=new Set((blocks as any[]).map((b:any)=>b.exercise_id));
@@ -3411,7 +3411,7 @@ function MainApp(){
   useEffect(()=>{
     // Initialize native features (status bar, splash screen)
     initNative();
-    sb.get("exercises","?order=name").then(d=>setExercises(d)).catch(()=>{});
+    sb.get("exercises","?order=name&select=id,name,muscle,equipment,sets,reps,description,imgs,video_url").then(d=>setExercises(d)).catch(()=>{});
     sb.get("foods","?order=name").then(d=>setFoods(d)).catch(()=>{});
     sb.get("clients",`?coach_id=eq.${getCoachId()}&order=name`).then(d=>setAllClients(d)).catch(()=>{});
     sb.get("bookings",`?coach_id=eq.${getCoachId()}&date=gte.${new Date().toISOString().slice(0,10)}&status=neq.cancelled&order=date.asc,time.asc&limit=20`).then(d=>setAllBookings(d)).catch(()=>{});
