@@ -427,7 +427,7 @@ function ExercisesTab({autoOpen=false}:{autoOpen?:boolean}){
       const coachId=getCoachId();
       const isAdmin=getIsAdmin();
       const [allEx,blocks]=await Promise.all([
-        sb.get("exercises","?order=name&select=id,name,muscle,equipment,sets,reps,description,imgs,video_url"),
+        sb.get("exercises","?order=name&select=id,name,muscle,equipment,sets,reps,description,video_url"),
         isAdmin?Promise.resolve([]):sb.get("coach_exercise_blocks",`?coach_id=eq.${coachId}&select=exercise_id`).catch(()=>[]),
       ]);
       const blockedIds=new Set((blocks as any[]).map((b:any)=>b.exercise_id));
