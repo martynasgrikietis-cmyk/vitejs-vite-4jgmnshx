@@ -3415,7 +3415,7 @@ function MainApp(){
   useEffect(()=>{
     // Initialize native features (status bar, splash screen)
     initNative();
-    sb.get("exercises","?order=name&select=id,name,muscle,equipment,sets,reps,description,imgs,video_url").then(d=>setExercises(d)).catch(()=>{});
+    sb.get("exercises","sb.get("exercises","?order=name&select=id,name,muscle,equipment,sets,reps,description,video_url"),").then(d=>setExercises(d)).catch(()=>{});
     sb.get("foods","?order=name").then(d=>setFoods(d)).catch(()=>{});
     sb.get("clients",`?coach_id=eq.${getCoachId()}&order=name`).then(d=>setAllClients(d)).catch(()=>{});
     sb.get("bookings",`?coach_id=eq.${getCoachId()}&date=gte.${new Date().toISOString().slice(0,10)}&status=neq.cancelled&order=date.asc,time.asc&limit=20`).then(d=>setAllBookings(d)).catch(()=>{});
