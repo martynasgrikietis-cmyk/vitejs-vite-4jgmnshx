@@ -643,7 +643,7 @@ function SharePage({token,type}:{token:string,type:string}){
                         <div key={i} style={{background:C.surface,borderRadius:14,border:`1px solid ${C.border}`,overflow:"hidden"}}>
                           {imgs[0]&&(
                             <div style={{position:"relative",height:220,overflow:"hidden"}}>
-                              <img src={imgs[0]} alt={ex.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                              <img src={imgs[0]} alt={ex.name} style={{width:"100%",height:imgs[1]?"50%":"100%",objectFit:"cover"}}/> {imgs[1]&&<img src={imgs[1]} alt={ex.name} style={{width:"100%",height:"50%",objectFit:"cover"}}/>}
                               <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,#0a0d14cc 0%,transparent 50%)"}}/>
                               <div style={{position:"absolute",bottom:14,left:16,right:16}}>
                                 <div style={{fontSize:16,fontWeight:800,color:"#fff",marginBottom:4}}>{ex.name}</div>
