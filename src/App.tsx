@@ -932,7 +932,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
       h+=`<div class="sec"><div class="sh"><span class="sn">${String(dn++).padStart(2,"0")}</span><div class="sl"></div><span class="st">${day2}</span></div><div class="dh"><div class="dn">${day2.toUpperCase()}</div><div class="dc">${exs.length} pratimas(-ai)</div></div>`;
       if(!exs.length)h+=`<div style="padding:12px 16px;color:#C8C4BC;font-size:10px;font-style:italic;">Pratimų nėra</div>`;
       else exs.forEach((ex:any,i:number)=>{
-        const fullEx=exMap[ex.id]||ex; const imgs=(fullEx.imgs&&fullEx.imgs.length?fullEx.imgs:fullEx.cover_img?[fullEx.cover_img]:[]).filter(Boolean);||[]).filter(Boolean);
+        const fullEx=exMap[ex.id]||ex;const imgs=(fullEx.imgs&&fullEx.imgs.length?fullEx.imgs:fullEx.cover_img?[fullEx.cover_img]:[]).filter(Boolean);
         h+=`<div class="er"><div class="en">${i+1}</div>`;
         h+=imgs[0]?`<img src="${imgs[0]}" class="ei" onerror="this.style.display='none'"/>`:`<div class="ep">📷</div>`; h+=imgs[1]?`<img src="${imgs[1]}" class="ei" onerror="this.style.display='none'"/>`:``;
         h+=`<div style="flex:1"><div class="en2">${ex.superset?`<span class="chip css2">SS</span> `:""}${ex.name}</div><div class="em">${ex.muscle||""}${ex.equipment?` · ${ex.equipment}`:""}</div><div class="chips">`;
