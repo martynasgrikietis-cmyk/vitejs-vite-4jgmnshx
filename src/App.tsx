@@ -854,7 +854,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
   const toggleDay=(d:string)=>setClientForm(p=>({...p,training_days:p.training_days.includes(d)?p.training_days.filter((x:string)=>x!==d):[...p.training_days,d]}));
   const openPick=(day:string)=>{setPickDay(day);setPickedEx(null);setPickSets("");setPickReps("");setPickWeight("");setPickRest("");};
   const pickList=exercises.filter(e=>(pickMuscle==="Visos"||e.muscle===pickMuscle)&&(e.name.toLowerCase().includes(pickSearch.toLowerCase())||e.muscle.toLowerCase().includes(pickSearch.toLowerCase())));
-  const addToDay=()=>{if(!pickedEx)return;const isSuperset=pickSets==="SS";setProgram((p:any)=>({...p,[pickDay]:[...(p[pickDay]||[]),{...pickedEx,customSets:isSuperset?"3":pickSets||pickedEx.sets,customReps:pickReps||pickedEx.reps,customWeight:pickWeight||"",customRest:pickRest||"",superset:isSuperset}]}));setPickDay(null);};
+  const addToDay=()=>{if(!pickedEx)return;const isSuperset=pickSets==="SS";const exData={id:pickedEx.id,name:pickedEx.name,muscle:pickedEx.muscle,equipment:pickedEx.equipment,sets:pickedEx.sets,reps:pickedEx.reps,description:pickedEx.description,imgs:pickedEx.cover_img?[pickedEx.cover_img]:(pickedEx.imgs||[]),cover_img:pickedEx.cover_img||"",customSets:isSuperset?"3":pickSets||pickedEx.sets,customReps:pickReps||pickedEx.reps,customWeight:pickWeight||"",customRest:pickRest||"",superset:isSuperset};setProgram((p:any)=>({...p,[pickDay]:[...(p[pickDay]||[]),exData]}));setPickDay(null);};
   const removeFromDay=(day:string,idx:number)=>setProgram((p:any)=>({...p,[day]:p[day].filter((_:any,i:number)=>i!==idx)}));
   const openShareModal=async(c:any)=>{
     let token=c.share_token;
