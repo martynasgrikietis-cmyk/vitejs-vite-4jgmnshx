@@ -934,7 +934,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
       else exs.forEach((ex:any,i:number)=>{
         const imgs=(ex.imgs||[]).filter(Boolean);
         h+=`<div class="er"><div class="en">${i+1}</div>`;
-        h+=imgs[0]?`<img src="${imgs[0]}" class="ei" onerror="this.style.display='none'"/>`:`<div class="ep">📷</div>`;
+        h+=imgs[0]?`<img src="${imgs[0]}" class="ei" onerror="this.style.display='none'"/>`:`<div class="ep">📷</div>`; h+=imgs[1]?`<img src="${imgs[1]}" class="ei" onerror="this.style.display='none'"/>`:``;
         h+=`<div style="flex:1"><div class="en2">${ex.superset?`<span class="chip css2">SS</span> `:""}${ex.name}</div><div class="em">${ex.muscle||""}${ex.equipment?` · ${ex.equipment}`:""}</div><div class="chips">`;
         if(ex.customSets)h+=`<span class="chip cg">Ser: ${ex.customSets}</span>`;
         if(ex.customReps)h+=`<span class="chip cb">Kart: ${ex.customReps}</span>`;
