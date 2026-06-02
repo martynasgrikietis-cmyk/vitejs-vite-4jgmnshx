@@ -888,7 +888,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
     return{score:raw,label,color};
   };
 
-  const printPDF=(c:any,pl:any[])=>{
+  const printPDF=async(c:any,pl:any[])=>{ const allExIds=[...new Set(Object.values(c.program||{}).flat().map((e:any)=>e.id).filter(Boolean))]; const exMap:any={}; if(allExIds.length){const full=await sb.get("exercises",`?id=in.(${allExIds.join(",")})&select=id,imgs,cover_img`);full.forEach((e:any)=>{exMap[e.id]=e;});}
     const prog=c.program||{},pn=c.program_name||"";
     const bv=calcBMI(c.weight,c.height),bn=bv?parseFloat(bv.toFixed(1)):null,bc=bn?bmiCat(bn):null;
     const nut2=calcNut(c.weight,c.height,c.age,c.gender,ACTIVITY_LEVELS[c.activity_index??2]?.factor||1.55);
@@ -932,7 +932,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
       h+=`<div class="sec"><div class="sh"><span class="sn">${String(dn++).padStart(2,"0")}</span><div class="sl"></div><span class="st">${day2}</span></div><div class="dh"><div class="dn">${day2.toUpperCase()}</div><div class="dc">${exs.length} pratimas(-ai)</div></div>`;
       if(!exs.length)h+=`<div style="padding:12px 16px;color:#C8C4BC;font-size:10px;font-style:italic;">Pratimų nėra</div>`;
       else exs.forEach((ex:any,i:number)=>{
-        const imgs=(ex.imgs||[]).filter(Boolean);
+        const fullEx=exMap[ex.id]||ex; const imgs=(fullEx.imgs&&fullEx.imgs.length?fullEx.imgs:fullEx.cover_img?[fullEx.cover_img]:[]).filter(Boolean);||[]).filter(Boolean);
         h+=`<div class="er"><div class="en">${i+1}</div>`;
         h+=imgs[0]?`<img src="${imgs[0]}" class="ei" onerror="this.style.display='none'"/>`:`<div class="ep">📷</div>`; h+=imgs[1]?`<img src="${imgs[1]}" class="ei" onerror="this.style.display='none'"/>`:``;
         h+=`<div style="flex:1"><div class="en2">${ex.superset?`<span class="chip css2">SS</span> `:""}${ex.name}</div><div class="em">${ex.muscle||""}${ex.equipment?` · ${ex.equipment}`:""}</div><div class="chips">`;
