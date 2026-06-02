@@ -638,7 +638,7 @@ function SharePage({token,type}:{token:string,type:string}){
                 ):(
                   <div style={{display:"flex",flexDirection:"column",gap:10}}>
                     {exs.map((ex:any,i:number)=>{
-                      const imgs=(ex.imgs||[]).filter(Boolean);
+                      const imgs=((ex.imgs&&ex.imgs.length?ex.imgs:ex.cover_img?[ex.cover_img]:[])).filter(Boolean);
                       return(
                         <div key={i} style={{background:C.surface,borderRadius:14,border:`1px solid ${C.border}`,overflow:"hidden"}}>
                           {imgs[0]&&(
