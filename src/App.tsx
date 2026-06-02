@@ -492,7 +492,7 @@ function ExercisesTab({autoOpen=false}:{autoOpen?:boolean}){
               <div style={{height:3,background:`linear-gradient(to right,${mc},${mc}60)`}}/>
               {/* Image with overlays */}
               <div style={{position:"relative" as const}}>
-                ImgGallery imgs={ex.cover_img?[ex.cover_img]:(ex.imgs||[])}
+                <ImgGallery imgs={ex.cover_img?[ex.cover_img]:(ex.imgs||[])} height={130}/>
                 {/* Muscle badge */}
                 <div style={{position:"absolute" as const,top:8,left:8,background:`${mc}DD`,backdropFilter:"blur(4px)",borderRadius:6,padding:"3px 9px",fontSize:10,color:"#fff",fontWeight:700,letterSpacing:"0.06em"}}>{ex.muscle}</div>
                 {/* Video badge */}
