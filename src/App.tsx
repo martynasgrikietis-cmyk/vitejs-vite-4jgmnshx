@@ -492,7 +492,7 @@ function ExercisesTab({autoOpen=false}:{autoOpen?:boolean}){
               <div style={{height:3,background:`linear-gradient(to right,${mc},${mc}60)`}}/>
               {/* Image with overlays */}
               <div style={{position:"relative" as const}}>
-                <ImgGallery imgs={ex.cover_img?[ex.cover_img]:(ex.imgs||[])} height={130}/>
+                ImgGallery imgs={ex.cover_img?[ex.cover_img]:(ex.imgs||[])}
                 {/* Muscle badge */}
                 <div style={{position:"absolute" as const,top:8,left:8,background:`${mc}DD`,backdropFilter:"blur(4px)",borderRadius:6,padding:"3px 9px",fontSize:10,color:"#fff",fontWeight:700,letterSpacing:"0.06em"}}>{ex.muscle}</div>
                 {/* Video badge */}
@@ -1571,7 +1571,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
         <div style={{overflowY:"auto",padding:10,flex:1}}>
           <div className="pick-grid" style={{}}>
             {pickList.map(ex=>(<div key={ex.id} onClick={()=>setPickedEx(ex)} style={{background:C.faint,borderRadius:10,border:pickedEx?.id===ex.id?`2px solid ${C.gold}`:`1px solid ${C.border}`,cursor:"pointer",overflow:"hidden",position:"relative"}}>
-              <ImgGallery imgs={ex.imgs} height={85}/>
+              <ImgGallery imgs={ex.cover_img?[ex.cover_img]:(ex.imgs||[])} height={85}/>
               {pickedEx?.id===ex.id&&<div style={{position:"absolute",top:5,right:5,width:18,height:18,background:C.gold,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,color:C.bg,fontSize:10}}>✓</div>}
               <div style={{padding:"7px 9px"}}><div style={{fontSize:11,fontWeight:600,color:C.text,marginBottom:2}}>{ex.name}</div><div style={{fontSize:10,color:C.teal}}>{ex.muscle}</div></div>
             </div>))}
