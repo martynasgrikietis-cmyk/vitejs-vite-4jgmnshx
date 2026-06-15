@@ -700,6 +700,8 @@ function SharePage({token,type}:{token:string,type:string}){
         </>
       )}
     </div>
+  </div>
+  </div>
   );
 }
 
@@ -3213,6 +3215,8 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
             </div>
           )}
         </div>
+      </div>
+    </div>
       )}
 
       {/* ── FOOD LOG TAB ── */}
@@ -3392,15 +3396,13 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
-</div>
       )}
     </div>
   </div>
+  </div>
   );
 }
+
 
 // ── MAIN APP ──────────────────────────────────────────────
 // MainApp: shown when logged in
@@ -3610,4 +3612,5 @@ function LoginGate(){
 }
 
 export default AppRouter;
+
 
