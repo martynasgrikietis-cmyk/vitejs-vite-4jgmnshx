@@ -2810,6 +2810,7 @@ function FoodManagerModal({onClose}:{onClose:()=>void}){
 
 // ── MACRO CALCULATOR TAB ─────────────────────────────────
 function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
+  // ── Calculator state
   const [clientId,setClientId]=useState("");
   const [weight,setWeight]=useState("");
   const [height,setHeight]=useState("");
@@ -2818,217 +2819,104 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
   const [actIdx,setActIdx]=useState(2);
   const [meals,setMeals]=useState(4);
   const [activeTab,setActiveTab]=useState<"calc"|"log">("calc");
-  // Food log
-  const [log,setLog]=useState<any[]>([]);
+
+  // ── Diary state
+  const [diary,setDiary]=useState<any[]>([]);
+  const [dForm,setDForm]=useState({name:"",kcal:"",protein:"",fat:"",carbs:"",weight:"100"});
+  const [dEditId,setDEditId]=useState<number|null>(null);
+  const [dErr,setDErr]=useState("");
+  const [dSearch,setDSearch]=useState("");
 
   const handleClientSelect=(id:string)=>{
     setClientId(id);
-    const c=clients.find(x=>x.id===id);
+    const c=clients.find((x:any)=>x.id===id);
     if(c){setWeight(c.weight||"");setHeight(c.height||"");setAge(c.age||"");setGender(c.gender||"Vyras");setActIdx(c.activity_index??2);}
   };
 
   const nut=calcNut(weight,height,age,gender,ACTIVITY_LEVELS[actIdx]?.factor||1.55);
 
-  // 3 goal profiles with full macro breakdown
   const profiles=nut?[
-    {
-      id:"lose",
-      icon:"🔻",
-      name:"Riebalų deginimas",
-      nameEn:"FAT LOSS",
-      desc:"Kalorinis deficitas. Aukšti baltymai išsaugo raumenis.",
-      color:"#E07B5A",
-      shadow:"#8B3A10",
-      kcal:nut.lose,
-      prot:Math.round(parseFloat(weight||"0")*2.4),
-      fat:Math.round(nut.lose*0.25/9),
-      carbs:0,
-      rules:[
-        "Kalorinis deficitas: -500 kcal/dieną",
-        "Baltymai: 2.4g/kg — raumenis išsaugo",
-        "Riebalai: 25% kalorijų — hormonams",
-        "Angliavandeniai: likusi dalis",
-        "Vanduo: min. 2.5l/dieną",
-        "Treniruotės: 3-4x per savaitę",
-      ],
-      foods:["Vištienos krūtinėlė","Žuvis","Kiaušiniai","Brokoliai","Špinatai","Graikų jogurtas"],
-    },
-    {
-      id:"maintain",
-      icon:"⚖️",
-      name:"Formos palaikymas",
-      nameEn:"MAINTENANCE",
-      desc:"Balansas. Kūno sudėties gerinimas.",
-      color:"#D4A853",
-      shadow:"#7A5A10",
-      kcal:nut.tdee,
-      prot:Math.round(parseFloat(weight||"0")*2.0),
-      fat:Math.round(nut.tdee*0.28/9),
-      carbs:0,
-      rules:[
-        "Kalorijos = TDEE (nei deficitas, nei perteklius)",
-        "Baltymai: 2.0g/kg — kūno sudėties gerinimui",
-        "Riebalai: 28% kalorijų",
-        "Angliavandeniai: energijai treniruotėms",
-        "Vanduo: min. 2.0l/dieną",
-        "Treniruotės: 3-5x per savaitę",
-      ],
-      foods:["Lašiša","Ryžiai","Avokadas","Quinoa","Pienas","Riešutai"],
-    },
-    {
-      id:"gain",
-      icon:"🔺",
-      name:"Raumenų auginimas",
-      nameEn:"MUSCLE GAIN",
-      desc:"Kalorinis perteklius. Daug baltymų raumenims augti.",
-      color:"#4E9068",
-      shadow:"#1A4028",
-      kcal:nut.gain,
-      prot:Math.round(parseFloat(weight||"0")*2.2),
-      fat:Math.round(nut.gain*0.25/9),
-      carbs:0,
-      rules:[
-        "Kalorinis perteklius: +300 kcal/dieną",
-        "Baltymai: 2.2g/kg — raumenų sintezei",
-        "Riebalai: 25% kalorijų",
-        "Angliavandeniai: daugiausiai — energijai",
-        "Vanduo: min. 3.0l/dieną",
-        "Treniruotės: 4-5x per savaitę, jėga",
-      ],
-      foods:["Jautiena","Makaronai","Ryžiai","Bananai","Avižos","Sūris"],
-    },
+    {id:"lose",icon:"🔻",name:"Riebalų deginimas",nameEn:"FAT LOSS",color:"#E07B5A",kcal:nut.lose,prot:Math.round(parseFloat(weight||"0")*2.4),fat:Math.round(nut.lose*0.25/9)},
+    {id:"maintain",icon:"⚖️",name:"Formos palaikymas",nameEn:"MAINTENANCE",color:"#D4A853",kcal:nut.tdee,prot:Math.round(parseFloat(weight||"0")*2.0),fat:Math.round(nut.tdee*0.28/9)},
+    {id:"gain",icon:"🔺",name:"Raumenų auginimas",nameEn:"MUSCLE GAIN",color:"#4E9068",kcal:nut.gain,prot:Math.round(parseFloat(weight||"0")*2.2),fat:Math.round(nut.gain*0.25/9)},
   ].map(p=>{
-    const protKcal=p.prot*4;
-    const fatKcal=p.fat*9;
-    const carbsKcal=Math.max(0,p.kcal-protKcal-fatKcal);
+    const carbsKcal=Math.max(0,p.kcal-p.prot*4-p.fat*9);
     return{...p,carbs:Math.round(carbsKcal/4)};
   }):[];
 
-  // Food diary — self-managed
-  const [diary, setDiary] = useState<any[]>([]);
-  const [dForm, setDForm] = useState({name:"",kcal:"",protein:"",fat:"",carbs:"",weight:"100"});
-  const [dEditId, setDEditId] = useState<number|null>(null);
-  const [dErr, setDErr] = useState("");
-  const [dSearch, setDSearch] = useState("");
+  const logTotals=diary.reduce((a:any,f:any)=>({kcal:a.kcal+f.kcal,prot:a.prot+f.prot,fat:a.fat+f.fat,carbs:a.carbs+f.carbs}),{kcal:0,prot:0,fat:0,carbs:0});
+  const filteredDiary=dSearch?diary.filter((f:any)=>f.name.toLowerCase().includes(dSearch.toLowerCase())):diary;
 
-  const logTotals = diary.reduce((a,f) => ({
-    kcal: a.kcal+f.kcal, prot: a.prot+f.prot,
-    fat: a.fat+f.fat, carbs: a.carbs+f.carbs,
-  }), {kcal:0, prot:0, fat:0, carbs:0});
-
-  const saveDiaryEntry = () => {
+  const saveDiaryEntry=()=>{
     if(!dForm.name.trim()||!dForm.kcal){setDErr("Pavadinimas ir kalorijos privalomi");return;}
-    const w = parseFloat(dForm.weight)||100;
-    const ratio = w/100;
-    const entry = {
-      id: dEditId||Date.now(),
-      name: dForm.name.trim(),
-      weight: w,
-      kcal: Math.round((parseFloat(dForm.kcal)||0)*ratio),
-      prot: Math.round((parseFloat(dForm.protein)||0)*ratio*10)/10,
-      fat: Math.round((parseFloat(dForm.fat)||0)*ratio*10)/10,
-      carbs: Math.round((parseFloat(dForm.carbs)||0)*ratio*10)/10,
-      kcalPer100: parseFloat(dForm.kcal)||0,
-      protPer100: parseFloat(dForm.protein)||0,
-      fatPer100: parseFloat(dForm.fat)||0,
-      carbsPer100: parseFloat(dForm.carbs)||0,
+    const w=parseFloat(dForm.weight)||100;
+    const ratio=w/100;
+    const entry={
+      id:dEditId||Date.now(),
+      name:dForm.name.trim(),weight:w,
+      kcal:Math.round((parseFloat(dForm.kcal)||0)*ratio),
+      prot:Math.round((parseFloat(dForm.protein)||0)*ratio*10)/10,
+      fat:Math.round((parseFloat(dForm.fat)||0)*ratio*10)/10,
+      carbs:Math.round((parseFloat(dForm.carbs)||0)*ratio*10)/10,
+      kcalPer100:parseFloat(dForm.kcal)||0,
+      protPer100:parseFloat(dForm.protein)||0,
+      fatPer100:parseFloat(dForm.fat)||0,
+      carbsPer100:parseFloat(dForm.carbs)||0,
     };
-    if(dEditId){
-      setDiary(p=>p.map(x=>x.id===dEditId?entry:x));
-      setDEditId(null);
-    } else {
-      setDiary(p=>[...p,entry]);
-    }
+    if(dEditId){setDiary((p:any[])=>p.map((x:any)=>x.id===dEditId?entry:x));setDEditId(null);}
+    else{setDiary((p:any[])=>[...p,entry]);}
     setDForm({name:"",kcal:"",protein:"",fat:"",carbs:"",weight:"100"});
     setDErr("");
   };
 
-  const editDiaryEntry = (f:any) => {
+  const editDiaryEntry=(f:any)=>{
     setDEditId(f.id);
-    setDForm({
-      name:f.name,
-      kcal:String(f.kcalPer100||f.kcal),
-      protein:String(f.protPer100||f.prot),
-      fat:String(f.fatPer100||f.fat),
-      carbs:String(f.carbsPer100||f.carbs),
-      weight:String(f.weight),
-    });
+    setDForm({name:f.name,kcal:String(f.kcalPer100||f.kcal),protein:String(f.protPer100||f.prot||0),fat:String(f.fatPer100||f.fat),carbs:String(f.carbsPer100||f.carbs),weight:String(f.weight)});
     setDErr("");
   };
 
-  const filteredDiary = dSearch
-    ? diary.filter(f=>f.name.toLowerCase().includes(dSearch.toLowerCase()))
-    : diary;
-
-
-
-  // Bar component
-  const Bar=({val,max,color}:{val:number,max:number,color:string})=>{
-    const pct=max>0?Math.min(100,Math.round(val/max*100)):0;
-    const over=val>max;
-    return(
-      <div style={{height:6,background:C.faint,borderRadius:3,overflow:"hidden",boxShadow:"inset 0 2px 4px rgba(0,0,0,0.3)"}}>
-        <div style={{height:"100%",width:`${pct}%`,background:over?"#C05050":color,borderRadius:3,transition:"width .4s ease"}}/>
-      </div>
-    );
-  };
-
-  // Donut SVG
-  const Donut=({prot,fat,carbs,kcal,size=100}:{prot:number,fat:number,carbs:number,kcal:number,size?:number})=>{
+  const Donut=({prot,fat,carbs,kcal}:{prot:number,fat:number,carbs:number,kcal:number})=>{
     const total=prot*4+fat*9+carbs*4||1;
-    const r=38,cx=size/2,cy=size/2,sw=10,circ=2*Math.PI*r;
-    const segs=[
-      {val:Math.round(prot*4/total*100),color:"#4E9068"},
-      {val:Math.round(fat*9/total*100),color:"#7B6DB0"},
-      {val:Math.round(carbs*4/total*100),color:"#D4A853"},
-    ];
+    const r=38,cx=50,cy=50,sw=10,circ=2*Math.PI*r;
+    const segs=[{v:Math.round(prot*4/total*100),c:"#4E9068"},{v:Math.round(fat*9/total*100),c:"#7B6DB0"},{v:Math.round(carbs*4/total*100),c:"#D4A853"}];
     let off=0;
     return(
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{flexShrink:0}}>
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke={C.faint} strokeWidth={sw}/>
+      <svg width="100" height="100" viewBox="0 0 100 100">
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#1E2430" strokeWidth={sw}/>
         {segs.map((s,i)=>{
-          const dash=circ*s.val/100;
-          const el=<circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={s.color} strokeWidth={sw}
-            strokeDasharray={`${dash} ${circ-dash}`} strokeDashoffset={-off*circ/100} strokeLinecap="butt"/>;
-          off+=s.val; return el;
+          const dash=circ*s.v/100;
+          const el=<circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={s.c} strokeWidth={sw} strokeDasharray={`${dash} ${circ-dash}`} strokeDashoffset={-off*circ/100}/>;
+          off+=s.v; return el;
         })}
         <text x={cx} y={cy-4} textAnchor="middle" fill={C.gold} fontSize="14" fontFamily="'Bebas Neue',sans-serif">{kcal}</text>
-        <text x={cx} y={cy+9} textAnchor="middle" fill={C.muted} fontSize="7" fontFamily="'Barlow Condensed',sans-serif" letterSpacing="1.5">KCAL</text>
+        <text x={cx} y={cy+10} textAnchor="middle" fill={C.muted} fontSize="8" fontFamily="'Barlow Condensed',sans-serif">KCAL</text>
       </svg>
     );
   };
 
   return(
     <div className="fu">
-      {/* Header */}
       <div style={{marginBottom:20}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-          <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:10,color:C.gold,letterSpacing:"0.3em"}}>05</span>
-          <div style={{width:24,height:1,background:C.gold}}/>
-        </div>
         <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:42,color:C.text,letterSpacing:"0.04em",lineHeight:1}}>MAKRO SKAIČIUOKLĖ</div>
-        <div style={{fontFamily:CONDENSED_FONT,fontSize:11,color:C.muted,marginTop:6,letterSpacing:"0.08em"}}>Kalorijų ir makroelementų rekomendacijos pagal klientų tikslus</div>
+        <div style={{fontFamily:CONDENSED_FONT,fontSize:11,color:C.muted,marginTop:6}}>Kalorijų ir makroelementų rekomendacijos</div>
       </div>
 
-      {/* Sub tabs */}
       <div style={{display:"flex",gap:0,marginBottom:20,borderBottom:`1px solid ${C.border}`}}>
-        {[["calc","🧮 Skaičiuoklė & Rekomendacijos"],["log","📝 Maisto dienoraštis"]].map(([v,l])=>(
-          <button key={v} onClick={()=>setActiveTab(v as any)} style={{padding:"9px 20px",background:"transparent",border:"none",borderBottom:activeTab===v?`2px solid ${C.gold}`:"2px solid transparent",color:activeTab===v?C.gold:C.muted,fontFamily:CONDENSED_FONT,fontSize:11,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase" as const,cursor:"pointer",marginBottom:-1}}>{l}</button>
+        {([["calc","🧮 Skaičiuoklė"],["log","📝 Maisto dienoraštis"]] as const).map(([v,l])=>(
+          <button key={v} onClick={()=>setActiveTab(v)} style={{padding:"9px 20px",background:"transparent",border:"none",borderBottom:activeTab===v?`2px solid ${C.gold}`:"2px solid transparent",color:activeTab===v?C.gold:C.muted,fontFamily:CONDENSED_FONT,fontSize:11,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase" as const,cursor:"pointer",marginBottom:-1}}>{l}</button>
         ))}
       </div>
 
-      {/* ── CALCULATOR + RECOMMENDATIONS ── */}
       {activeTab==="calc"&&(
         <div>
-          {/* Input row */}
           <div style={{...css.card,marginBottom:20}}>
             <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:C.text,letterSpacing:"0.04em",marginBottom:16}}>KLIENTO DUOMENYS</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12,alignItems:"end"}}>
               <div>
-                <span style={css.label}>Klientas (neprivaloma)</span>
+                <span style={css.label}>Klientas</span>
                 <select value={clientId} onChange={e=>handleClientSelect(e.target.value)} style={css.select}>
                   <option value="">— Rankiniu būdu —</option>
-                  {clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+                  {clients.map((c:any)=><option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div><span style={css.label}>Svoris (kg)</span><input value={weight} onChange={e=>setWeight(e.target.value)} style={css.input} placeholder="80" type="number"/></div>
@@ -3039,15 +2927,14 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
                   <option>Vyras</option><option>Moteris</option>
                 </select>
               </div>
-              <div>
-                <span style={css.label}>Aktyvumas</span>
+              <div><span style={css.label}>Aktyvumas</span>
                 <select value={actIdx} onChange={e=>setActIdx(parseInt(e.target.value))} style={css.select}>
-                  {ACTIVITY_LEVELS.map((a,i)=><option key={i} value={i}>{a.label}</option>)}
+                  {ACTIVITY_LEVELS.map((a:any,i:number)=><option key={i} value={i}>{a.label}</option>)}
                 </select>
               </div>
               <div>
                 <span style={css.label}>Valgymai/dieną: {meals}</span>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginTop:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginTop:8}}>
                   {[2,3,4,5,6].map(n=>(
                     <button key={n} onClick={()=>setMeals(n)} style={{width:28,height:28,borderRadius:"6px",background:meals===n?"linear-gradient(145deg,#E8BE6A,#B8902A)":"linear-gradient(145deg,#1E2535,#141820)",color:meals===n?"#1A0E00":C.muted,border:"none",fontFamily:CONDENSED_FONT,fontSize:11,fontWeight:700,cursor:"pointer",boxShadow:meals===n?"0 3px 0 #7A5A10":"0 2px 0 #0A0E14"}}>{n}</button>
                   ))}
@@ -3056,48 +2943,36 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
             </div>
           </div>
 
-          {/* TDEE summary if data entered */}
           {nut&&(
-            <div style={{background:"linear-gradient(145deg,#0E1016,#0A0C12)",border:`1px solid ${C.goldBorder}`,padding:"16px 20px",marginBottom:20,display:"flex",alignItems:"center",gap:20,flexWrap:"wrap" as const,boxShadow:`0 4px 20px rgba(212,168,83,0.1)`}}>
+            <div style={{background:"linear-gradient(145deg,#0E1016,#0A0C12)",border:`1px solid ${C.goldBorder}`,padding:"16px 20px",marginBottom:20,display:"flex",alignItems:"center",gap:20,flexWrap:"wrap" as const,boxShadow:"0 4px 20px rgba(212,168,83,0.1)"}}>
               <div>
                 <div style={{fontFamily:CONDENSED_FONT,fontSize:9,color:C.muted,letterSpacing:"0.2em",textTransform:"uppercase" as const,marginBottom:4}}>Bazinės kalorijos (TDEE)</div>
-                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:48,color:C.gold,lineHeight:1,letterSpacing:"0.04em"}}>{nut.tdee} <span style={{fontSize:14,color:C.muted}}>kcal/d.</span></div>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:48,color:C.gold,lineHeight:1}}>{nut.tdee} <span style={{fontSize:14,color:C.muted}}>kcal/d.</span></div>
               </div>
               <div style={{width:1,height:48,background:C.border}}/>
-              {[
-                {l:"KMI",v:calcBMI(weight,height)?parseFloat(calcBMI(weight,height)!.toFixed(1)):null,c:C.teal},
-                {l:"BMR",v:Math.round(nut.tdee/(ACTIVITY_LEVELS[actIdx]?.factor||1.55)),c:C.text},
-                {l:"Valgymui",v:Math.round(nut.tdee/meals)+" kcal",c:C.purple},
-              ].map(x=>x.v&&(
-                <div key={x.l}>
-                  <div style={{fontFamily:CONDENSED_FONT,fontSize:9,color:C.muted,letterSpacing:"0.14em",textTransform:"uppercase" as const,marginBottom:4}}>{x.l}</div>
-                  <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:24,color:x.c,lineHeight:1}}>{x.v}</div>
-                </div>
-              ))}
+              <div>
+                <div style={{fontFamily:CONDENSED_FONT,fontSize:9,color:C.muted,letterSpacing:"0.14em",textTransform:"uppercase" as const,marginBottom:4}}>Vienam valgymui</div>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:24,color:C.text,lineHeight:1}}>{Math.round(nut.tdee/meals)} kcal</div>
+              </div>
             </div>
           )}
 
-          {/* 3 GOAL PROFILES */}
           {profiles.length>0?(
-            <>
+            <div>
               <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,color:C.text,letterSpacing:"0.04em",marginBottom:16}}>3 TIKSLŲ REKOMENDACIJOS</div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:20}}>
-                {profiles.map(p=>(
-                  <div key={p.id} style={{background:"linear-gradient(145deg,#0E1016,#0A0C12)",border:`1px solid ${p.color}40`,overflow:"hidden",boxShadow:`0 4px 20px rgba(0,0,0,0.3)`}}>
-                    {/* Profile header */}
+                {profiles.map((p:any)=>(
+                  <div key={p.id} style={{background:"linear-gradient(145deg,#0E1016,#0A0C12)",border:`1px solid ${p.color}40`,overflow:"hidden"}}>
                     <div style={{background:`linear-gradient(135deg,${p.color}25,${p.color}10)`,borderBottom:`1px solid ${p.color}30`,padding:"14px 16px"}}>
                       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
                         <span style={{fontSize:20}}>{p.icon}</span>
                         <div>
                           <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:p.color,letterSpacing:"0.06em",lineHeight:1}}>{p.nameEn}</div>
-                          <div style={{fontFamily:CONDENSED_FONT,fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>{p.name}</div>
+                          <div style={{fontFamily:CONDENSED_FONT,fontSize:9,color:C.muted}}>{p.name}</div>
                         </div>
                       </div>
-                      <div style={{fontFamily:"'Barlow',sans-serif",fontSize:11,color:C.muted,fontWeight:300,lineHeight:1.5}}>{p.desc}</div>
                     </div>
-
                     <div style={{padding:"14px 16px"}}>
-                      {/* Donut + main kcal */}
                       <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
                         <Donut prot={p.prot} fat={p.fat} carbs={p.carbs} kcal={p.kcal}/>
                         <div style={{flex:1}}>
@@ -3107,285 +2982,117 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
                           <div style={{fontFamily:CONDENSED_FONT,fontSize:9,color:C.muted,marginTop:4}}>Vienam valgymui: <b style={{color:p.color}}>{Math.round(p.kcal/meals)} kcal</b></div>
                         </div>
                       </div>
-
-                      {/* Macro pills */}
-                      <div style={{display:"flex",flexDirection:"column" as const,gap:8,marginBottom:14}}>
-                        {[
-                          {l:"Baltymai",v:p.prot,g:"g",color:"#4E9068",kcal:p.prot*4,note:`${Math.round(p.prot/parseFloat(weight||"1")*10)/10}g/kg`},
-                          {l:"Riebalai",v:p.fat,g:"g",color:"#7B6DB0",kcal:p.fat*9,note:`${Math.round(p.fat*9/p.kcal*100)}% kalorijų`},
-                          {l:"Angliavandeniai",v:p.carbs,g:"g",color:"#D4A853",kcal:p.carbs*4,note:`${Math.round(p.carbs*4/p.kcal*100)}% kalorijų`},
-                        ].map(m=>(
+                      <div style={{display:"flex",flexDirection:"column" as const,gap:6}}>
+                        {[{l:"Baltymai",v:p.prot,c:"#4E9068"},{l:"Riebalai",v:p.fat,c:"#7B6DB0"},{l:"Angliavandeniai",v:p.carbs,c:"#D4A853"}].map((m:any)=>(
                           <div key={m.l}>
                             <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                              <span style={{fontFamily:CONDENSED_FONT,fontSize:9,color:C.muted,letterSpacing:"0.1em",textTransform:"uppercase" as const}}>{m.l}</span>
-                              <span style={{fontFamily:CONDENSED_FONT,fontSize:11,fontWeight:700,color:m.color}}>{m.v}g <span style={{fontSize:9,color:C.muted}}>· {m.kcal} kcal · {m.note}</span></span>
+                              <span style={{fontFamily:CONDENSED_FONT,fontSize:9,color:C.muted,textTransform:"uppercase" as const}}>{m.l}</span>
+                              <span style={{fontFamily:CONDENSED_FONT,fontSize:11,fontWeight:700,color:m.c}}>{m.v}g</span>
                             </div>
                             <div style={{height:5,background:C.faint,borderRadius:3,overflow:"hidden"}}>
-                              <div style={{height:"100%",width:`${Math.round(m.kcal/p.kcal*100)}%`,background:`linear-gradient(to right,${m.color},${m.color}99)`,borderRadius:3}}/>
+                              <div style={{height:"100%",width:`${Math.round(m.v*4/p.kcal*100)}%`,background:m.c,borderRadius:3}}/>
                             </div>
                           </div>
                         ))}
-                      </div>
-
-                      {/* Per meal breakdown */}
-                      <div style={{background:C.faint,border:`1px solid ${C.border}`,padding:"10px 12px",marginBottom:12}}>
-                        <div style={{fontFamily:CONDENSED_FONT,fontSize:8,color:C.muted,letterSpacing:"0.16em",textTransform:"uppercase" as const,marginBottom:8}}>Vienas valgymas ({meals} per dieną)</div>
-                        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:4,textAlign:"center" as const}}>
-                          {[
-                            {l:"Kcal",v:Math.round(p.kcal/meals),c:p.color},
-                            {l:"B",v:Math.round(p.prot/meals*10)/10+"g",c:"#4E9068"},
-                            {l:"R",v:Math.round(p.fat/meals*10)/10+"g",c:"#7B6DB0"},
-                            {l:"A",v:Math.round(p.carbs/meals*10)/10+"g",c:"#D4A853"},
-                          ].map(x=>(
-                            <div key={x.l}>
-                              <div style={{fontFamily:CONDENSED_FONT,fontSize:7,color:C.muted,letterSpacing:"0.1em",textTransform:"uppercase" as const}}>{x.l}</div>
-                              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:x.c,lineHeight:1.2}}>{x.v}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Rules */}
-                      <div>
-                        <div style={{fontFamily:CONDENSED_FONT,fontSize:8,color:C.muted,letterSpacing:"0.14em",textTransform:"uppercase" as const,marginBottom:8}}>Rekomendacijos</div>
-                        {p.rules.map((r,i)=>(
-                          <div key={i} style={{display:"flex",gap:6,alignItems:"flex-start",padding:"3px 0",borderTop:i>0?`1px solid ${C.border}`:"none"}}>
-                            <div style={{width:4,height:4,borderRadius:"50%",background:p.color,flexShrink:0,marginTop:5}}/>
-                            <span style={{fontFamily:"'Barlow',sans-serif",fontSize:10,color:C.muted,lineHeight:1.5}}>{r}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Recommended foods */}
-                      <div style={{marginTop:12,paddingTop:10,borderTop:`1px solid ${C.border}`}}>
-                        <div style={{fontFamily:CONDENSED_FONT,fontSize:8,color:C.muted,letterSpacing:"0.14em",textTransform:"uppercase" as const,marginBottom:6}}>Rekomenduojami maisto produktai</div>
-                        <div style={{display:"flex",flexWrap:"wrap" as const,gap:4}}>
-                          {p.foods.map(f=>(
-                            <span key={f} style={{background:`${p.color}15`,border:`1px solid ${p.color}40`,padding:"2px 8px",fontFamily:CONDENSED_FONT,fontSize:9,color:p.color,letterSpacing:"0.06em"}}>{f}</span>
-                          ))}
-                        </div>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-
-              {/* Comparison table */}
-              <div style={{...css.card,marginBottom:20}}>
-                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:C.text,letterSpacing:"0.04em",marginBottom:16}}>TIKSLŲ PALYGINIMAS</div>
-                <div style={{overflowX:"auto" as const}}>
-                  <table style={{width:"100%",borderCollapse:"collapse" as const}}>
-                    <thead>
-                      <tr style={{borderBottom:`1px solid ${C.border}`}}>
-                        {["","🔻 Riebalų deginimas","⚖️ Formos palaikymas","🔺 Raumenų auginimas"].map((h,i)=>(
-                          <th key={h} style={{padding:"8px 12px",fontFamily:CONDENSED_FONT,fontSize:9,color:i===0?C.muted:profiles[i-1]?.color,letterSpacing:"0.14em",textTransform:"uppercase" as const,textAlign:i===0?"left" as const:"center" as const,fontWeight:700}}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        {label:"Kalorijos",vals:profiles.map(p=>`${p.kcal} kcal`)},
-                        {label:"Baltymai",vals:profiles.map(p=>`${p.prot}g`)},
-                        {label:"Riebalai",vals:profiles.map(p=>`${p.fat}g`)},
-                        {label:"Angliavandeniai",vals:profiles.map(p=>`${p.carbs}g`)},
-                        {label:"Vienam valgymui",vals:profiles.map(p=>`${Math.round(p.kcal/meals)} kcal`)},
-                        {label:"Baltymai/kg",vals:profiles.map(p=>`${Math.round(p.prot/parseFloat(weight||"1")*10)/10}g`)},
-                      ].map((row,ri)=>(
-                        <tr key={row.label} style={{background:ri%2===0?"transparent":C.faint,borderTop:`1px solid ${C.border}`}}>
-                          <td style={{padding:"8px 12px",fontFamily:CONDENSED_FONT,fontSize:11,color:C.muted,letterSpacing:"0.06em"}}>{row.label}</td>
-                          {row.vals.map((v,i)=>(
-                            <td key={i} style={{padding:"8px 12px",fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:profiles[i].color,textAlign:"center" as const,letterSpacing:"0.04em"}}>{v}</td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </>
+            </div>
           ):(
             <div style={{...css.card,textAlign:"center" as const,padding:"48px 24px"}}>
-              <div style={{fontSize:52,marginBottom:12}}>🧮</div>
-              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,color:C.muted,letterSpacing:"0.04em",marginBottom:8}}>ĮVESKITE DUOMENIS</div>
-              <div style={{fontFamily:CONDENSED_FONT,fontSize:13,color:C.muted,lineHeight:1.7}}>
-                Pasirinkite klientą arba įveskite:<br/>
-                <b style={{color:C.text}}>Svorį · Ūgį · Amžių · Aktyvumo lygį</b><br/>
-                ir gausite 3 personalines rekomendacijas
-              </div>
+              <div style={{fontSize:48,marginBottom:12}}>🧮</div>
+              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:C.muted,letterSpacing:"0.04em",marginBottom:8}}>ĮVESKITE DUOMENIS</div>
+              <div style={{fontFamily:CONDENSED_FONT,fontSize:12,color:C.muted}}>Pasirinkite klientą arba įveskite svorį, ūgį ir amžių</div>
             </div>
           )}
         </div>
       )}
 
-      {/* ── FOOD LOG TAB ── */}
       {activeTab==="log"&&(
         <div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
-            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,color:C.text,letterSpacing:"0.04em"}}>MAISTO DIENORAŠTIS</div>
-            <div style={{fontFamily:CONDENSED_FONT,fontSize:11,color:C.muted}}>{diary.length} produktai šiandien</div>
-          </div>
-
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,color:C.text,letterSpacing:"0.04em",marginBottom:20}}>MAISTO DIENORAŠTIS</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1.3fr",gap:16}}>
-
-            {/* ── LEFT: Add / Edit form ── */}
             <div>
-              <div style={{...css.card}}>
-                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:C.text,letterSpacing:"0.04em",marginBottom:16}}>
-                  {dEditId?"✏️ REDAGUOTI":"➕ PRIDĖTI MAISTĄ"}
-                </div>
-
-                {dErr&&<div style={{background:"#C0505020",border:"1px solid #C05050",padding:"8px 12px",color:"#ef8080",fontSize:12,marginBottom:10,fontFamily:CONDENSED_FONT,borderRadius:4}}>{dErr}</div>}
-
-                {/* Name */}
+              <div style={css.card}>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:C.text,letterSpacing:"0.04em",marginBottom:16}}>{dEditId?"✏️ REDAGUOTI":"➕ PRIDĖTI MAISTĄ"}</div>
+                {dErr&&<div style={{background:"#C0505020",border:"1px solid #C05050",padding:"8px 12px",color:"#ef8080",fontSize:12,marginBottom:10,fontFamily:CONDENSED_FONT}}>{dErr}</div>}
                 <div style={{marginBottom:10}}>
                   <span style={css.label}>Produkto pavadinimas *</span>
-                  <input
-                    value={dForm.name}
-                    onChange={e=>setDForm(p=>({...p,name:e.target.value}))}
-                    onKeyDown={e=>e.key==="Enter"&&saveDiaryEntry()}
-                    style={css.input}
-                    placeholder="pvz. Vištienos krūtinėlė, ryžiai, kiaušinis..."
-                  />
+                  <input value={dForm.name} onChange={e=>setDForm((p:any)=>({...p,name:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&saveDiaryEntry()} style={css.input} placeholder="pvz. Vištienos krūtinėlė..."/>
                 </div>
-
-                {/* Macros per 100g */}
                 <div style={{background:C.faint,border:`1px solid ${C.border}`,padding:"12px",marginBottom:12}}>
                   <div style={{fontFamily:CONDENSED_FONT,fontSize:9,color:C.muted,letterSpacing:"0.16em",textTransform:"uppercase" as const,marginBottom:10}}>Makroelementai per 100g *</div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                    {([
-                      {l:"🔥 Kalorijos (kcal)",k:"kcal",c:C.gold,ph:"pvz. 165"},
-                      {l:"💪 Baltymai (g)",k:"protein",c:"#4E9068",ph:"pvz. 31"},
-                      {l:"🫙 Riebalai (g)",k:"fat",c:"#7B6DB0",ph:"pvz. 3.6"},
-                      {l:"🌾 Angliavandeniai (g)",k:"carbs",c:"#D4A853",ph:"pvz. 0"},
-                    ] as const).map(f=>(
+                    {([{l:"🔥 Kalorijos (kcal)",k:"kcal",c:C.gold},{l:"💪 Baltymai (g)",k:"protein",c:"#4E9068"},{l:"🫙 Riebalai (g)",k:"fat",c:"#7B6DB0"},{l:"🌾 Angliavandeniai (g)",k:"carbs",c:"#D4A853"}] as const).map(f=>(
                       <div key={f.k}>
                         <span style={{...css.label,color:f.c}}>{f.l}</span>
-                        <input
-                          value={(dForm as any)[f.k]}
-                          onChange={e=>setDForm(p=>({...p,[f.k]:e.target.value}))}
-                          style={{...css.input,borderColor:(dForm as any)[f.k]?f.c+"80":C.border}}
-                          type="number" step="0.1" placeholder={f.ph}
-                        />
+                        <input value={(dForm as any)[f.k]} onChange={e=>setDForm((p:any)=>({...p,[f.k]:e.target.value}))} style={{...css.input,borderColor:(dForm as any)[f.k]?f.c+"80":C.border}} type="number" step="0.1" placeholder="0"/>
                       </div>
                     ))}
                   </div>
                 </div>
-
-                {/* Weight */}
                 <div style={{marginBottom:14}}>
                   <span style={css.label}>Suvalgyta kiekis (gramais)</span>
-                  <input
-                    value={dForm.weight}
-                    onChange={e=>setDForm(p=>({...p,weight:e.target.value}))}
-                    style={css.input}
-                    type="number" placeholder="100"
-                  />
+                  <input value={dForm.weight} onChange={e=>setDForm((p:any)=>({...p,weight:e.target.value}))} style={css.input} type="number" placeholder="100"/>
                 </div>
-
-                {/* Live preview */}
                 {dForm.kcal&&parseFloat(dForm.weight)>0&&(
                   <div style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,padding:"10px 14px",marginBottom:14}}>
-                    <div style={{fontFamily:CONDENSED_FONT,fontSize:9,color:C.gold,letterSpacing:"0.14em",textTransform:"uppercase" as const,marginBottom:8}}>
-                      Peržiūra — {dForm.weight}g {dForm.name||"produktas"}
-                    </div>
+                    <div style={{fontFamily:CONDENSED_FONT,fontSize:9,color:C.gold,letterSpacing:"0.14em",textTransform:"uppercase" as const,marginBottom:8}}>Peržiūra — {dForm.weight}g</div>
                     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:4,textAlign:"center" as const}}>
-                      {[
-                        {l:"Kcal",v:Math.round((parseFloat(dForm.kcal)||0)*(parseFloat(dForm.weight)||100)/100),c:C.gold},
-                        {l:"Baltymai",v:Math.round((parseFloat(dForm.protein)||0)*(parseFloat(dForm.weight)||100)/100*10)/10+"g",c:"#4E9068"},
-                        {l:"Riebalai",v:Math.round((parseFloat(dForm.fat)||0)*(parseFloat(dForm.weight)||100)/100*10)/10+"g",c:"#7B6DB0"},
-                        {l:"Angliavandeniai",v:Math.round((parseFloat(dForm.carbs)||0)*(parseFloat(dForm.weight)||100)/100*10)/10+"g",c:"#D4A853"},
-                      ].map(x=>(
+                      {[{l:"Kcal",v:Math.round((parseFloat(dForm.kcal)||0)*parseFloat(dForm.weight)/100),c:C.gold},{l:"Baltymai",v:Math.round((parseFloat(dForm.protein)||0)*parseFloat(dForm.weight)/100*10)/10+"g",c:"#4E9068"},{l:"Riebalai",v:Math.round((parseFloat(dForm.fat)||0)*parseFloat(dForm.weight)/100*10)/10+"g",c:"#7B6DB0"},{l:"Angliav.",v:Math.round((parseFloat(dForm.carbs)||0)*parseFloat(dForm.weight)/100*10)/10+"g",c:"#D4A853"}].map((x:any)=>(
                         <div key={x.l} style={{background:C.faint,border:`1px solid ${C.border}`,padding:"6px 4px"}}>
-                          <div style={{fontFamily:CONDENSED_FONT,fontSize:7,color:C.muted,letterSpacing:"0.1em",textTransform:"uppercase" as const,marginBottom:2}}>{x.l}</div>
-                          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:x.c,lineHeight:1}}>{x.v}</div>
+                          <div style={{fontFamily:CONDENSED_FONT,fontSize:7,color:C.muted,textTransform:"uppercase" as const}}>{x.l}</div>
+                          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:x.c,lineHeight:1}}>{x.v}</div>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
-
                 <div style={{display:"flex",gap:8}}>
-                  <button onClick={saveDiaryEntry} style={{...css.btnG,flex:1,display:"flex",justifyContent:"center",gap:6}}>
-                    {dEditId?"💾 Išsaugoti":"➕ Pridėti"}
-                  </button>
-                  {dEditId&&(
-                    <button onClick={()=>{setDEditId(null);setDForm({name:"",kcal:"",protein:"",fat:"",carbs:"",weight:"100"});setDErr("");}} style={css.btnGhost}>
-                      Atšaukti
-                    </button>
-                  )}
+                  <button onClick={saveDiaryEntry} style={{...css.btnG,flex:1,display:"flex",justifyContent:"center"}}>{dEditId?"💾 Išsaugoti":"➕ Pridėti"}</button>
+                  {dEditId&&<button onClick={()=>{setDEditId(null);setDForm({name:"",kcal:"",protein:"",fat:"",carbs:"",weight:"100"});setDErr("");}} style={css.btnGhost}>Atšaukti</button>}
                 </div>
               </div>
             </div>
-
-            {/* ── RIGHT: Diary list + totals ── */}
             <div>
-              {/* Totals card */}
               <div style={{...css.card,background:"linear-gradient(145deg,#0E1016,#0A0C12)",marginBottom:12}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
                   <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:C.text,letterSpacing:"0.04em"}}>DIENOS SUVESTINĖ</div>
-                  <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:36,color:C.gold,lineHeight:1}}>
-                    {logTotals.kcal}<span style={{fontSize:13,color:C.muted}}> kcal</span>
-                  </div>
+                  <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:36,color:C.gold,lineHeight:1}}>{logTotals.kcal}<span style={{fontSize:12,color:C.muted}}> kcal</span></div>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-                  {[
-                    {l:"Baltymai",v:logTotals.prot+"g",c:"#4E9068"},
-                    {l:"Riebalai",v:logTotals.fat+"g",c:"#7B6DB0"},
-                    {l:"Angliavandeniai",v:logTotals.carbs+"g",c:"#D4A853"},
-                  ].map(m=>(
+                  {[{l:"Baltymai",v:logTotals.prot+"g",c:"#4E9068"},{l:"Riebalai",v:logTotals.fat+"g",c:"#7B6DB0"},{l:"Angliavandeniai",v:logTotals.carbs+"g",c:"#D4A853"}].map((m:any)=>(
                     <div key={m.l} style={{background:C.faint,border:`1px solid ${C.border}`,padding:"10px",textAlign:"center" as const,borderTop:`3px solid ${m.c}`}}>
-                      <div style={{fontFamily:CONDENSED_FONT,fontSize:8,color:C.muted,letterSpacing:"0.12em",textTransform:"uppercase" as const,marginBottom:4}}>{m.l}</div>
+                      <div style={{fontFamily:CONDENSED_FONT,fontSize:8,color:C.muted,textTransform:"uppercase" as const,marginBottom:4}}>{m.l}</div>
                       <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:m.c,lineHeight:1}}>{m.v}</div>
                     </div>
                   ))}
                 </div>
               </div>
-
-              {/* Food list */}
               <div style={css.card}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-                  <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:C.text,letterSpacing:"0.04em"}}>
-                    SUVALGYTAS MAISTAS
-                  </div>
-                  {diary.length>0&&(
-                    <button onClick={()=>{setDiary([]);setDEditId(null);}} style={{...css.btnRed,padding:"4px 10px",fontSize:9}}>
-                      🗑️ Išvalyti viską
-                    </button>
-                  )}
+                  <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:C.text,letterSpacing:"0.04em"}}>SUVALGYTAS MAISTAS</div>
+                  {diary.length>0&&<button onClick={()=>{setDiary([]);setDEditId(null);}} style={{...css.btnRed,padding:"4px 10px",fontSize:9}}>🗑️ Išvalyti</button>}
                 </div>
-
-                {diary.length>0&&(
-                  <div style={{marginBottom:10}}>
-                    <input
-                      value={dSearch}
-                      onChange={e=>setDSearch(e.target.value)}
-                      style={{...css.input}}
-                      placeholder="🔍 Filtruoti..."
-                    />
-                  </div>
-                )}
-
+                {diary.length>0&&<div style={{marginBottom:10}}><input value={dSearch} onChange={e=>setDSearch(e.target.value)} style={css.input} placeholder="🔍 Filtruoti..."/></div>}
                 {diary.length===0
                   ?<div style={{textAlign:"center" as const,color:C.muted,padding:"32px 0"}}>
                       <div style={{fontSize:40,marginBottom:10}}>🍽️</div>
                       <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:C.muted,letterSpacing:"0.04em",marginBottom:6}}>DIENORAŠTIS TUŠČIAS</div>
-                      <div style={{fontFamily:CONDENSED_FONT,fontSize:11,lineHeight:1.6}}>
-                        Pridėkite produktą kairėje:<br/>
-                        <b style={{color:C.text}}>pavadinimas → makro per 100g → kiekis gramais</b>
-                      </div>
+                      <div style={{fontFamily:CONDENSED_FONT,fontSize:11}}>Pridėkite produktą kairėje</div>
                     </div>
                   :<div style={{display:"flex",flexDirection:"column" as const,gap:1,background:C.border,maxHeight:380,overflowY:"auto" as const}}>
                       {filteredDiary.map((f:any)=>(
-                        <div key={f.id} style={{background:dEditId===f.id?C.goldSoft:C.surface,padding:"9px 14px",display:"flex",alignItems:"center",gap:10,transition:"background .15s"}}>
+                        <div key={f.id} style={{background:dEditId===f.id?C.goldSoft:C.surface,padding:"9px 14px",display:"flex",alignItems:"center",gap:10}}>
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{fontFamily:CONDENSED_FONT,fontSize:13,fontWeight:700,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{f.name}</div>
-                            <div style={{fontSize:9,color:C.muted,fontFamily:CONDENSED_FONT,marginTop:2}}>
-                              {f.weight}g · B:{f.prot}g · R:{f.fat}g · A:{f.carbs}g
-                            </div>
+                            <div style={{fontSize:9,color:C.muted,fontFamily:CONDENSED_FONT,marginTop:2}}>{f.weight}g · B:{f.prot}g · R:{f.fat}g · A:{f.carbs}g</div>
                           </div>
-                          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:C.gold,letterSpacing:"0.04em",flexShrink:0}}>{f.kcal}</div>
+                          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:C.gold,flexShrink:0}}>{f.kcal}</div>
                           <button onClick={()=>editDiaryEntry(f)} style={{...css.btnTeal,padding:"4px 8px",fontSize:10,flexShrink:0}}>✏️</button>
-                          <button onClick={()=>setDiary(p=>p.filter((x:any)=>x.id!==f.id))} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:16,padding:0,flexShrink:0}}>×</button>
+                          <button onClick={()=>setDiary((p:any[])=>p.filter((x:any)=>x.id!==f.id))} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:16,padding:0,flexShrink:0}}>×</button>
                         </div>
                       ))}
                     </div>
@@ -3394,14 +3101,11 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
-  </div>
-</div>
-    </div>
-      </div>
-    );
+  );
 }
+
 
 // ── MAIN APP ──────────────────────────────────────────────
 // MainApp: shown when logged in
