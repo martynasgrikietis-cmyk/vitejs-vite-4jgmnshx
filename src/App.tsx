@@ -618,6 +618,8 @@ function SharePage({token,type}:{token:string,type:string}){
           {client.level&&<span style={{background:C.tealSoft,border:`1px solid ${C.tealBorder}`,borderRadius:20,padding:"4px 14px",fontSize:12,fontWeight:700,color:C.teal}}>{client.level}</span>}
           {bmiN&&<span style={{background:bmiCat(bmiN).color+"22",border:`1px solid ${bmiCat(bmiN).color}44`,borderRadius:20,padding:"4px 14px",fontSize:12,fontWeight:700,color:bmiCat(bmiN).color}}>KMI {bmiN}</span>}
         </div>
+        </div>
+        </div>
       </div>
 
       {/* Training view */}
@@ -700,8 +702,6 @@ function SharePage({token,type}:{token:string,type:string}){
         </>
       )}
     </div>
-  </div>
-  </div>
   );
 }
 
