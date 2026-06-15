@@ -447,7 +447,7 @@ function LibraryAccessModal({ coach, onClose }: { coach: Coach; onClose: () => v
   const [searchFood, setSearchFood] = useState("");
   const [muscleFilter, setMuscleFilter] = useState("Visi");
   const [catFilter, setCatFilter] = useState("Visi");
-  const ALL_MUSCLES_L = ["Visi","Krūtinė","Nugara","Kojos","Pečiai","Bicepsas","Tricepsas","Pilvas"];
+  const ALL_MUSCLES_L = ["Visi","Krūtinė","Nugara","Kojos","Pečiai","Bicepsas","Tricepsas","Pilvas","Kardio","Apšilimas"];
   const ALL_FOOD_CATS_L = ["Visi","Mėsa & Žuvis","Grūdai & Kruopos","Daržovės","Vaisiai","Pieno produktai","Kiaušiniai","Riešutai & Sėklos","Ankštiniai","Sveiki riebalai","Kita"];
 
   useEffect(() => {
