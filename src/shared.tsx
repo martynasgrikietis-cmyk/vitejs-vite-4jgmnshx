@@ -1,528 +1,730 @@
-// ── shared.tsx — DNA Trainer · Architectural Dark theme ──
-export const SUPABASE_URL = "https://wtsksjyayilyyudvizsx.supabase.co";
-export const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0c2tzanlheWlseXl1ZHZpenN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5NjI3NzgsImV4cCI6MjA5MzUzODc3OH0.wxlA05-VNVfsTe-630pQXYSewpDWII_AnOK2SIGEy7E";
-export const sb = {
-  headers: { "Content-Type":"application/json", apikey:SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}`, Prefer:"return=representation" },
-  url:(t:string,q="")=>`${SUPABASE_URL}/rest/v1/${t}${q}`,
-  async get(t:string,q=""){const r=await fetch(sb.url(t,q),{headers:sb.headers});if(!r.ok)throw new Error(await r.text());return r.json();},
-  async insert(t:string,d:any){const r=await fetch(sb.url(t),{method:"POST",headers:sb.headers,body:JSON.stringify(d)});if(!r.ok)throw new Error(await r.text());return r.json();},
-  async update(t:string,id:any,d:any){const r=await fetch(sb.url(t,`?id=eq.${id}`),{method:"PATCH",headers:{...sb.headers,Prefer:"return=representation"},body:JSON.stringify(d)});if(!r.ok)throw new Error(await r.text());return r.json();},
-  async delete(t:string,id:any){const r=await fetch(sb.url(t,`?id=eq.${id}`),{method:"DELETE",headers:sb.headers});if(!r.ok)throw new Error(await r.text());},
+// ── auth.tsx — Multi-account auth system ─────────────────
+import { useState, useEffect, createContext, useContext } from "react";
+import { sb, C, FONT, css, Err } from "./shared";
 
-  // ── STORAGE: upload image file, returns public URL ──
-  async uploadImage(file:File, bucket="exercise-images"):Promise<string>{
-    // Compress image before upload
-    const compressed = await compressImage(file, 1200, 0.82);
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const storageUrl = `${SUPABASE_URL}/storage/v1/object/${bucket}/${fileName}`;
-    const r = await fetch(storageUrl, {
-      method: "POST",
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-        "Content-Type": file.type || "image/jpeg",
-        "x-upsert": "true",
-      },
-      body: compressed,
-    });
-    if (!r.ok) throw new Error(await r.text());
-    return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${fileName}`;
-  },
-
-  // ── STORAGE: delete image by URL ──
-  async deleteImage(url:string, bucket="exercise-images"):Promise<void>{
-    const path = url.split(`/object/public/${bucket}/`)[1];
-    if(!path) return;
-    await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
-      method: "DELETE",
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
-    });
-  },
+// ── Types ─────────────────────────────────────────────────
+export type Coach = {
+  id: string;
+  username: string;
+  full_name: string;
+  telegram_chat_id?: string;
+  library_tier?: string;
+  role: "admin" | "coach";
+  active: boolean;
+  created_at: string;
 };
 
-// ── IMAGE COMPRESSION ────────────────────────────────────
-async function compressImage(file: File, maxDim = 1200, quality = 0.82): Promise<Blob> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      let { width, height } = img;
-      if (width > maxDim || height > maxDim) {
-        if (width > height) { height = Math.round((height * maxDim) / width); width = maxDim; }
-        else { width = Math.round((width * maxDim) / height); height = maxDim; }
-      }
-      const canvas = document.createElement("canvas");
-      canvas.width = width; canvas.height = height;
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(img, 0, 0, width, height);
-      canvas.toBlob((blob) => resolve(blob || file), "image/jpeg", quality);
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
-    img.src = url;
-  });
+// ── Auth Context ──────────────────────────────────────────
+const AuthCtx = createContext<{
+  coach: Coach | null;
+  isAdmin: boolean;
+  logout: () => void;
+}>({ coach: null, isAdmin: false, logout: () => {} });
+
+export const useAuth = () => useContext(AuthCtx);
+
+// ── Session helpers ───────────────────────────────────────
+const SESSION_KEY = "dna_session";
+export function getSession(): Coach | null {
+  try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null"); }
+  catch { return null; }
+}
+export function setSession(c: Coach) { sessionStorage.setItem(SESSION_KEY, JSON.stringify(c)); }
+export function clearSession() { sessionStorage.removeItem(SESSION_KEY); }
+
+// Simple password hash (SHA-256 via Web Crypto)
+async function hashPassword(pw: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-export const APP_PASSWORD = "coach2024";
-export const ALL_MUSCLES  = ["Krūtinė","Nugara","Kojos","Pečiai","Bicepsas","Tricepsas","Pilvas"];
-export const GOALS        = ["Raumenų auginimas","Riebalų deginimas","Jėgos ugdymas","Ištvermė","Reabilitacija","Sveikata"];
-export const LEVELS       = ["Pradedantysis","Vidutinis","Pažengęs"];
-export const DAYS         = ["Pirmadienis","Antradienis","Trečiadienis","Ketvirtadienis","Penktadienis","Šeštadienis","Sekmadienis"];
-export const REST_OPTIONS = ["30 sek","45 sek","60 sek","90 sek","2 min","3 min","4 min","5 min"];
-export const MEAL_TIMES   = ["🌅 Pusryčiai","☀️ Priešpiečiai","🍽️ Pietūs","🌤️ Užkandis","🌙 Vakarienė"];
-export const FOOD_CATS    = ["Mėsa & Žuvis","Grūdai & Kruopos","Daržovės","Vaisiai","Pieno produktai","Kiaušiniai","Riešutai & Sėklos","Ankštiniai","Sveiki riebalai","Kita"];
-export const ACTIVITY_LEVELS = [
-  {label:"Sėdimas darbas (mažai judėjimo)",factor:1.2},
-  {label:"Lengvas aktyvumas (1–3 dienos/sav.)",factor:1.375},
-  {label:"Vidutinis aktyvumas (3–5 dienos/sav.)",factor:1.55},
-  {label:"Didelis aktyvumas (6–7 dienos/sav.)",factor:1.725},
-  {label:"Profesionalus sportininkas",factor:1.9},
-];
-
-// ── ARCHITECTURAL DARK THEME ─────────────────────────────
-export const C = {
-  bg:"#060709",surface:"#0E1016",surface2:"#121520",border:"#1E2430",
-  gold:"#D4A853",goldSoft:"#D4A85315",goldBorder:"#D4A85340",
-  teal:"#5B8DB8",tealSoft:"#5B8DB812",tealBorder:"#5B8DB838",
-  red:"#C05050",redSoft:"#C0505012",redBorder:"#C0505038",
-  green:"#4E9068",greenSoft:"#4E906812",greenBorder:"#4E906838",
-  purple:"#7B6DB0",purpleSoft:"#7B6DB012",purpleBorder:"#7B6DB038",
-  text:"#FFFFFF",muted:"#8A9AAA",faint:"#080A0F",
-};
-
-export const FONT = "'Barlow','Helvetica Neue',sans-serif";
-export const DISPLAY_FONT = "'Bebas Neue',sans-serif";
-export const CONDENSED_FONT = "'Barlow Condensed','Helvetica Neue',sans-serif";
-
-export const HERO_IMG = "https://images.unsplash.com/photo-1549476464-37392f717541?w=1600&q=90";
-export const GYM_IMG2 = "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=800&q=80";
-export const GYM_IMG3 = "https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?w=800&q=80";
-
-export const RESPONSIVE_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@400;500;600;700;800&display=swap');
-  *{box-sizing:border-box;} body{margin:0;background:#060709;font-size:14px;}
-  input,select,textarea{font-size:14px!important;}
-
-  @keyframes spin{to{transform:rotate(360deg)}}
-  @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-  @keyframes spin{from{transform:translateY(-50%) rotate(0deg)}to{transform:translateY(-50%) rotate(360deg)}}
-  @keyframes skelShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-  @keyframes aiPulse{0%,100%{opacity:.4}50%{opacity:1}}
-
-  .fu {animation:fadeUp .4s ease both;}
-  .fu1{animation:fadeUp .4s .07s ease both;}
-  .fu2{animation:fadeUp .4s .14s ease both;}
-  .fu3{animation:fadeUp .4s .21s ease both;}
-  .fu4{animation:fadeUp .4s .28s ease both;}
-
-  /* ── GRIDS ── */
-  .ex-grid  {display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1px;background:#141820;}
-  .cl-grid  {display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1px;background:#141820;}
-  .food-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1px;background:#141820;}
-  .dash-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid #141820;border-bottom:1px solid #141820;}
-  .dash-bottom{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:0;border-top:1px solid #141820;}
-  .cf-grid  {display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-  .macro-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
-  .ex2-grid {display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-  .food4-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;}
-  .step-nav {display:flex;gap:4px;}
-  .pick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:8px;}
-  .pick-row {display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;padding:14px 20px;border-top:1px solid #141820;background:#060709;}
-  .view-actions{display:flex;gap:8px;flex-wrap:wrap;}
-  .view-actions button{flex:1;min-width:100px;}
-  .meal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:1px;background:#141820;}
-
-  /* ── SECTION HEADINGS ── */
-  .sec-heading{font-family:'Bebas Neue',sans-serif;font-size:42px;color:#F5F0E8;letter-spacing:0.04em;line-height:1;margin-bottom:20px;}
-  .sec-eyebrow{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
-  .sec-eyebrow-num{font-family:'Bebas Neue',sans-serif;font-size:10px;color:#D4A853;letter-spacing:0.3em;}
-  .sec-eyebrow-line{width:24px;height:1px;background:#D4A853;}
-
-  /* ── NAV ── */
-  .arch-nav-btn{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;border:none;padding:6px 14px;border-radius:8px;transition:all .12s ease;position:relative;top:0;}
-  .arch-nav-btn:not(.active){background:transparent;color:#6A7A8A;}
-  .arch-nav-btn:not(.active):hover{background:rgba(212,168,83,0.06);color:#D4A853;clip-path:polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%,8px 50%);}
-  .arch-nav-btn.active{background:linear-gradient(135deg,rgba(212,168,83,0.18),rgba(212,168,83,0.06));color:#F5D87A;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%,10px 50%);text-shadow:0 0 12px rgba(212,168,83,0.8);}
-
-  /* ── TABLE/LIST ROWS ── */
-  .arch-row{border-top:1px solid #141820;transition:background .15s,padding-left .2s;cursor:pointer;}
-  .arch-row:hover{background:rgba(212,168,83,0.05);padding-left:6px;}
-  .arch-session-row{padding:13px 0;border-top:1px solid #141820;display:flex;align-items:center;gap:14px;cursor:pointer;transition:padding-left .2s;}
-  .arch-session-row:hover{padding-left:8px;}
-
-  /* ── STAT BLOCKS ── */
-  .arch-stat-block{padding:22px 28px;border-right:1px solid #141820;transition:background .2s;cursor:pointer;}
-  .arch-stat-block:last-child{border-right:none;}
-  .arch-stat-block:hover{background:rgba(212,168,83,0.06);}
-
-  /* ── EXERCISE/CLIENT CARDS ── */
-  .arch-card{background:#060709;transition:all .2s;cursor:pointer;}
-  .arch-card:hover{background:#0C0E13;transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,0.5),0 0 0 1px rgba(212,168,83,0.15);}
-
-  /* ── 3D BUTTONS ── */
-  button{transition:all .12s ease;position:relative;top:0;}
-  button:active{transform:translateY(3px) !important;top:3px !important;}
-
-  .arch-btn-primary{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;cursor:pointer;background:linear-gradient(145deg,#E8BE6A,#B8902A);color:#1A0E00;border:none;padding:11px 20px;border-radius:10px;box-shadow:0 6px 0 #7A5A10,0 8px 16px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.25);transition:all .12s ease;}
-  .arch-btn-primary:hover{filter:brightness(1.08);}
-  .arch-btn-primary:active{box-shadow:0 2px 0 #7A5A10,0 3px 8px rgba(0,0,0,0.4) !important;}
-  .arch-btn-ghost{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;background:linear-gradient(145deg,#1E2535,#141820);color:#C0D0E0;border:1px solid #2A3545;padding:10px 18px;border-radius:10px;box-shadow:0 4px 0 #0A0E14,0 6px 12px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.06);transition:all .12s ease;}
-  .arch-btn-ghost:hover{color:#D4A853;border-color:#D4A85360;}
-  .arch-btn-ghost:active{box-shadow:0 1px 0 #0A0E14,0 2px 6px rgba(0,0,0,0.3) !important;}
-
-  /* ── BOTTOM NAV ACTIVE GLOW ── */
-  .bottom-nav-item.active .bottom-nav-icon{filter:drop-shadow(0 0 6px #D4A853);}
-
-  /* ── INPUTS ── */
-  .arch-input{width:100%;background:#060709;border-top:none;border-left:none;border-right:none;border-bottom:1px solid #141820;padding:10px 0;color:#F5F0E8;font-family:'Barlow',sans-serif;font-size:14px;outline:none;transition:border-color .2s;box-sizing:border-box;}
-  .arch-input:focus{border-bottom-color:#D4A853;box-shadow:0 4px 12px rgba(212,168,83,0.15);}
-  .arch-input::placeholder{color:#303848;}
-
-  /* ── SEARCH/TAG BAR ── */
-  .search-btn:hover{border-color:#D4A853 !important;color:#D4A853 !important;}
-  .sbar{font-family:'Barlow Condensed',sans-serif!important;letter-spacing:0.06em;}
-  .tag-row{overflow-x:auto;padding-bottom:4px;}
-  .tag-row::-webkit-scrollbar{height:2px;}
-  .tag-row::-webkit-scrollbar-thumb{background:#141820;}
-
-  /* ── MOBILE ── */
-  .bottom-nav{display:none;}
-  @media(max-width:640px){
-    body{padding-top:env(safe-area-inset-top);background:#060709;}
-    .header-pad{padding-top:calc(env(safe-area-inset-top) + 8px) !important;padding-left:16px !important;padding-right:16px !important;height:auto !important;min-height:calc(52px + env(safe-area-inset-top)) !important;}
-    .content-pad{padding:calc(62px + env(safe-area-inset-top)) 0 calc(80px + env(safe-area-inset-bottom)) !important;max-width:100% !important;}
-    .hero-section{min-height:200px !important;}
-    .hero-section .hero-inner{padding:20px 16px !important;}
-    .hero-title{font-size:48px !important;}
-    .hero-actions{display:flex !important;flex-direction:column !important;gap:8px !important;width:100% !important;}
-    .hero-actions button{width:100% !important;padding:14px !important;font-size:12px !important;justify-content:center !important;}
-    .dash-stats{grid-template-columns:1fr 1fr !important;}
-    .arch-stat-block{padding:16px 14px !important;}
-    .arch-stat-block .stat-num{font-size:40px !important;}
-    .dash-bottom{grid-template-columns:1fr !important;}
-    .cl-grid{grid-template-columns:1fr !important;}
-    .ex-grid{grid-template-columns:repeat(2,1fr) !important;}
-    .food-grid{grid-template-columns:1fr !important;}
-    .cf-grid{grid-template-columns:1fr !important;}
-    .macro-grid{grid-template-columns:1fr 1fr 1fr !important;}
-    .meal-grid{grid-template-columns:1fr !important;}
-    .ex2-grid{grid-template-columns:1fr 1fr !important;}
-    .food4-grid{grid-template-columns:1fr 1fr !important;}
-    .pick-row{gap:8px;padding:10px 14px;}
-    .pick-row>div{min-width:calc(50% - 4px);}
-    .pick-row>button{width:100%;margin-top:4px;}
-    .step-nav button{padding:5px 7px!important;font-size:10px!important;}
-    .view-actions button{min-width:unset;font-size:11px;}
-    .day-btns{display:grid!important;grid-template-columns:repeat(4,1fr);gap:6px!important;}
-    .modal-inner{max-height:100vh !important;border-radius:0 !important;margin:0 !important;width:100% !important;}
-    .logout-label{display:none;}
-    .hsubtitle{display:none;}
-    .header-nav-items{display:none !important;}
-    .sec-heading{font-size:28px !important;}
-    .bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:#0C0E13;border-top:1px solid #1E2430;z-index:200;padding:6px 0 calc(6px + env(safe-area-inset-bottom));justify-content:space-around;align-items:center;}
-    .bottom-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;cursor:pointer;min-width:44px;transition:background .15s;flex:1;}
-    .bottom-nav-item.active{background:rgba(212,168,83,0.12);}
-    .bottom-nav-icon{font-size:22px;line-height:1;}
-    .bottom-nav-label{font-size:9px;color:#505868;letter-spacing:0.04em;font-weight:600;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;white-space:nowrap;}
-    .bottom-nav-item.active .bottom-nav-label{color:#D4A853;}
-    button{min-height:44px;}
-    input,select,textarea{font-size:16px !important;min-height:44px;}
-    *{-webkit-tap-highlight-color:transparent;}
-  }
-  @media(min-width:641px) and (max-width:960px){
-    .cl-grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));}
-    .cf-grid{grid-template-columns:1fr;}
-    .dash-stats{grid-template-columns:repeat(2,1fr);}
-    .dash-bottom{grid-template-columns:1fr;}
-  }
-  @media(hover:none){button{min-height:44px;}}
-`;
-
-// ── STYLE HELPERS ────────────────────────────────────────
-export const css = {
-  page:    {minHeight:"100vh",background:C.bg,color:C.text,fontFamily:FONT},
-  header:  {background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"0 28px",height:62,display:"flex",alignItems:"center",gap:14},
-  logo:    {width:34,height:34,background:C.gold,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:16,color:C.bg,flexShrink:0},
-  card:    {background:C.surface,border:`1px solid ${C.border}`,padding:24},
-  label:   {fontSize:9,color:"#A0B0C0",letterSpacing:"0.2em",marginBottom:6,display:"block",fontWeight:600,textTransform:"uppercase" as const,fontFamily:CONDENSED_FONT},
-  input:   {width:"100%",background:C.faint,borderTop:"none",borderLeft:"none",borderRight:"none",borderBottom:`1px solid ${C.border}`,padding:"10px 0",color:C.text,fontFamily:FONT,fontSize:14,outline:"none",boxSizing:"border-box" as const,transition:"border-color .2s"},
-  select:  {width:"100%",background:C.faint,border:`1px solid ${C.border}`,padding:"10px 14px",color:C.text,fontFamily:FONT,fontSize:14,outline:"none",boxSizing:"border-box" as const},
-  navBtn:  (a:boolean)=>({
-    fontFamily:CONDENSED_FONT,fontSize:11,fontWeight:700,letterSpacing:"0.14em",textTransform:"uppercase" as const,
-    padding:"6px 14px",borderRadius:"8px",
-    background:a?"linear-gradient(145deg,#E8BE6A,#B8902A)":"transparent",
-    color:a?"#1A0E00":C.muted,
-    border:"none",cursor:"pointer",transition:"all .12s ease",
-    boxShadow:a?"0 4px 0 #7A5A10,0 6px 12px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.2)":"none",
-    position:"relative" as const,top:0,
-  }),
-  btnG:    {padding:"11px 22px",background:"linear-gradient(145deg,#E8BE6A,#B8902A)",color:"#1A0E00",border:"none",fontFamily:CONDENSED_FONT,fontWeight:800,fontSize:11,cursor:"pointer",letterSpacing:"0.16em",textTransform:"uppercase" as const,borderRadius:"10px",boxShadow:"0 6px 0 #7A5A10, 0 8px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25)",transition:"all .12s ease",position:"relative" as const,top:0},
-  btnGhost:{padding:"10px 18px",background:"linear-gradient(145deg,#1E2535,#141820)",color:"#C0D0E0",border:"1px solid #2A3545",fontFamily:CONDENSED_FONT,fontWeight:600,fontSize:11,cursor:"pointer",letterSpacing:"0.12em",textTransform:"uppercase" as const,borderRadius:"10px",boxShadow:"0 4px 0 #0A0E14, 0 6px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)",transition:"all .12s ease",position:"relative" as const,top:0},
-  btnTeal: {padding:"9px 16px",background:"linear-gradient(145deg,#3A7A9A,#1E5068)",color:"#A0E0F8",border:"none",fontFamily:CONDENSED_FONT,fontSize:11,cursor:"pointer",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase" as const,borderRadius:"10px",boxShadow:"0 4px 0 #0E2A38, 0 6px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)",transition:"all .12s ease",position:"relative" as const,top:0},
-  btnRed:  {padding:"9px 16px",background:"linear-gradient(145deg,#D05060,#902030)",color:"#FFD0D8",border:"none",fontFamily:CONDENSED_FONT,fontSize:11,cursor:"pointer",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase" as const,borderRadius:"10px",boxShadow:"0 4px 0 #500010, 0 6px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)",transition:"all .12s ease",position:"relative" as const,top:0},
-  btnGreen:{padding:"9px 16px",background:"linear-gradient(145deg,#3A8858,#206038)",color:"#A0F0C0",border:"none",fontFamily:CONDENSED_FONT,fontSize:11,cursor:"pointer",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase" as const,borderRadius:"10px",boxShadow:"0 4px 0 #0A3018, 0 6px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)",transition:"all .12s ease",position:"relative" as const,top:0},
-  secTitle:{fontFamily:DISPLAY_FONT,fontSize:36,color:C.text,letterSpacing:"0.04em",marginBottom:0,display:"block",lineHeight:1},
-  overlay: {position:"fixed" as const,inset:0,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:8,backdropFilter:"blur(8px)"},
-  modal:   (w:number)=>({background:C.surface,border:`1px solid ${C.border}`,width:"100%",maxWidth:w||520,maxHeight:"93vh",display:"flex",flexDirection:"column" as const,overflow:"hidden",boxShadow:"0 40px 100px rgba(0,0,0,0.8)"}),
-};
-
-// ── SECTION HEADER HELPER ────────────────────────────────
-export function SectionHead({num,title,action,actionLabel}:{num:string,title:string,action?:()=>void,actionLabel?:string}){
-  return(
-    <div style={{marginBottom:24}}>
-      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-        <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:10,color:C.gold,letterSpacing:"0.3em"}}>{num}</span>
-        <div style={{width:24,height:1,background:C.gold}}/>
-        {action&&<button onClick={action} style={{...css.btnGhost,marginLeft:"auto",padding:"5px 12px",fontSize:10}}>{actionLabel}</button>}
-      </div>
-      <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:42,color:"#FFFFFF",letterSpacing:"0.04em",lineHeight:1}}>{title}</div>
-    </div>
+// ── Auth Provider ─────────────────────────────────────────
+export function AuthProvider({ children, onLogout }: { children: any; onLogout: () => void }) {
+  const coach = getSession();
+  const isAdmin = coach?.role === "admin";
+  const logout = () => { clearSession(); onLogout(); };
+  return (
+    <AuthCtx.Provider value={{ coach, isAdmin, logout }}>
+      {children}
+    </AuthCtx.Provider>
   );
 }
 
-export function calcBMI(w:string,h:string){if(!w||!h)return null;return parseFloat(w)/Math.pow(parseFloat(h)/100,2);}
-export function bmiCat(b:number){if(b<18.5)return{label:"Nepakankamas",color:"#60a5fa"};if(b<25)return{label:"Normalus",color:"#22c55e"};if(b<30)return{label:"Antsvoris",color:"#f59e0b"};return{label:"Nutukimas",color:"#ef4444"};}
-export function calcNut(w:string,h:string,age:string,gender:string,act:number){
-  const wf=parseFloat(w),hf=parseFloat(h),af=parseFloat(age)||25;
-  if(!wf||!hf)return null;
-  const bmr=gender==="Moteris"?10*wf+6.25*hf-5*af-161:10*wf+6.25*hf-5*af+5;
-  const tdee=Math.round(bmr*act);
-  const lose=Math.round(tdee-500),gain=Math.round(tdee+300);
-  const protLose=Math.round(wf*2.2),protGain=Math.round(wf*1.8);
-  const fatLose=Math.round(lose*0.25/9),fatGain=Math.round(gain*0.25/9);
-  const carbLose=Math.max(0,Math.round((lose-protLose*4-fatLose*9)/4));
-  const carbGain=Math.max(0,Math.round((gain-protGain*4-fatGain*9)/4));
-  return{tdee,lose,gain,protLose,protGain,fatLose,fatGain,carbLose,carbGain};
-}
-export function genToken(){return Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);}
-export function getCoachId():string|null{try{const s=JSON.parse(sessionStorage.getItem("dna_session")||"null");return s?.id||null;}catch{return null;}}
-export function getIsAdmin():boolean{try{const s=JSON.parse(sessionStorage.getItem("dna_session")||"null");return s?.role==="admin";}catch{return false;}}
+// ── LOGIN SCREEN ──────────────────────────────────────────
+export function LoginScreen({ onLogin }: { onLogin: (coach: Coach) => void }) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
 
-import { useState, useRef } from "react";
+  const submit = async () => {
+    if (!username.trim() || !password.trim()) { setErr("Įveskite vartotojo vardą ir slaptažodį."); return; }
+    setLoading(true); setErr("");
+    try {
+      const hash = await hashPassword(password);
+      const rows = await sb.get("coaches", `?username=eq.${encodeURIComponent(username.trim().toLowerCase())}&password_hash=eq.${hash}&active=eq.true&limit=1`);
+      if (!rows.length) { setErr("Neteisingas vartotojo vardas arba slaptažodis."); setLoading(false); return; }
+      const coach: Coach = rows[0];
+      setSession(coach);
+      onLogin(coach);
+    } catch (e: any) {
+      setErr("Prisijungimo klaida: " + e.message);
+      setLoading(false);
+    }
+  };
 
-export const Tag=({c,label,active,onClick}:any)=>(
-  <button onClick={onClick} style={{padding:"5px 14px",border:"none",background:active?`linear-gradient(145deg,${c}DD,${c}99)`:"linear-gradient(145deg,#1E2535,#141820)",color:active?"#fff":C.muted,fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,cursor:"pointer",fontWeight:700,flexShrink:0,letterSpacing:"0.12em",textTransform:"uppercase" as const,borderRadius:"8px",boxShadow:active?`0 4px 0 ${c}55,0 6px 12px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.2)`:"0 3px 0 #0A0E14,0 4px 8px rgba(0,0,0,0.3)",transition:"all .12s ease",position:"relative" as const,top:0}}>{label}</button>
-);
-export const Badge=({label,color}:any)=><span style={{background:color+"15",border:`1px solid ${color}40`,padding:"2px 10px",color,fontSize:10,fontWeight:700,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.1em",textTransform:"uppercase" as const}}>{label}</span>;
-export const Spinner=()=><div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:60,color:C.muted,fontSize:12,gap:12,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.14em",textTransform:"uppercase"}}><div style={{width:18,height:18,border:`1px solid ${C.border}`,borderTopColor:C.gold,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>Kraunama</div>;
-export const Skeleton=({w="100%",h=16,radius=2}:{w?:string|number,h?:number,radius?:number})=>(
-  <div style={{width:w,height:h,borderRadius:radius,background:`linear-gradient(90deg,${C.border} 25%,${C.surface2} 50%,${C.border} 75%)`,backgroundSize:"200% 100%",animation:"skelShimmer 1.5s infinite"}}/>
-);
-export const SkeletonCard=()=>(
-  <div style={{background:C.surface,border:`1px solid ${C.border}`}}>
-    <div style={{height:120,background:C.border}}/>
-    <div style={{padding:"14px 16px",display:"flex",flexDirection:"column" as const,gap:8}}>
-      <Skeleton w="55%" h={12}/><Skeleton w="75%" h={8}/>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginTop:4}}>
-        {[0,1,2].map(i=><Skeleton key={i} w="100%" h={8}/>)}
+  return (
+    <div style={{ minHeight:"100vh", background:C.bg, display:"flex", flexDirection:"column" as const, fontFamily:"'Barlow','Helvetica Neue',sans-serif", overflow:"hidden", position:"relative" as const }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@300;400&display=swap');
+        *{box-sizing:border-box;}
+        body{margin:0;background:#060709;}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        .login-fu{animation:fadeUp .5s ease both;}
+        .login-fu1{animation:fadeUp .5s .1s ease both;}
+        .login-fu2{animation:fadeUp .5s .2s ease both;}
+        .login-fu3{animation:fadeUp .5s .3s ease both;}
+        .login-input{
+          width:100%;background:rgba(255,255,255,0.06);
+          border:1px solid rgba(255,255,255,0.1);
+          border-radius:12px;
+          padding:16px 18px;
+          color:#F5F0E8;
+          font-family:'Barlow',sans-serif;
+          font-size:16px;
+          outline:none;
+          transition:border-color .2s, background .2s;
+          -webkit-appearance:none;
+          box-sizing:border-box;
+        }
+        .login-input:focus{
+          border-color:#D4A853;
+          background:rgba(212,168,83,0.08);
+        }
+        .login-input::placeholder{color:rgba(255,255,255,0.2);}
+        .login-btn{
+          width:100%;padding:17px;
+          background:linear-gradient(135deg,#D4A853,#B8902A);
+          color:#060709;border:none;border-radius:14px;
+          font-family:'Barlow Condensed',sans-serif;
+          font-weight:700;font-size:14px;
+          letter-spacing:0.18em;text-transform:uppercase;
+          cursor:pointer;
+          transition:opacity .2s, transform .1s;
+          -webkit-appearance:none;
+        }
+        .login-btn:active{transform:scale(0.98);}
+        @media(min-width:641px){
+          .login-left{display:flex!important;}
+          .login-mobile-bg{display:none!important;}
+        }
+      `}</style>
+
+      {/* ── FULL SCREEN WALLPAPER (mobile) ── */}
+      <div className="login-mobile-bg" style={{ position:"absolute" as const, inset:0, zIndex:0 }}>
+        <img src="https://i.pinimg.com/736x/e3/bc/16/e3bc16974256fb6913e37079fa4cb653.jpg" alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 30%", filter:"brightness(0.18) saturate(0.3) contrast(1.2)" }}/>
+        <div style={{ position:"absolute" as const, inset:0, background:"linear-gradient(to bottom, rgba(6,7,9,0.3) 0%, rgba(6,7,9,0.7) 40%, rgba(6,7,9,0.97) 70%)" }}/>
+        <div style={{ position:"absolute" as const, inset:0, backgroundImage:"linear-gradient(rgba(212,168,83,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(212,168,83,0.04) 1px,transparent 1px)", backgroundSize:"48px 48px" }}/>
       </div>
-    </div>
-  </div>
-);
-export const Err=({msg}:any)=>msg?<div style={{background:C.redSoft,border:`1px solid ${C.redBorder}`,padding:"10px 16px",fontSize:12,color:C.red,marginBottom:14,fontFamily:"'Barlow',sans-serif",letterSpacing:"0.04em"}}>{msg}</div>:null;
-export const NutriBadge=({kcal,p,c,f}:any)=>(
-  <div style={{display:"flex",gap:5,flexWrap:"wrap" as const}}>
-    {kcal&&<span style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,padding:"2px 8px",fontSize:9,fontWeight:700,color:C.gold,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.1em"}}>{kcal} kcal</span>}
-    {p&&<span style={{background:"#ef444412",border:"1px solid #ef444438",padding:"2px 8px",fontSize:9,fontWeight:600,color:"#f87171",fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.1em"}}>P:{p}g</span>}
-    {c&&<span style={{background:"#f9731612",border:"1px solid #f9731638",padding:"2px 8px",fontSize:9,fontWeight:600,color:"#fb923c",fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.1em"}}>C:{c}g</span>}
-    {f&&<span style={{background:C.purpleSoft,border:"1px solid #a78bfa38",padding:"2px 8px",fontSize:9,fontWeight:600,color:C.purple,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.1em"}}>F:{f}g</span>}
-  </div>
-);
 
-export function ImgGallery({imgs,height=140}:{imgs:string[],height?:number}){
-  const [cur,setCur]=useState(0);
-  const list=(imgs||[]).filter(Boolean);
-  if(!list.length)return<div style={{height,display:"flex",alignItems:"center",justifyContent:"center",color:"#2A3040",fontSize:28,background:C.faint,flexDirection:"column" as const,gap:6}}><span>📷</span><span style={{fontSize:9,fontFamily:CONDENSED_FONT,letterSpacing:"0.1em",textTransform:"uppercase" as const,color:C.muted}}>Nuotraukų nėra</span></div>;
-  return(
-    <div style={{position:"relative",height,overflow:"hidden",background:C.faint}}>
-      <img src={list[cur]} alt="" style={{width:"100%",height:"100%",objectFit:"cover",transition:"opacity .2s"}} onError={e=>(e.target as HTMLImageElement).style.opacity="0.2"}/>
-      {list.length>1&&<>
-        <div style={{position:"absolute" as const,top:8,right:8,background:"rgba(0,0,0,0.7)",padding:"2px 8px",fontSize:9,color:"white",fontFamily:CONDENSED_FONT,letterSpacing:"0.1em"}}>{cur+1}/{list.length}</div>
-        <button onClick={e=>{e.stopPropagation();setCur(p=>(p-1+list.length)%list.length);}} style={{position:"absolute" as const,left:0,top:0,bottom:0,width:36,background:"linear-gradient(to right,rgba(0,0,0,0.4),transparent)",border:"none",color:"white",fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"flex-start",paddingLeft:8}}>‹</button>
-        <button onClick={e=>{e.stopPropagation();setCur(p=>(p+1)%list.length);}} style={{position:"absolute" as const,right:0,top:0,bottom:0,width:36,background:"linear-gradient(to left,rgba(0,0,0,0.4),transparent)",border:"none",color:"white",fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:8}}>›</button>
-        <div style={{position:"absolute" as const,bottom:6,left:"50%",transform:"translateX(-50%)",display:"flex",gap:4}}>
-          {list.map((_,i)=>(
-            <div key={i} onClick={e=>{e.stopPropagation();setCur(i);}} style={{width:i===cur?16:5,height:5,background:i===cur?C.gold:"rgba(255,255,255,0.4)",cursor:"pointer",transition:"all .2s"}}/>
-          ))}
+      {/* ── DESKTOP: Left wallpaper panel ── */}
+      <div className="login-left" style={{ display:"none", flex:1, position:"relative" as const }}>
+        <img src="https://i.pinimg.com/736x/e3/bc/16/e3bc16974256fb6913e37079fa4cb653.jpg" alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 30%", filter:"brightness(0.22) saturate(0.3) contrast(1.2)" }}/>
+        <div style={{ position:"absolute", inset:0, background:"linear-gradient(to right, rgba(6,7,9,0.1), rgba(6,7,9,0.85))" }}/>
+        <div style={{ position:"absolute", inset:0, backgroundImage:"linear-gradient(rgba(212,168,83,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(212,168,83,0.05) 1px,transparent 1px)", backgroundSize:"56px 56px" }}/>
+        <div style={{ position:"relative", padding:"48px", display:"flex", flexDirection:"column" as const, justifyContent:"flex-end" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+            <div style={{ width:24, height:1, background:"#D4A853" }}/>
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, color:"#D4A853", letterSpacing:"0.3em" }}>DNA TRAINER</span>
+          </div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:60, color:"#F5F0E8", lineHeight:0.9, letterSpacing:"0.02em", textShadow:"0 4px 40px rgba(0,0,0,0.9)" }}>
+            SPORTO<br/><span style={{ color:"#D4A853" }}>SISTEMA</span>
+          </div>
+          <div style={{ fontFamily:"'Barlow',sans-serif", fontSize:12, color:"#505868", fontWeight:300, marginTop:14, letterSpacing:"0.08em" }}>
+            Profesionali trenerių platforma
+          </div>
         </div>
-      </>}
-    </div>
-  );
-}
+      </div>
 
-// ── MULTI IMAGE UPLOADER — uses Supabase Storage ─────────
-export function MultiImgUploader({imgs,onChange,maxImgs=4}:{imgs:string[],onChange:any,maxImgs?:number}){
-  const fileRef=useRef<HTMLInputElement>(null);
-  const urlRef=useRef<HTMLInputElement>(null);
-  const [showUrl,setShowUrl]=useState(false);
-  const [uploading,setUploading]=useState(false);
-  const [uploadError,setUploadError]=useState("");
-  const [dragging,setDragging]=useState<number|null>(null);
-  const [dragOver,setDragOver]=useState<number|null>(null);
+      {/* ── LOGIN FORM — mobile centered, desktop right panel ── */}
+      <div style={{
+        position:"relative" as const, zIndex:1,
+        flex:1,
+        display:"flex", flexDirection:"column" as const,
+        justifyContent:"flex-end",
+        padding:"0 24px calc(40px + env(safe-area-inset-bottom))",
+        maxWidth:480,
+        width:"100%",
+        margin:"0 auto",
+      }}>
+        {/* Logo + title — top of form */}
+        <div className="login-fu" style={{ textAlign:"center" as const, marginBottom:40 }}>
+          <svg width="64" height="64" viewBox="0 0 48 48" fill="none" style={{ margin:"0 auto 16px", display:"block" }}>
+            <circle cx="24" cy="24" r="21" stroke="#D4A853" strokeWidth="1.2" opacity="0.7"/>
+            <ellipse cx="24" cy="24" rx="11" ry="5" stroke="#D4A853" strokeWidth="1.5" fill="none"/>
+            <ellipse cx="24" cy="24" rx="11" ry="5" stroke="#D4A853" strokeWidth="1.5" fill="none" transform="rotate(60 24 24)"/>
+            <ellipse cx="24" cy="24" rx="11" ry="5" stroke="#D4A853" strokeWidth="1.5" fill="none" transform="rotate(120 24 24)"/>
+            <circle cx="24" cy="24" r="3" fill="#D4A853"/>
+            <circle cx="35" cy="24" r="1.8" fill="#D4A853" opacity="0.6"/>
+            <circle cx="18.5" cy="14.8" r="1.8" fill="#D4A853" opacity="0.6"/>
+            <circle cx="18.5" cy="33.2" r="1.8" fill="#D4A853" opacity="0.6"/>
+          </svg>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, color:"#FFFFFF", letterSpacing:"0.08em", lineHeight:1 }}>DNA TRAINER</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:10, color:"#505868", letterSpacing:"0.22em", textTransform:"uppercase" as const, marginTop:4 }}>Coach platforma</div>
+        </div>
 
-  const addFile=async(e:any)=>{
-    const files=Array.from(e.target.files) as File[];
-    e.target.value="";
-    const remaining=maxImgs-(imgs||[]).length;
-    const toUpload=files.slice(0,remaining);
-    if(!toUpload.length) return;
-    setUploading(true);
-    setUploadError("");
-    try{
-      const urls=await Promise.all(toUpload.map(f=>sb.uploadImage(f)));
-      onChange((p:string[])=>[...(p||[]),...urls]);
-    }catch(err:any){
-      setUploadError("Klaida įkeliant nuotrauką: "+err.message);
-    }finally{
-      setUploading(false);
-    }
-  };
-
-  const addUrl=()=>{
-    const v=urlRef.current?.value?.trim();
-    if(v&&!(imgs||[]).includes(v)&&(imgs||[]).length<maxImgs){
-      onChange((p:string[])=>[...(p||[]),v]);
-      if(urlRef.current)urlRef.current.value="";
-      setShowUrl(false);
-    }
-  };
-
-  const remove=(i:number)=>{
-    // Optionally delete from storage — skip for now to avoid accidental deletes
-    onChange((p:string[])=>p.filter((_:string,j:number)=>j!==i));
-  };
-
-  const moveL=(i:number)=>{if(i===0)return;const a=[...(imgs||[])];[a[i-1],a[i]]=[a[i],a[i-1]];onChange(()=>a);};
-  const moveR=(i:number)=>{if(i===(imgs||[]).length-1)return;const a=[...(imgs||[])];[a[i],a[i+1]]=[a[i+1],a[i]];onChange(()=>a);};
-
-  const handleDragStart=(i:number)=>setDragging(i);
-  const handleDragEnd=()=>{
-    if(dragging!==null&&dragOver!==null&&dragging!==dragOver){
-      const a=[...(imgs||[])];
-      const item=a.splice(dragging,1)[0];
-      a.splice(dragOver,0,item);
-      onChange(()=>a);
-    }
-    setDragging(null);setDragOver(null);
-  };
-
-  const list=imgs||[];
-  const slots=maxImgs;
-
-  return(
-    <div>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-        <span style={css.label as any}>
-          Nuotraukos <span style={{color:C.muted,fontWeight:400,fontSize:9}}>({list.length}/{slots} · vilkite kad perrikiuotumėte)</span>
-        </span>
-        {list.length>0&&list.length<slots&&!uploading&&(
-          <div style={{display:"flex",gap:6}}>
-            <button onClick={()=>fileRef.current?.click()} style={{...css.btnTeal,padding:"3px 10px",fontSize:9}}>+ Įkelti</button>
-            <button onClick={()=>setShowUrl(s=>!s)} style={{...css.btnGhost,padding:"3px 10px",fontSize:9}}>+ URL</button>
+        {/* Error */}
+        {err && (
+          <div className="login-fu" style={{ background:"rgba(192,80,80,0.15)", border:"1px solid rgba(192,80,80,0.4)", borderRadius:10, padding:"12px 16px", fontSize:13, color:"#ef8080", marginBottom:16, textAlign:"center" as const }}>
+            {err}
           </div>
         )}
+
+        {/* Username */}
+        <div className="login-fu1" style={{ marginBottom:14 }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, color:"#8A9AAA", letterSpacing:"0.2em", textTransform:"uppercase" as const, marginBottom:8 }}>Vartotojo vardas</div>
+          <input
+            className="login-input"
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && submit()}
+            placeholder="vardas"
+            autoCapitalize="none"
+            autoCorrect="off"
+            autoComplete="username"
+          />
+        </div>
+
+        {/* Password */}
+        <div className="login-fu2" style={{ marginBottom:28 }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, color:"#8A9AAA", letterSpacing:"0.2em", textTransform:"uppercase" as const, marginBottom:8 }}>Slaptažodis</div>
+          <input
+            type="password"
+            className="login-input"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && submit()}
+            placeholder="••••••••"
+            autoComplete="current-password"
+            style={{ letterSpacing: password ? "0.2em" : "normal" }}
+          />
+        </div>
+
+        {/* Submit button */}
+        <div className="login-fu3">
+          <button
+            className="login-btn"
+            onClick={submit}
+            disabled={loading || !username || !password}
+            style={{ opacity: loading || !username || !password ? 0.5 : 1 }}
+          >
+            {loading ? "JUNGIAMASI..." : "PRISIJUNGTI"}
+          </button>
+          <div style={{ fontFamily:"'Barlow',sans-serif", fontSize:11, color:"#303848", marginTop:16, textAlign:"center" as const, letterSpacing:"0.04em" }}>
+            Kreipkitės į administratorių dėl prieigos.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── ADMIN — USER MANAGEMENT TAB ───────────────────────────
+export function UsersTab() {
+  const { coach: me } = useAuth();
+  const [coaches, setCoaches] = useState<Coach[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form, setForm] = useState({ username: "", full_name: "", password: "", role: "coach" as "admin" | "coach", active: true, telegram_chat_id: "" });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+  const [confirmDel, setConfirmDel] = useState<Coach | null>(null);
+  const [libraryCoach, setLibraryCoach] = useState<Coach | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    try { setCoaches(await sb.get("coaches", "?order=created_at")); }
+    catch (e: any) { setErr(e.message); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+
+  const openNew = () => { setEditId(null); setForm({ username: "", full_name: "", password: "", role: "coach", active: true, telegram_chat_id: "" }); setErr(""); setFormOpen(true); };
+  const openEdit = (c: Coach) => { setEditId(c.id); setForm({ username: c.username, full_name: c.full_name, password: "", role: c.role, active: c.active, telegram_chat_id: c.telegram_chat_id||"" }); setErr(""); setFormOpen(true); };
+
+  const save = async () => {
+    if (!form.username.trim() || !form.full_name.trim()) { setErr("Vardas ir vartotojo vardas privalomi."); return; }
+    if (!editId && !form.password.trim()) { setErr("Slaptažodis privalomas kuriant naują vartotoją."); return; }
+    setSaving(true); setErr("");
+    try {
+      const data: any = { username: form.username.trim().toLowerCase(), full_name: form.full_name.trim(), role: form.role, active: form.active, telegram_chat_id: form.telegram_chat_id.trim()||null };
+      if (form.password.trim()) data.password_hash = await hashPassword(form.password);
+      if (editId) await sb.update("coaches", editId, data);
+      else await sb.insert("coaches", data);
+      setFormOpen(false); await load();
+    } catch (e: any) { setErr("Klaida: " + e.message); }
+    finally { setSaving(false); }
+  };
+
+  const toggleActive = async (c: Coach) => {
+    try { await sb.update("coaches", c.id, { active: !c.active }); await load(); }
+    catch (e: any) { alert("Klaida: " + e.message); }
+  };
+
+  const del = async (c: Coach) => {
+    try { await sb.delete("coaches", c.id); setConfirmDel(null); await load(); }
+    catch (e: any) { alert("Klaida: " + e.message); }
+  };
+
+  const roleColor = (r: string) => r === "admin" ? C.gold : C.teal;
+  const roleLabel = (r: string) => r === "admin" ? "👑 Admin" : "🏋️ Treneris";
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "flex-end", marginBottom: 20, flexWrap: "wrap" as const, gap: 12 }}>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 900, color: C.text, letterSpacing: "-0.02em" }}>👥 Vartotojai</div>
+          <div style={{ color: C.muted, fontSize: 13, marginTop: 2 }}>{coaches.length} vartotojų iš viso</div>
+        </div>
+        <button onClick={openNew} style={{ ...css.btnG, marginLeft: "auto" }}>+ Naujas vartotojas</button>
       </div>
 
-      {/* Upload progress */}
-      {uploading&&(
-        <div style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,padding:"10px 14px",marginBottom:10,display:"flex",alignItems:"center",gap:10,fontSize:12,color:C.gold,fontFamily:CONDENSED_FONT,letterSpacing:"0.08em"}}>
-          <div style={{width:14,height:14,border:`2px solid ${C.gold}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.8s linear infinite",flexShrink:0}}/>
-          Įkeliama į Supabase Storage...
-        </div>
-      )}
-
-      {/* Upload error */}
-      {uploadError&&(
-        <div style={{background:C.redSoft,border:`1px solid ${C.redBorder}`,padding:"8px 12px",marginBottom:10,fontSize:11,color:C.red,fontFamily:CONDENSED_FONT}}>
-          {uploadError}
-          <button onClick={()=>setUploadError("")} style={{background:"none",border:"none",color:C.red,cursor:"pointer",marginLeft:8,fontSize:13}}>×</button>
-        </div>
-      )}
-
-      {/* 4-slot image grid */}
-      <div style={{display:"grid",gridTemplateColumns:`repeat(${slots},1fr)`,gap:6,marginBottom:showUrl?10:0}}>
-        {Array.from({length:slots}).map((_,i)=>{
-          const src=list[i];
-          const isFirst=i===0;
-          const isDraggingThis=dragging===i;
-          const isDragTarget=dragOver===i;
-
-          if(src){
-            return(
-              <div key={i}
-                draggable
-                onDragStart={()=>handleDragStart(i)}
-                onDragOver={e=>{e.preventDefault();setDragOver(i);}}
-                onDragEnd={handleDragEnd}
-                style={{position:"relative" as const,aspectRatio:"1",border:`2px solid ${isFirst?C.gold:isDragTarget?"#5B8DB8":C.border}`,overflow:"hidden",cursor:"grab",opacity:isDraggingThis?0.5:1,transition:"all .15s",background:C.faint}}
-              >
-                <img src={src} alt={`Photo ${i+1}`} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} onError={e=>(e.target as HTMLImageElement).style.opacity="0.3"}/>
-                {isFirst&&(
-                  <div style={{position:"absolute" as const,top:4,left:4,background:C.gold,padding:"1px 6px",fontSize:7,fontWeight:700,color:C.bg,fontFamily:CONDENSED_FONT,letterSpacing:"0.1em"}}>COVER</div>
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 60, color: C.muted }}>Kraunama...</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
+          {coaches.map(c => (
+            <div key={c.id} style={{ background: C.surface, borderRadius: 14, border: `1px solid ${c.id === me?.id ? C.goldBorder : C.border}`, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" as const }}>
+              {/* Avatar */}
+              <div style={{ width: 48, height: 48, background: `linear-gradient(135deg,${roleColor(c.role)},${roleColor(c.role)}AA)`, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, color: "#fff", flexShrink: 0 }}>
+                {(c.full_name || "?")[0].toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" as const }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{c.full_name}</div>
+                  {c.id === me?.id && <span style={{ background: C.goldSoft, border: `1px solid ${C.goldBorder}`, borderRadius: 20, padding: "1px 8px", fontSize: 10, color: C.gold, fontWeight: 700 }}>Jūs</span>}
+                  <span style={{ background: roleColor(c.role) + "18", border: `1px solid ${roleColor(c.role)}44`, borderRadius: 20, padding: "1px 8px", fontSize: 10, color: roleColor(c.role), fontWeight: 700 }}>{roleLabel(c.role)}</span>
+                  {!c.active && <span style={{ background: C.redSoft, border: `1px solid ${C.redBorder}`, borderRadius: 20, padding: "1px 8px", fontSize: 10, color: C.red, fontWeight: 700 }}>Neaktyvus</span>}
+                </div>
+                <div style={{ fontSize: 12, color: C.muted }}>@{c.username} · Sukurtas: {new Date(c.created_at).toLocaleDateString("lt-LT")}</div>
+              </div>
+              <div style={{ display: "flex", gap: 7, flexShrink: 0 }}>
+                <button onClick={() => openEdit(c)} style={css.btnTeal}>✏️ Redaguoti</button>
+                {c.role !== "admin" && (
+                  <button onClick={() => setLibraryCoach(c)} style={{ ...css.btnGhost, fontSize: 11, padding: "5px 12px", color: C.gold, borderColor: C.goldBorder }}>
+                    📚 Biblioteka
+                  </button>
                 )}
-                <div style={{position:"absolute" as const,inset:0,background:"rgba(0,0,0,0)",transition:"background .15s",display:"flex",alignItems:"flex-end",justifyContent:"center",gap:3,padding:4}}
-                  onMouseEnter={e=>(e.currentTarget.style.background="rgba(0,0,0,0.55)")}
-                  onMouseLeave={e=>(e.currentTarget.style.background="rgba(0,0,0,0)")}>
-                  <div style={{display:"flex",gap:3,opacity:0}} className="img-controls">
-                    {i>0&&<button onClick={()=>moveL(i)} style={{width:20,height:20,background:"rgba(255,255,255,0.9)",border:"none",color:"#000",fontSize:10,cursor:"pointer",flexShrink:0}}>←</button>}
-                    {i<list.length-1&&<button onClick={()=>moveR(i)} style={{width:20,height:20,background:"rgba(255,255,255,0.9)",border:"none",color:"#000",fontSize:10,cursor:"pointer",flexShrink:0}}>→</button>}
-                    <button onClick={()=>remove(i)} style={{width:20,height:20,background:"#ef4444",border:"none",color:"white",fontSize:11,cursor:"pointer",flexShrink:0}}>×</button>
+                <button onClick={() => toggleActive(c)} style={c.active ? css.btnGhost : css.btnGreen}>
+                  {c.active ? "⏸ Išjungti" : "▶ Įjungti"}
+                </button>
+                {c.id !== me?.id && <button onClick={() => setConfirmDel(c)} style={css.btnRed}>🗑️</button>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Form modal */}
+      {formOpen && (
+        <div style={css.overlay}>
+          <div style={css.modal(480)}>
+            <div style={{ padding: "16px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center" }}>
+              <div style={{ fontWeight: 700, fontSize: 15, color: C.gold }}>{editId ? "✏️ Redaguoti vartotoją" : "➕ Naujas vartotojas"}</div>
+              <button onClick={() => setFormOpen(false)} style={{ marginLeft: "auto", width: 28, height: 28, background: C.faint, border: `1px solid ${C.border}`, borderRadius: 7, color: C.muted, cursor: "pointer", fontSize: 16 }}>×</button>
+            </div>
+            <div style={{ padding: 22, display: "flex", flexDirection: "column" as const, gap: 14 }}>
+              <Err msg={err} />
+              <div><span style={css.label}>Vardas ir pavardė *</span><input value={form.full_name} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))} style={css.input} placeholder="Jonas Jonaitis" /></div>
+              <div><span style={css.label}>Vartotojo vardas * (mažosios raidės)</span><input value={form.username} onChange={e => setForm(p => ({ ...p, username: e.target.value.toLowerCase() }))} style={css.input} placeholder="jonas" autoCapitalize="none" /></div>
+              <div><span style={css.label}>{editId ? "Naujas slaptažodis (palikite tuščią jei nekeičiate)" : "Slaptažodis *"}</span><input type="password" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} style={css.input} placeholder="••••••••" /></div>
+              <div>
+                <span style={css.label}>📱 Telegram Chat ID (rezervacijų pranešimams)</span>
+                <input value={form.telegram_chat_id} onChange={e => setForm(p => ({ ...p, telegram_chat_id: e.target.value }))} style={css.input} placeholder="pvz. 1687801580" />
+                <div style={{fontSize:10,color:C.muted,marginTop:4}}>Gaukite savo ID: atsiųskite žinutę @userinfobot Telegram</div>
+              </div>
+              <div>
+                <span style={css.label}>Rolė</span>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {(["coach", "admin"] as const).map(r => (
+                    <button key={r} onClick={() => setForm(p => ({ ...p, role: r }))} style={{ flex: 1, padding: "9px", borderRadius: 8, border: form.role === r ? `1px solid ${roleColor(r)}` : `1px solid ${C.border}`, background: form.role === r ? roleColor(r) + "18" : "transparent", color: form.role === r ? roleColor(r) : C.muted, fontFamily: FONT, fontSize: 13, cursor: "pointer", fontWeight: 600 }}>
+                      {roleLabel(r)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <input type="checkbox" id="active" checked={form.active} onChange={e => setForm(p => ({ ...p, active: e.target.checked }))} style={{ width: 16, height: 16, cursor: "pointer" }} />
+                <label htmlFor="active" style={{ fontSize: 13, color: C.text, cursor: "pointer" }}>Aktyvus (gali prisijungti)</label>
+              </div>
+            </div>
+            <div style={{ padding: "14px 20px", borderTop: `1px solid ${C.border}`, display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button onClick={() => setFormOpen(false)} style={css.btnGhost}>Atšaukti</button>
+              <button onClick={save} disabled={saving} style={css.btnG}>{saving ? "⏳ Saugoma..." : "💾 Išsaugoti"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Library access modal */}
+      {libraryCoach && (
+        <LibraryAccessModal
+          coach={libraryCoach}
+          onClose={() => { setLibraryCoach(null); load(); }}
+        />
+      )}
+
+      {/* Confirm delete */}
+      {confirmDel && (
+        <div style={css.overlay}>
+          <div style={{ background: C.surface, borderRadius: 16, border: `1px solid ${C.redBorder}`, padding: 28, maxWidth: 340, width: "100%", textAlign: "center" }}>
+            <div style={{ fontSize: 32, marginBottom: 10 }}>🗑️</div>
+            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8, color: C.text }}>Ištrinti vartotoją?</div>
+            <div style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>„{confirmDel.full_name}" ir visi jų duomenys bus ištrinti.</div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+              <button onClick={() => setConfirmDel(null)} style={css.btnGhost}>Atšaukti</button>
+              <button onClick={() => del(confirmDel)} style={{ ...css.btnG, background: C.red, color: "#fff" }}>Ištrinti</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── LIBRARY ACCESS MODAL ─────────────────────────────────
+// ── LIBRARY ACCESS MODAL (Tier + Individual) ─────────────
+const TIERS = [
+  {
+    id: "full",
+    name: "Pilna prieiga",
+    desc: "Mato visus pratimus ir maisto produktus",
+    color: "#4E9068",
+    icon: "🔓",
+    exFilter: () => true,
+    foodFilter: () => true,
+  },
+  {
+    id: "intermediate",
+    name: "Vidutinis",
+    desc: "Standartiniai pratimai, be olimpinių ir pažengusių",
+    color: "#D4A853",
+    icon: "🏋️",
+    exFilter: (e: any) => !["Olimpiniai kėlimai","Kallistenics","Gimnastika"].includes(e.equipment||""),
+    foodFilter: () => true,
+  },
+  {
+    id: "beginner",
+    name: "Pradedantysis",
+    desc: "Pagrindiniai pratimai ir bazinis maistas",
+    color: "#5B8DB8",
+    icon: "🌱",
+    exFilter: (e: any) => ["Krūtinė","Nugara","Kojos","Pečiai","Pilvas"].includes(e.muscle||""),
+    foodFilter: (f: any) => ["Mėsa & Žuvis","Grūdai & Kruopos","Daržovės","Vaisiai","Pieno produktai","Kiaušiniai"].includes(f.category||""),
+  },
+  {
+    id: "custom",
+    name: "Individualus",
+    desc: "Rankiniu būdu valdote kiekvieną elementą",
+    color: "#9B7DD4",
+    icon: "⚙️",
+    exFilter: () => true,
+    foodFilter: () => true,
+  },
+];
+
+function LibraryAccessModal({ coach, onClose }: { coach: Coach; onClose: () => void }) {
+  const [exercises, setExercises] = useState<any[]>([]);
+  const [foods, setFoods] = useState<any[]>([]);
+  const [blockedEx, setBlockedEx] = useState<Set<string>>(new Set());
+  const [blockedFood, setBlockedFood] = useState<Set<string>>(new Set());
+  const [tier, setTier] = useState<string>(coach.library_tier || "full");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [tab, setTab] = useState<"tier" | "exercises" | "foods">("tier");
+  const [searchEx, setSearchEx] = useState("");
+  const [searchFood, setSearchFood] = useState("");
+  const [muscleFilter, setMuscleFilter] = useState("Visi");
+  const [catFilter, setCatFilter] = useState("Visi");
+  const ALL_MUSCLES_L = ["Visi","Krūtinė","Nugara","Kojos","Pečiai","Bicepsas","Tricepsas","Pilvas","Kardio","Apšilimas"];
+  const ALL_FOOD_CATS_L = ["Visi","Mėsa & Žuvis","Grūdai & Kruopos","Daržovės","Vaisiai","Pieno produktai","Kiaušiniai","Riešutai & Sėklos","Ankštiniai","Sveiki riebalai","Kita"];
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [exList, foodList, exBlocks, foodBlocks] = await Promise.all([
+          sb.get("exercises", "?order=muscle,name&select=id,name,muscle,equipment"),
+          sb.get("foods", "?order=category,name&select=id,name,category").catch(() => []),
+          sb.get("coach_exercise_blocks", `?coach_id=eq.${coach.id}&select=exercise_id`).catch(() => []),
+          sb.get("coach_food_blocks", `?coach_id=eq.${coach.id}&select=food_id`).catch(() => []),
+        ]);
+        setExercises(exList);
+        setFoods(foodList);
+        setBlockedEx(new Set((exBlocks as any[]).map((b: any) => b.exercise_id)));
+        setBlockedFood(new Set((foodBlocks as any[]).map((b: any) => b.food_id)));
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, [coach.id]);
+
+  // Apply tier — sets blocks based on tier filter
+  const applyTier = (newTier: string) => {
+    setTier(newTier);
+    const t = TIERS.find(t => t.id === newTier);
+    if (!t || newTier === "custom") return;
+    // Block exercises that don't pass the tier filter
+    const newBlockedEx = new Set<string>(
+      exercises.filter(e => !t.exFilter(e)).map(e => e.id)
+    );
+    const newBlockedFood = new Set<string>(
+      foods.filter(f => !t.foodFilter(f)).map(f => f.id)
+    );
+    setBlockedEx(newBlockedEx);
+    setBlockedFood(newBlockedFood);
+  };
+
+  const toggleEx = (id: string) => {
+    setTier("custom"); // Switch to custom when manually overriding
+    setBlockedEx(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  };
+  const toggleFood = (id: string) => {
+    setTier("custom");
+    setBlockedFood(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  };
+  const blockAllMuscle = (muscle: string) => { setTier("custom"); setBlockedEx(prev => { const n = new Set(prev); exercises.filter(e => e.muscle === muscle).forEach(e => n.add(e.id)); return n; }); };
+  const allowAllMuscle = (muscle: string) => { setTier("custom"); setBlockedEx(prev => { const n = new Set(prev); exercises.filter(e => e.muscle === muscle).forEach(e => n.delete(e.id)); return n; }); };
+  const blockAllCat = (cat: string) => { setTier("custom"); setBlockedFood(prev => { const n = new Set(prev); foods.filter(f => f.category === cat).forEach(f => n.add(f.id)); return n; }); };
+  const allowAllCat = (cat: string) => { setTier("custom"); setBlockedFood(prev => { const n = new Set(prev); foods.filter(f => f.category === cat).forEach(f => n.delete(f.id)); return n; }); };
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      // Update coach tier
+      await sb.update("coaches", coach.id, { library_tier: tier });
+      // Delete old blocks
+      await fetch(`${sb.url("coach_exercise_blocks", `?coach_id=eq.${coach.id}`)}`, { method: "DELETE", headers: sb.headers });
+      await fetch(`${sb.url("coach_food_blocks", `?coach_id=eq.${coach.id}`)}`, { method: "DELETE", headers: sb.headers });
+      // Insert new blocks
+      if (blockedEx.size > 0) await sb.insert("coach_exercise_blocks", Array.from(blockedEx).map(exercise_id => ({ coach_id: coach.id, exercise_id })));
+      if (blockedFood.size > 0) await sb.insert("coach_food_blocks", Array.from(blockedFood).map(food_id => ({ coach_id: coach.id, food_id })));
+      onClose();
+    } catch (e: any) { alert("Klaida: " + e.message); }
+    finally { setSaving(false); }
+  };
+
+  const filteredEx = exercises.filter(e => (muscleFilter === "Visi" || e.muscle === muscleFilter) && (!searchEx || e.name.toLowerCase().includes(searchEx.toLowerCase())));
+  const filteredFood = foods.filter(f => (catFilter === "Visi" || f.category === catFilter) && (!searchFood || f.name.toLowerCase().includes(searchFood.toLowerCase())));
+  const exByMuscle = ALL_MUSCLES_L.slice(1).reduce((acc: any, m) => { const l = filteredEx.filter(e => e.muscle === m); if (l.length) acc[m] = l; return acc; }, {} as Record<string, any[]>);
+  const foodByCat = ALL_FOOD_CATS_L.slice(1).reduce((acc: any, c) => { const l = filteredFood.filter(f => f.category === c); if (l.length) acc[c] = l; return acc; }, {} as Record<string, any[]>);
+  const allowedEx = exercises.length - blockedEx.size;
+  const allowedFood = foods.length - blockedFood.size;
+  const currentTier = TIERS.find(t => t.id === tier);
+
+  return (
+    <div style={css.overlay}>
+      <div style={{ ...css.modal(820), maxHeight: "94vh" }}>
+
+        {/* Header */}
+        <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 38, height: 38, background: `linear-gradient(135deg,${C.gold},#8B6520)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 900, color: C.bg, flexShrink: 0 }}>
+            {(coach.full_name || "?")[0].toUpperCase()}
+          </div>
+          <div>
+            <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 20, color: C.text, letterSpacing: "0.04em", lineHeight: 1 }}>{coach.full_name}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
+              <span style={{ fontSize: 12 }}>{currentTier?.icon}</span>
+              <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 10, color: currentTier?.color, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 700 }}>{currentTier?.name}</span>
+            </div>
+          </div>
+          {/* Summary stats */}
+          <div style={{ marginLeft: "auto", display: "flex", gap: 16, alignItems: "center" }}>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 24, color: C.gold, lineHeight: 1 }}>{allowedEx}<span style={{ fontSize: 12, color: C.muted }}>/{exercises.length}</span></div>
+              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 8, color: C.muted, letterSpacing: "0.12em" }}>PRATIMAI</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 24, color: C.green, lineHeight: 1 }}>{allowedFood}<span style={{ fontSize: 12, color: C.muted }}>/{foods.length}</span></div>
+              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 8, color: C.muted, letterSpacing: "0.12em" }}>MAISTAS</div>
+            </div>
+            <button onClick={onClose} style={{ width: 28, height: 28, background: C.faint, border: `1px solid ${C.border}`, color: C.muted, cursor: "pointer", fontSize: 14 }}>×</button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: "flex", borderBottom: `1px solid ${C.border}`, background: C.faint }}>
+          {[
+            ["tier", "⚡ Lygis (Tier)"],
+            ["exercises", `🏋️ Pratimai (${allowedEx}/${exercises.length})`],
+            ["foods", `🥗 Maistas (${allowedFood}/${foods.length})`],
+          ].map(([v, l]) => (
+            <button key={v} onClick={() => setTab(v as any)} style={{ flex: 1, padding: "10px", background: "transparent", border: "none", borderBottom: tab === v ? `2px solid ${C.gold}` : "2px solid transparent", color: tab === v ? C.gold : C.muted, fontFamily: "'Barlow Condensed',sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", cursor: "pointer" }}>{l}</button>
+          ))}
+        </div>
+
+        {loading ? <div style={{ padding: 40, textAlign: "center", color: C.muted }}>Kraunama...</div> : (
+          <div style={{ flex: 1, overflowY: "auto", padding: "18px 20px" }}>
+
+            {/* ── TIER TAB ── */}
+            {tab === "tier" && (
+              <div>
+                <div style={{ fontFamily: "'Barlow',sans-serif", fontSize: 13, color: C.muted, marginBottom: 18, lineHeight: 1.6 }}>
+                  Pasirinkite greitą prieigos lygį. Jis automatiškai nustatys ką treneris matys. Po to galite rankiniu būdu patikslinti konkrečius elementus <b style={{ color: C.text }}>Pratimų</b> arba <b style={{ color: C.text }}>Maisto</b> skirtuke.
+                </div>
+
+                {/* Tier cards */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
+                  {TIERS.map(t => (
+                    <div key={t.id} onClick={() => applyTier(t.id)} style={{
+                      padding: "16px 18px", border: `2px solid ${tier === t.id ? t.color : C.border}`,
+                      background: tier === t.id ? t.color + "12" : C.faint,
+                      cursor: "pointer", transition: "all .15s",
+                      position: "relative" as const,
+                    }}>
+                      {tier === t.id && (
+                        <div style={{ position: "absolute" as const, top: 10, right: 10, width: 18, height: 18, background: t.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", fontWeight: 900 }}>✓</div>
+                      )}
+                      <div style={{ fontSize: 24, marginBottom: 8 }}>{t.icon}</div>
+                      <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 20, color: tier === t.id ? t.color : C.text, letterSpacing: "0.04em", lineHeight: 1, marginBottom: 4 }}>{t.name}</div>
+                      <div style={{ fontFamily: "'Barlow',sans-serif", fontSize: 11, color: C.muted, lineHeight: 1.5 }}>{t.desc}</div>
+                      {/* Preview count */}
+                      <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+                        <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 9, background: C.faint, border: `1px solid ${C.border}`, padding: "2px 8px", color: C.muted, letterSpacing: "0.1em" }}>
+                          🏋️ {exercises.filter(t.exFilter).length} pratimai
+                        </span>
+                        <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 9, background: C.faint, border: `1px solid ${C.border}`, padding: "2px 8px", color: C.muted, letterSpacing: "0.1em" }}>
+                          🥗 {foods.filter(t.foodFilter).length} maistas
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Current state preview */}
+                <div style={{ background: C.faint, border: `1px solid ${C.border}`, padding: "14px 16px" }}>
+                  <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 9, color: C.muted, letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 10 }}>Dabartinė prieiga pagal raumenų grupes</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {ALL_MUSCLES_L.slice(1).map(m => {
+                      const total = exercises.filter(e => e.muscle === m).length;
+                      const allowed = exercises.filter(e => e.muscle === m && !blockedEx.has(e.id)).length;
+                      const pct = total > 0 ? Math.round(allowed / total * 100) : 100;
+                      return (
+                        <div key={m} style={{ padding: "6px 10px", background: pct === 100 ? C.greenSoft : pct === 0 ? C.redSoft : C.goldSoft, border: `1px solid ${pct === 100 ? C.greenBorder : pct === 0 ? C.redBorder : C.goldBorder}`, textAlign: "center" as const, minWidth: 80 }}>
+                          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 11, fontWeight: 700, color: pct === 100 ? C.green : pct === 0 ? C.red : C.gold }}>{pct}%</div>
+                          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 8, color: C.muted, letterSpacing: "0.08em" }}>{m}</div>
+                          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 8, color: C.muted }}>{allowed}/{total}</div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-                <button onClick={()=>remove(i)} style={{position:"absolute" as const,top:2,right:2,width:18,height:18,background:"rgba(0,0,0,0.7)",border:"none",color:"white",fontSize:10,cursor:"pointer",flexShrink:0,lineHeight:1}}>×</button>
+
+                <div style={{ marginTop: 12, fontFamily: "'Barlow',sans-serif", fontSize: 11, color: C.muted, lineHeight: 1.6 }}>
+                  💡 Pasirinkę lygį galite pereiti į <b style={{ color: C.text }}>Pratimų</b> arba <b style={{ color: C.text }}>Maisto</b> skirtukus ir rankiniu būdu pakeisti atskirus elementus. Sistema automatiškai persijungs į <b style={{ color: C.purple }}>Individualų</b> lygį.
+                </div>
               </div>
-            );
-          }else{
-            return(
-              <div key={i}
-                onDragOver={e=>{e.preventDefault();setDragOver(i);}}
-                onDrop={()=>{}}
-                onClick={()=>!uploading&&fileRef.current?.click()}
-                style={{aspectRatio:"1",border:`1px dashed ${isDragTarget?C.teal:C.border}`,background:isDragTarget?C.tealSoft:C.faint,display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",cursor:uploading?"not-allowed":"pointer",color:C.muted,gap:4,transition:"all .15s"}}
-              >
-                {uploading&&i===list.length
-                  ?<div style={{width:16,height:16,border:`2px solid ${C.gold}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
-                  :<span style={{fontSize:22,opacity:0.4}}>📷</span>
-                }
-                {i===0&&list.length===0&&!uploading&&<span style={{fontSize:8,fontFamily:CONDENSED_FONT,letterSpacing:"0.1em",textTransform:"uppercase" as const,color:C.muted}}>Pridėti</span>}
-              </div>
-            );
-          }
-        })}
-      </div>
+            )}
 
-      <style>{`.img-controls{opacity:0;transition:opacity .15s;}div:hover>.img-controls{opacity:1!important;}`}</style>
+            {/* ── EXERCISES TAB ── */}
+            {tab === "exercises" && (
+              <>
+                <div style={{ background: C.goldSoft, border: `1px solid ${C.goldBorder}`, padding: "8px 14px", marginBottom: 14, fontFamily: "'Barlow',sans-serif", fontSize: 12, color: C.gold }}>
+                  ✅ Žalia = treneris MATO &nbsp;·&nbsp; ❌ Raudona = treneris NEMATO &nbsp;·&nbsp; Keitimas persijungia į <b>Individualų</b> lygį
+                </div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" as const }}>
+                  <input value={searchEx} onChange={e => setSearchEx(e.target.value)} placeholder="🔍 Ieškoti pratimų..." style={{ ...css.input, width: 200, flexShrink: 0 }} />
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" as const }}>
+                    {ALL_MUSCLES_L.map(m => (
+                      <button key={m} onClick={() => setMuscleFilter(m)} style={{ padding: "4px 10px", background: muscleFilter === m ? C.gold : "transparent", color: muscleFilter === m ? C.bg : C.muted, border: `1px solid ${muscleFilter === m ? C.gold : C.border}`, fontFamily: "'Barlow Condensed',sans-serif", fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", cursor: "pointer" }}>{m}</button>
+                    ))}
+                  </div>
+                </div>
+                {Object.entries(exByMuscle).map(([muscle, exs]) => (
+                  <div key={muscle} style={{ marginBottom: 16 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: `1px solid ${C.border}`, marginBottom: 8 }}>
+                      <div style={{ width: 2, height: 14, background: C.gold }} />
+                      <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 16, color: C.text, letterSpacing: "0.04em", flex: 1 }}>{muscle}</span>
+                      <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 9, color: C.muted, letterSpacing: "0.1em" }}>
+                        {(exs as any[]).filter(e => !blockedEx.has(e.id)).length}/{(exs as any[]).length}
+                      </span>
+                      <button onClick={() => allowAllMuscle(muscle)} style={{ ...css.btnGreen, padding: "3px 10px", fontSize: 9 }}>✓ Visi</button>
+                      <button onClick={() => blockAllMuscle(muscle)} style={{ ...css.btnRed, padding: "3px 10px", fontSize: 9 }}>✕ Jokie</button>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(190px,1fr))", gap: 4 }}>
+                      {(exs as any[]).map((ex: any) => {
+                        const blocked = blockedEx.has(ex.id);
+                        return (
+                          <div key={ex.id} onClick={() => toggleEx(ex.id)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: blocked ? C.redSoft : C.faint, border: `1px solid ${blocked ? C.redBorder : C.border}`, cursor: "pointer", transition: "all .15s", opacity: blocked ? 0.65 : 1 }}>
+                            <div style={{ width: 16, height: 16, background: blocked ? C.red : C.green, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#fff", flexShrink: 0, fontWeight: 900 }}>{blocked ? "✕" : "✓"}</div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 12, fontWeight: 600, color: blocked ? C.muted : C.text }}>{ex.name}</div>
+                              {ex.equipment && <div style={{ fontSize: 9, color: C.muted }}>{ex.equipment}</div>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
 
-      {/* Empty state big upload button */}
-      {list.length===0&&!uploading&&(
-        <div onClick={()=>fileRef.current?.click()} style={{border:`1px dashed ${C.border}`,padding:"18px",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:C.muted,gap:10,marginTop:6,fontSize:11,fontFamily:CONDENSED_FONT,letterSpacing:"0.12em",textTransform:"uppercase" as const,background:C.faint}}>
-          <span style={{fontSize:20}}>📷</span>SPUSTELĖKITE ARBA VILKITE NUOTRAUKAS
+            {/* ── FOODS TAB ── */}
+            {tab === "foods" && (
+              <>
+                <div style={{ background: C.greenSoft, border: `1px solid ${C.greenBorder}`, padding: "8px 14px", marginBottom: 14, fontFamily: "'Barlow',sans-serif", fontSize: 12, color: C.green }}>
+                  ✅ Žalia = treneris MATO &nbsp;·&nbsp; ❌ Raudona = treneris NEMATO &nbsp;·&nbsp; Keitimas persijungia į <b>Individualų</b> lygį
+                </div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" as const }}>
+                  <input value={searchFood} onChange={e => setSearchFood(e.target.value)} placeholder="🔍 Ieškoti maisto..." style={{ ...css.input, width: 200 }} />
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" as const }}>
+                    {ALL_FOOD_CATS_L.map(c => (
+                      <button key={c} onClick={() => setCatFilter(c)} style={{ padding: "4px 10px", background: catFilter === c ? C.gold : "transparent", color: catFilter === c ? C.bg : C.muted, border: `1px solid ${catFilter === c ? C.gold : C.border}`, fontFamily: "'Barlow Condensed',sans-serif", fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", cursor: "pointer" }}>{c}</button>
+                    ))}
+                  </div>
+                </div>
+                {Object.entries(foodByCat).map(([cat, fds]) => (
+                  <div key={cat} style={{ marginBottom: 16 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: `1px solid ${C.border}`, marginBottom: 8 }}>
+                      <div style={{ width: 2, height: 14, background: C.green }} />
+                      <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 16, color: C.text, letterSpacing: "0.04em", flex: 1 }}>{cat}</span>
+                      <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 9, color: C.muted }}>{(fds as any[]).filter(f => !blockedFood.has(f.id)).length}/{(fds as any[]).length}</span>
+                      <button onClick={() => allowAllCat(cat)} style={{ ...css.btnGreen, padding: "3px 10px", fontSize: 9 }}>✓ Visi</button>
+                      <button onClick={() => blockAllCat(cat)} style={{ ...css.btnRed, padding: "3px 10px", fontSize: 9 }}>✕ Jokie</button>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(190px,1fr))", gap: 4 }}>
+                      {(fds as any[]).map((f: any) => {
+                        const blocked = blockedFood.has(f.id);
+                        return (
+                          <div key={f.id} onClick={() => toggleFood(f.id)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: blocked ? C.redSoft : C.faint, border: `1px solid ${blocked ? C.redBorder : C.border}`, cursor: "pointer", transition: "all .15s", opacity: blocked ? 0.65 : 1 }}>
+                            <div style={{ width: 16, height: 16, background: blocked ? C.red : C.green, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#fff", flexShrink: 0, fontWeight: 900 }}>{blocked ? "✕" : "✓"}</div>
+                            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 12, fontWeight: 600, color: blocked ? C.muted : C.text }}>{f.name}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                {foods.length === 0 && <div style={{ textAlign: "center", color: C.muted, padding: "32px 0", fontSize: 13 }}>Maisto produktų nerasta</div>}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div style={{ padding: "12px 20px", borderTop: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
+            <span style={{ fontSize: 14 }}>{currentTier?.icon}</span>
+            <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 11, color: currentTier?.color, fontWeight: 700, letterSpacing: "0.1em" }}>{currentTier?.name}</span>
+            <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 10, color: C.muted }}>· Blokuota: {blockedEx.size} pratimų, {blockedFood.size} maisto</span>
+          </div>
+          <button onClick={onClose} style={css.btnGhost}>Atšaukti</button>
+          <button onClick={save} disabled={saving} style={{ ...css.btnG, opacity: saving ? 0.6 : 1 }}>
+            {saving ? "Saugoma..." : "💾 Išsaugoti"}
+          </button>
         </div>
-      )}
-
-      {/* URL input */}
-      {showUrl&&(
-        <div style={{display:"flex",gap:8,marginTop:8}}>
-          <input ref={urlRef} placeholder="https://example.com/image.jpg" style={{...css.input,flex:1,fontSize:12}} onKeyDown={e=>e.key==="Enter"&&addUrl()} autoFocus/>
-          <button onClick={addUrl} style={{...css.btnG,padding:"8px 14px",fontSize:13,fontWeight:900}}>+</button>
-          <button onClick={()=>setShowUrl(false)} style={{...css.btnGhost,padding:"8px 10px",fontSize:13}}>×</button>
-        </div>
-      )}
-
-      {/* Add buttons when empty */}
-      {list.length===0&&!uploading&&(
-        <div style={{display:"flex",gap:8,marginTop:8}}>
-          <button onClick={()=>fileRef.current?.click()} style={{...css.btnTeal,flex:1,fontSize:11,justifyContent:"center",display:"flex",alignItems:"center",gap:6}}>📁 Pasirinkti failus</button>
-          <button onClick={()=>setShowUrl(s=>!s)} style={{...css.btnGhost,flex:1,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>🔗 Įklijuoti URL</button>
-        </div>
-      )}
-
-      <input ref={fileRef} type="file" accept="image/*" multiple onChange={addFile} style={{display:"none"}}/>
-
-      <div style={{fontSize:9,color:C.muted,marginTop:6,fontFamily:CONDENSED_FONT,letterSpacing:"0.08em"}}>
-        Pirma nuotrauka — COVER (rodoma kortele ir PDF). Vilkite kad perrikiuotumėte.
       </div>
     </div>
   );
