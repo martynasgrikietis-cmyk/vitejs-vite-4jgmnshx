@@ -3394,7 +3394,9 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
             </div>
           </div>
         </div>
-      )}
+      );
+}
+
 // ── MAIN APP ──────────────────────────────────────────────
 // MainApp: shown when logged in
 function MainApp(){
