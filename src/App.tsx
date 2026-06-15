@@ -689,7 +689,9 @@ function SharePage({token,type}:{token:string,type:string}){
             <div>Sporto & Mitybos programa</div>
           </div>
         </div>
+      </div>
       )}
+    </div>
 
       {/* Meal plan view */}
       {!isTraining&&(
