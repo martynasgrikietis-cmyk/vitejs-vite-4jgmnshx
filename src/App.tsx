@@ -629,12 +629,12 @@ function SharePage({token,type}:{token:string,type:string}){
 
       {/* Hero header — cinematic */}
       <div style={{position:"relative",padding:"36px 20px 28px",textAlign:"center",borderBottom:`1px solid ${C.border}`,overflow:"hidden",minHeight:200}}>
-        <img src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1000&q=80" alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",filter:"brightness(0.18) saturate(0.5)"}} onError={e=>(e.target as HTMLImageElement).style.display="none"}/>
-        <div style={{position:"absolute",inset:0,background:`linear-gradient(180deg,${C.bgFade1} 0%,${C.bgFade2} 60%,${C.bg} 100%)`}}/>
+        <img src="/hero-gym.jpg" alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",filter:"brightness(0.55) saturate(0.95)"}} onError={e=>(e.target as HTMLImageElement).style.display="none"}/>
+        <div style={{position:"absolute",inset:0,background:`linear-gradient(180deg,${C.bgFade1} 0%,${C.bgFade2} 48%,${C.bg} 100%)`}}/>
         <div style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:500,height:220,background:`radial-gradient(ellipse at 50% 0%,${accentColor}14 0%,transparent 70%)`,pointerEvents:"none"}}/>
         <div style={{width:72,height:72,background:`linear-gradient(135deg,${C.gold},#B06A08)`,borderRadius:20,display:"flex",alignItems:"center",justifyContent:"center",fontSize:30,fontWeight:900,color:C.bg,margin:"0 auto 18px",boxShadow:`0 8px 28px ${C.goldGlow}`}} className="fu">{(client.name||"?")[0].toUpperCase()}</div>
-        <div style={{fontSize:26,fontWeight:900,color:C.text,marginBottom:4,letterSpacing:"-0.02em"}} className="fu1">{client.name}</div>
-        <div style={{fontSize:13,color:C.muted,marginBottom:16}} className="fu1">{planEmoji} {planName}</div>
+        <div style={{fontSize:26,fontWeight:900,color:C.text,marginBottom:4,letterSpacing:"-0.02em",textShadow:`0 1px 12px ${C.bg}`}} className="fu1">{client.name}</div>
+        <div style={{fontSize:13,color:C.muted,marginBottom:16,textShadow:`0 1px 10px ${C.bg}`}} className="fu1">{planEmoji} {planName}</div>
         <div style={{display:"flex",justifyContent:"center",gap:8,flexWrap:"wrap"}} className="fu2">
           {client.goal&&<span style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:20,padding:"4px 14px",fontSize:12,fontWeight:700,color:C.gold}}>{client.goal}</span>}
           {client.level&&<span style={{background:C.tealSoft,border:`1px solid ${C.tealBorder}`,borderRadius:20,padding:"4px 14px",fontSize:12,fontWeight:700,color:C.teal}}>{client.level}</span>}
