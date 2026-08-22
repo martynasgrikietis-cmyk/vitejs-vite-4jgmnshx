@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { sb, C, FONT, RESPONSIVE_CSS, css, ALL_MUSCLES, GOALS, LEVELS, DAYS, REST_OPTIONS, ACTIVITY_LEVELS, calcBMI, bmiCat, calcNut, genToken, getCoachId, getIsAdmin, Tag, Badge, Spinner, Skeleton, SkeletonCard, Err, NutriBadge, ImgGallery, MultiImgUploader, HERO_IMG, GYM_IMG2, DISPLAY_FONT, CONDENSED_FONT, SectionHead, ThemeSwitcher } from "./shared";
+import { sb, C, FONT, RESPONSIVE_CSS, css, ALL_MUSCLES, GOALS, LEVELS, DAYS, REST_OPTIONS, ACTIVITY_LEVELS, calcBMI, bmiCat, calcNut, genToken, getCoachId, getIsAdmin, Tag, Badge, Spinner, Skeleton, SkeletonCard, Err, NutriBadge, ImgGallery, MultiImgUploader, HERO_IMG, GYM_IMG2, DISPLAY_FONT, CONDENSED_FONT, SectionHead, ThemeSwitcher, SUPABASE_URL, SUPABASE_KEY } from "./shared";
 import { LoginScreen, AuthProvider, UsersTab, useAuth, getSession, clearSession } from "./auth";
 import { FoodsTab, MealPlanBuilder, MealSharePage } from "./MealPlan";
 
@@ -1375,6 +1375,9 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
           </>}
         </div>
 
+        {/* ── AI KŪNO ANALIZĖ ── */}
+        {view&&<BodyAnalysisPanel clientId={view.id} exercises={exercises}/>}
+
         {/* ── SESSION NOTES ── */}
         {view&&<SessionNotesPanel clientId={view.id} clientName={view.name}/>}
 
@@ -2371,6 +2374,197 @@ function SessionNotesPanel({clientId,clientName}:{clientId:string,clientName:str
 }
 
 // ── BEFORE/AFTER PHOTOS (#5) ─────────────────────────────
+// ── AI KŪNO ANALIZĖ ───────────────────────────────────────
+const BODY_SEVERITY_COLOR:Record<string,string>={
+  "prioritetas":"#D6394A","vidutiniškai":"#C97A3B","gerai":"#1E9E5A",
+};
+const BODY_SEVERITY_LABEL:Record<string,string>={
+  "prioritetas":"Reikia dėmesio","vidutiniškai":"Galima tobulinti","gerai":"Gerai išvystyta",
+};
+
+function fileToBase64(file:File):Promise<string>{
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=()=>resolve((r.result as string).split(",")[1]);
+    r.onerror=reject;
+    r.readAsDataURL(file);
+  });
+}
+
+function BodyDiagram({areas}:{areas:{muscle:string,severity:string,note?:string}[]}){
+  const colorFor=(muscle:string)=>{
+    const a=areas.find(x=>x.muscle===muscle);
+    return a?BODY_SEVERITY_COLOR[a.severity]||"#8A9AAA":"#8A9AAA";
+  };
+  const opacityFor=(muscle:string)=> areas.some(x=>x.muscle===muscle) ? 1 : 0.18;
+  return(
+    <svg width="140" height="230" viewBox="0 0 140 230" fill="none">
+      {/* Galva */}
+      <circle cx="70" cy="20" r="16" fill="#8A9AAA" opacity={0.25}/>
+      {/* Pečiai (viršutiniai torso kampai) */}
+      <rect x="34" y="40" width="24" height="14" rx="6" fill={colorFor("Pečiai")} opacity={opacityFor("Pečiai")}/>
+      <rect x="82" y="40" width="24" height="14" rx="6" fill={colorFor("Pečiai")} opacity={opacityFor("Pečiai")}/>
+      {/* Krūtinė */}
+      <rect x="42" y="48" width="56" height="38" rx="10" fill={colorFor("Krūtinė")} opacity={opacityFor("Krūtinė")}/>
+      {/* Bicepsas (viršutinė rankos dalis) */}
+      <rect x="18" y="52" width="16" height="42" rx="8" fill={colorFor("Bicepsas")} opacity={opacityFor("Bicepsas")}/>
+      <rect x="106" y="52" width="16" height="42" rx="8" fill={colorFor("Bicepsas")} opacity={opacityFor("Bicepsas")}/>
+      {/* Tricepsas (apatinė rankos dalis) */}
+      <rect x="18" y="94" width="16" height="40" rx="8" fill={colorFor("Tricepsas")} opacity={opacityFor("Tricepsas")}/>
+      <rect x="106" y="94" width="16" height="40" rx="8" fill={colorFor("Tricepsas")} opacity={opacityFor("Tricepsas")}/>
+      {/* Pilvas */}
+      <rect x="44" y="86" width="52" height="46" rx="10" fill={colorFor("Pilvas")} opacity={opacityFor("Pilvas")}/>
+      {/* Kojos */}
+      <rect x="44" y="134" width="22" height="86" rx="10" fill={colorFor("Kojos")} opacity={opacityFor("Kojos")}/>
+      <rect x="74" y="134" width="22" height="86" rx="10" fill={colorFor("Kojos")} opacity={opacityFor("Kojos")}/>
+    </svg>
+  );
+}
+
+function BodyAnalysisPanel({clientId,exercises}:{clientId:string,exercises:any[]}){
+  const [history,setHistory]=useState<any[]>([]);
+  const [loading,setLoading]=useState(true);
+  const [analyzing,setAnalyzing]=useState(false);
+  const [err,setErr]=useState("");
+  const [selected,setSelected]=useState<any>(null);
+  const fileRef=useState<any>(null);
+
+  const load=async()=>{
+    setLoading(true);
+    try{
+      const rows=await sb.get("body_analysis",`?client_id=eq.${clientId}&order=date.desc`);
+      setHistory(rows);
+      setSelected(rows[0]||null);
+    }catch{setHistory([]);}
+    finally{setLoading(false);}
+  };
+  useEffect(()=>{load();},[clientId]);
+
+  const addPhoto=async(e:any)=>{
+    const file=e.target.files?.[0];
+    e.target.value="";
+    if(!file)return;
+    setErr("");setAnalyzing(true);
+    try{
+      const base64=await fileToBase64(file);
+      const photoUrl=await sb.uploadImage(file,"client-photos");
+
+      const system=`Tu esi profesionalus kūno proporcijų vertinimo asistentas sporto trenerio programoje. Trenerio klientas atsiuntė nuotrauką. Įvertink TIK vizualiai matomas raumenų grupes pagal bendrą kūno proporciją, simetriją ir raumenų išraišką — tai NĖRA medicininis ar sveikatos vertinimas.
+Naudok TIK šias raumenų grupes: Krūtinė, Nugara, Kojos, Pečiai, Bicepsas, Tricepsas, Pilvas.
+Kiekvienai grupei, kurią gali įvertinti iš nuotraukos, priskirk vieną iš: "prioritetas" (reikėtų daugiau treniruočių dėmesio), "vidutiniškai" (galima tobulinti), "gerai" (gerai išvystyta proporcingai kitoms grupėms).
+Jei grupė nematoma nuotraukoje (pvz. nugara iš priekio), praleisk ją.
+Atsakyk GRIEŽTAI TIK JSON, be jokio papildomo teksto, tiksliai šio formato:
+{"summary":"1-2 sakinių bendras įvertinimas lietuviškai","areas":[{"muscle":"Pečiai","severity":"prioritetas","note":"trumpas paaiškinimas iki 12 žodžių"}]}`;
+
+      const resp=await fetch(`${SUPABASE_URL}/functions/v1/ai-proxy`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json",Authorization:`Bearer ${SUPABASE_KEY}`},
+        body:JSON.stringify({
+          system,
+          max_tokens:700,
+          messages:[{role:"user",content:[
+            {type:"image",source:{type:"base64",media_type:file.type||"image/jpeg",data:base64}},
+            {type:"text",text:"Įvertink šią nuotrauką pagal instrukcijas."},
+          ]}],
+        }),
+      });
+      const data=await resp.json();
+      const raw=data.content?.find((b:any)=>b.type==="text")?.text||"";
+      const clean=raw.replace(/```json|```/g,"").trim();
+      const parsed=JSON.parse(clean);
+
+      await sb.insert("body_analysis",{
+        client_id:clientId,
+        photo_url:photoUrl,
+        ai_summary:parsed.summary||"",
+        areas:parsed.areas||[],
+      });
+      await load();
+    }catch(e:any){
+      setErr("Nepavyko atlikti AI analizės. Patikrinkite interneto ryšį ir bandykite dar kartą.");
+    }finally{setAnalyzing(false);}
+  };
+
+  const delEntry=async(id:string)=>{
+    try{await sb.delete("body_analysis",id);await load();}catch{}
+  };
+
+  const priorityMuscles=(selected?.areas||[]).filter((a:any)=>a.severity==="prioritetas").map((a:any)=>a.muscle);
+  const suggestedExercises=priorityMuscles.length
+    ? exercises.filter(ex=>priorityMuscles.includes(ex.muscle)).slice(0,4)
+    : [];
+
+  return(
+    <div style={{...css.card,marginBottom:12}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+        <div style={{width:2,height:16,background:C.teal}}/>
+        <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:C.text,letterSpacing:"0.04em"}}>AI KŪNO ANALIZĖ</span>
+        <label style={{...css.btnTeal,marginLeft:"auto",cursor:analyzing?"not-allowed":"pointer",opacity:analyzing?0.5:1,display:"flex",alignItems:"center",gap:6,fontSize:11}}>
+          {analyzing?"⏳ Analizuojama...":"📷 Nauja nuotrauka"}
+          <input type="file" accept="image/*" onChange={addPhoto} disabled={analyzing} style={{display:"none"}}/>
+        </label>
+      </div>
+
+      <div style={{fontSize:10,color:C.muted,marginBottom:14,lineHeight:1.5}}>
+        AI įvertina tik vizualią kūno proporciją nuotraukoje ir pasiūlo, kurioms raumenų grupėms skirti daugiau dėmesio — tai treniruočių rekomendacija, ne medicininis vertinimas.
+      </div>
+
+      <Err msg={err}/>
+
+      {loading?<Spinner/>:!selected?(
+        <div style={{textAlign:"center" as const,color:C.muted,padding:"24px 0",fontSize:12}}>
+          <div style={{fontSize:32,marginBottom:8}}>🧍</div>
+          Dar nėra analizuotų nuotraukų. Įkelkite pirmą, kad gautumėte AI rekomendacijas.
+        </div>
+      ):(
+        <div style={{display:"flex",gap:20,flexWrap:"wrap" as const,marginBottom:16}}>
+          <div style={{display:"flex",flexDirection:"column" as const,alignItems:"center",gap:10,flexShrink:0}}>
+            <img src={selected.photo_url} alt="" style={{width:110,height:140,objectFit:"cover",borderRadius:10,border:`1px solid ${C.border}`}}/>
+            <BodyDiagram areas={selected.areas||[]}/>
+          </div>
+          <div style={{flex:1,minWidth:220}}>
+            <div style={{fontSize:12,color:C.text,lineHeight:1.6,marginBottom:12}}>{selected.ai_summary}</div>
+            <div style={{display:"flex",flexDirection:"column" as const,gap:6,marginBottom:14}}>
+              {(selected.areas||[]).map((a:any,i:number)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:8,fontSize:11}}>
+                  <span style={{width:8,height:8,borderRadius:"50%",background:BODY_SEVERITY_COLOR[a.severity]||C.muted,flexShrink:0}}/>
+                  <span style={{fontWeight:700,color:C.text,minWidth:70}}>{a.muscle}</span>
+                  <span style={{color:C.muted}}>{a.note}</span>
+                </div>
+              ))}
+            </div>
+            {suggestedExercises.length>0&&(
+              <div>
+                <div style={{fontSize:9,color:C.muted,textTransform:"uppercase" as const,letterSpacing:"0.1em",marginBottom:6}}>Siūlomi pratimai</div>
+                <div style={{display:"flex",flexWrap:"wrap" as const,gap:6}}>
+                  {suggestedExercises.map(ex=>(
+                    <span key={ex.id} style={{background:C.tealSoft,border:`1px solid ${C.tealBorder}`,borderRadius:8,padding:"4px 10px",fontSize:11,color:C.teal,fontWeight:600}}>{ex.name}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {history.length>1&&(
+        <div style={{borderTop:`1px solid ${C.border}`,paddingTop:12}}>
+          <div style={{fontSize:9,color:C.muted,textTransform:"uppercase" as const,letterSpacing:"0.1em",marginBottom:8}}>Istorija</div>
+          <div style={{display:"flex",gap:8,overflowX:"auto" as const,paddingBottom:4}}>
+            {history.map(h=>(
+              <div key={h.id} onClick={()=>setSelected(h)} style={{position:"relative" as const,cursor:"pointer",flexShrink:0,opacity:selected?.id===h.id?1:0.55}}>
+                <img src={h.photo_url} alt="" style={{width:52,height:66,objectFit:"cover",borderRadius:8,border:`2px solid ${selected?.id===h.id?C.teal:C.border}`}}/>
+                <div style={{fontSize:8,color:C.muted,textAlign:"center" as const,marginTop:3}}>{new Date(h.date+"T12:00").toLocaleDateString("lt-LT",{day:"2-digit",month:"2-digit"})}</div>
+                <button onClick={(e:any)=>{e.stopPropagation();delEntry(h.id);}} style={{position:"absolute" as const,top:-4,right:-4,width:16,height:16,borderRadius:"50%",background:C.red,border:"none",color:"#fff",fontSize:10,cursor:"pointer",lineHeight:1}}>×</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BeforeAfterPanel({clientId}:{clientId:string}){
   const storageKey=`dna_photos_${clientId}`;
   const [photos,setPhotos]=useState<{id:number,date:string,url:string,label:string}[]>(()=>{
