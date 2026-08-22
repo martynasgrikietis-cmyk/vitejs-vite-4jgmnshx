@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { sb, C, FONT, RESPONSIVE_CSS, css, ALL_MUSCLES, GOALS, LEVELS, DAYS, REST_OPTIONS, ACTIVITY_LEVELS, calcBMI, bmiCat, calcNut, genToken, getCoachId, getIsAdmin, Tag, Badge, Spinner, Skeleton, SkeletonCard, Err, NutriBadge, ImgGallery, MultiImgUploader, HERO_IMG, GYM_IMG2, DISPLAY_FONT, CONDENSED_FONT, SectionHead } from "./shared";
+import { sb, C, FONT, RESPONSIVE_CSS, css, ALL_MUSCLES, GOALS, LEVELS, DAYS, REST_OPTIONS, ACTIVITY_LEVELS, calcBMI, bmiCat, calcNut, genToken, getCoachId, getIsAdmin, Tag, Badge, Spinner, Skeleton, SkeletonCard, Err, NutriBadge, ImgGallery, MultiImgUploader, HERO_IMG, GYM_IMG2, DISPLAY_FONT, CONDENSED_FONT, SectionHead, ThemeSwitcher } from "./shared";
 import { LoginScreen, AuthProvider, UsersTab, useAuth, getSession, clearSession } from "./auth";
 import { FoodsTab, MealPlanBuilder, MealSharePage } from "./MealPlan";
 
@@ -42,7 +42,7 @@ function getYouTubeEmbed(url:string):string|null{
 const emptyExForm  = {name:"",muscle:"Krūtinė",equipment:"",sets:"3",reps:"10-12",description:"",video_url:"",imgs:[] as string[]};
 
 const MUSCLE_COLORS:Record<string,string> = {
-  "Krūtinė":"#5B8DB8","Nugara":"#4E9068","Kojos":"#D4A853",
+  "Krūtinė":"#5B8DB8","Nugara":"#4E9068","Kojos":C.gold,
   "Pečiai":"#9B7DD4","Bicepsas":"#E07B5A","Tricepsas":"#5BA8A0","Kardio":"#C05050","Apšilimas":"#5B8DB8",
   "Pilvas":"#7DA84E","Visi":"#6B7280",
 };
@@ -272,9 +272,9 @@ function DashboardTab({onNav,allClients=[],allBookings=[]}:{onNav:(t:string,open
       <div className="fu" style={{position:"relative",overflow:"hidden",minHeight:280,borderBottom:`1px solid ${C.border}`}}>
         <img src="https://i.pinimg.com/736x/e3/bc/16/e3bc16974256fb6913e37079fa4cb653.jpg" alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:"center 30%",filter:"brightness(0.35) saturate(0.4) contrast(1.15)"}} loading="eager"/>
         <div style={{position:"absolute",inset:0,background:"linear-gradient(110deg,rgba(6,7,9,0.98) 28%,rgba(6,7,9,0.6) 58%,rgba(6,7,9,0.15) 100%)"}}/>
-        <div style={{position:"absolute",bottom:0,left:0,right:0,height:160,background:"linear-gradient(to top,#060709,transparent)"}}/>
-        <div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(rgba(212,168,83,0.055) 1px,transparent 1px),linear-gradient(90deg,rgba(212,168,83,0.055) 1px,transparent 1px)",backgroundSize:"56px 56px"}}/>
-        <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse 55% 60% at 72% 50%,rgba(212,168,83,0.07) 0%,transparent 65%)"}}/>
+        <div style={{position:"absolute",bottom:0,left:0,right:0,height:160,background:`linear-gradient(to top,${C.bg},transparent)`}}/>
+        <div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(rgba(var(--gold-rgb),0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(var(--gold-rgb),0.05) 1px,transparent 1px)",backgroundSize:"56px 56px"}}/>
+        <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse 55% 60% at 72% 50%,rgba(var(--gold-rgb),0.06) 0%,transparent 65%)"}}/>
         <div style={{position:"relative",padding:"44px 32px 36px"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}>
             <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:10,color:C.gold,letterSpacing:"0.3em"}}>01</span>
@@ -283,7 +283,7 @@ function DashboardTab({onNav,allClients=[],allBookings=[]}:{onNav:(t:string,open
           </div>
           <div style={{fontFamily:"'Bebas Neue',sans-serif",lineHeight:0.88,letterSpacing:"0.02em",marginBottom:18,textShadow:"0 4px 40px rgba(0,0,0,0.9)"}}>
             <div style={{fontSize:"clamp(52px,7vw,88px)",color:C.text,textShadow:"0 4px 30px rgba(0,0,0,0.8)"}}>SVEIKI</div>
-            <div style={{fontSize:"clamp(52px,7vw,88px)",color:C.gold,textShadow:`0 4px 30px rgba(212,168,83,0.3)`}}>SUGRĮŽĘ</div>
+            <div style={{fontSize:"clamp(52px,7vw,88px)",color:C.gold,textShadow:`0 4px 30px rgba(var(--gold-rgb),0.25)`}}>SUGRĮŽĘ</div>
           </div>
           <div style={{fontFamily:"'Barlow',sans-serif",fontSize:12,color:"#8A9AAA",fontWeight:300,marginBottom:24,letterSpacing:"0.06em"}}>{new Date().toLocaleDateString("lt-LT",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}} className="hero-actions">
@@ -310,7 +310,7 @@ function DashboardTab({onNav,allClients=[],allBookings=[]}:{onNav:(t:string,open
 
       {/* Recent + Today */}
       <div className="dash-bottom fu2" style={{}}>
-        <div style={{background:"#0E1016",border:"1px solid #1E2430",borderTop:"none",padding:"24px 28px"}}>
+        <div style={{background:C.surface,border:`1px solid ${C.border}`,borderTop:"none",padding:"24px 28px"}}>
           <div style={{display:"flex",alignItems:"flex-end",marginBottom:20}}>
             <div>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:9,color:C.gold,letterSpacing:"0.3em"}}>02</span><div style={{width:20,height:1,background:C.gold}}/></div>
@@ -340,7 +340,7 @@ function DashboardTab({onNav,allClients=[],allBookings=[]}:{onNav:(t:string,open
             </div>
           )}
         </div>
-        <div style={{background:"#0E1016",border:"1px solid #1E2430",borderTop:"none",borderLeft:"none",padding:"24px 24px"}}>
+        <div style={{background:C.surface,border:`1px solid ${C.border}`,borderTop:"none",borderLeft:"none",padding:"24px 24px"}}>
           <div style={{marginBottom:18}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:9,color:C.gold,letterSpacing:"0.3em"}}>03</span><div style={{width:20,height:1,background:C.gold}}/></div>
             <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,color:C.text,letterSpacing:"0.04em",lineHeight:1}}>ARTIMIAUSI UŽSIĖMIMAI</span>
@@ -608,17 +608,15 @@ function SharePage({token,type}:{token:string,type:string}){
       {/* Hero header — cinematic */}
       <div style={{position:"relative",padding:"36px 20px 28px",textAlign:"center",borderBottom:`1px solid ${C.border}`,overflow:"hidden",minHeight:200}}>
         <img src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1000&q=80" alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",filter:"brightness(0.18) saturate(0.5)"}} onError={e=>(e.target as HTMLImageElement).style.display="none"}/>
-        <div style={{position:"absolute",inset:0,background:`linear-gradient(180deg,${C.bg}44 0%,${C.bg}CC 60%,${C.bg} 100%)`}}/>
+        <div style={{position:"absolute",inset:0,background:`linear-gradient(180deg,${C.bgFade1} 0%,${C.bgFade2} 60%,${C.bg} 100%)`}}/>
         <div style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:500,height:220,background:`radial-gradient(ellipse at 50% 0%,${accentColor}14 0%,transparent 70%)`,pointerEvents:"none"}}/>
-        <div style={{width:72,height:72,background:`linear-gradient(135deg,${C.gold},#B06A08)`,borderRadius:20,display:"flex",alignItems:"center",justifyContent:"center",fontSize:30,fontWeight:900,color:C.bg,margin:"0 auto 18px",boxShadow:`0 8px 28px ${C.gold}44`}} className="fu">{(client.name||"?")[0].toUpperCase()}</div>
+        <div style={{width:72,height:72,background:`linear-gradient(135deg,${C.gold},#B06A08)`,borderRadius:20,display:"flex",alignItems:"center",justifyContent:"center",fontSize:30,fontWeight:900,color:C.bg,margin:"0 auto 18px",boxShadow:`0 8px 28px ${C.goldGlow}`}} className="fu">{(client.name||"?")[0].toUpperCase()}</div>
         <div style={{fontSize:26,fontWeight:900,color:C.text,marginBottom:4,letterSpacing:"-0.02em"}} className="fu1">{client.name}</div>
         <div style={{fontSize:13,color:C.muted,marginBottom:16}} className="fu1">{planEmoji} {planName}</div>
         <div style={{display:"flex",justifyContent:"center",gap:8,flexWrap:"wrap"}} className="fu2">
           {client.goal&&<span style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:20,padding:"4px 14px",fontSize:12,fontWeight:700,color:C.gold}}>{client.goal}</span>}
           {client.level&&<span style={{background:C.tealSoft,border:`1px solid ${C.tealBorder}`,borderRadius:20,padding:"4px 14px",fontSize:12,fontWeight:700,color:C.teal}}>{client.level}</span>}
           {bmiN&&<span style={{background:bmiCat(bmiN).color+"22",border:`1px solid ${bmiCat(bmiN).color}44`,borderRadius:20,padding:"4px 14px",fontSize:12,fontWeight:700,color:bmiCat(bmiN).color}}>KMI {bmiN}</span>}
-        </div>
-        </div>
         </div>
       </div>
 
@@ -689,9 +687,7 @@ function SharePage({token,type}:{token:string,type:string}){
             <div>Sporto & Mitybos programa</div>
           </div>
         </div>
-      </div>
       )}
-    </div>
 
       {/* Meal plan view */}
       {!isTraining&&(
@@ -887,7 +883,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
     const perDay=score/(Object.keys(program||{}).filter(d=>(program[d]||[]).length>0).length||1);
     const raw=Math.min(10,Math.round(perDay*0.8*10)/10);
     const label=raw<=3?"Lengvas":raw<=5?"Vidutinis":raw<=7?"Sunkus":"Elitinis";
-    const color=raw<=3?"#4E9068":raw<=5?"#D4A853":raw<=7?"#E07B5A":"#C05050";
+    const color=raw<=3?"#4E9068":raw<=5?C.gold:raw<=7?"#E07B5A":"#C05050";
     return{score:raw,label,color};
   };
 
@@ -904,7 +900,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
     let h=`<!DOCTYPE html><html lang="lt"><head><meta charset="UTF-8"><title>${pn||"Programa"} · ${c.name}</title><style>${css2}</style></head><body>`;
     h+=`<button class="pb" onclick="window.print()">🖨️ Spausdinti / PDF</button>`;
     // Cover
-    h+=`<div class="cover"><div class="cover-bg"></div><div class="cover-grid"></div><div class="cover-inner"><div class="cover-top"><div class="logo-wrap"><svg width="32" height="32" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="21" stroke="#D4A853" stroke-width="1.2" opacity="0.6"/><ellipse cx="24" cy="24" rx="11" ry="5" stroke="#D4A853" stroke-width="1.4" fill="none"/><ellipse cx="24" cy="24" rx="11" ry="5" stroke="#D4A853" stroke-width="1.4" fill="none" transform="rotate(60 24 24)"/><ellipse cx="24" cy="24" rx="11" ry="5" stroke="#D4A853" stroke-width="1.4" fill="none" transform="rotate(120 24 24)"/><circle cx="24" cy="24" r="2.5" fill="#D4A853"/></svg><div><div class="logo-text">DNA TRAINER</div><div class="logo-sub">Coach Platform</div></div></div><div class="date-tag">${today2}</div></div><div class="cover-label"><span class="cover-num">01</span><div class="cover-line"></div></div><div class="cover-main">${pn||"TRENIRUOČIŲ"}<br/><span class="cover-gold">PROGRAMA</span></div><div class="cover-meta">`;
+    h+=`<div class="cover"><div class="cover-bg"></div><div class="cover-grid"></div><div class="cover-inner"><div class="cover-top"><div class="logo-wrap"><svg width="32" height="32" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="21" stroke=C.gold stroke-width="1.2" opacity="0.6"/><ellipse cx="24" cy="24" rx="11" ry="5" stroke=C.gold stroke-width="1.4" fill="none"/><ellipse cx="24" cy="24" rx="11" ry="5" stroke=C.gold stroke-width="1.4" fill="none" transform="rotate(60 24 24)"/><ellipse cx="24" cy="24" rx="11" ry="5" stroke=C.gold stroke-width="1.4" fill="none" transform="rotate(120 24 24)"/><circle cx="24" cy="24" r="2.5" fill=C.gold/></svg><div><div class="logo-text">DNA TRAINER</div><div class="logo-sub">Coach Platform</div></div></div><div class="date-tag">${today2}</div></div><div class="cover-label"><span class="cover-num">01</span><div class="cover-line"></div></div><div class="cover-main">${pn||"TRENIRUOČIŲ"}<br/><span class="cover-gold">PROGRAMA</span></div><div class="cover-meta">`;
     if(c.name)h+=`<div class="meta-item"><div class="meta-label">Klientas</div><div class="meta-val">${c.name}</div></div>`;
     if(c.goal)h+=`<div class="meta-item"><div class="meta-label">Tikslas</div><div class="meta-val meta-gold">${c.goal}</div></div>`;
     if(c.level)h+=`<div class="meta-item"><div class="meta-label">Lygis</div><div class="meta-val">${c.level}</div></div>`;
@@ -1050,7 +1046,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
               return(
                 <div key={c.id} style={{background:C.surface,borderRadius:16,border:`1px solid ${trainsToday?C.goldBorder:C.border}`,overflow:"hidden",display:"flex",flexDirection:"column" as const,transition:"transform .15s,border-color .15s",cursor:"pointer"}} onClick={()=>openView(c)}>
                   {/* Card top — accent bar */}
-                  <div style={{height:3,background:trainsToday?`linear-gradient(to right,${C.gold},${C.gold}80)`:C.border}}/>
+                  <div style={{height:3,background:trainsToday?`linear-gradient(to right,${C.gold},${C.goldStrong})`:C.border}}/>
                   <div style={{padding:"14px 16px 10px",display:"flex",alignItems:"flex-start",gap:12}}>
                     {/* Avatar */}
                     <div style={{width:46,height:46,background:`linear-gradient(135deg,${C.gold},#8B6520)`,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,fontWeight:900,color:C.bg,flexShrink:0,position:"relative" as const}}>
@@ -1090,7 +1086,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
                       </div>
                     </div>
                     <div style={{height:3,background:C.faint,overflow:"hidden"}}>
-                      <div style={{height:"100%",width:`${completionPct}%`,background:`linear-gradient(to right,${C.gold},${C.gold}88)`,transition:"width .3s"}}/>
+                      <div style={{height:"100%",width:`${completionPct}%`,background:`linear-gradient(to right,${C.gold},${C.goldMid})`,transition:"width .3s"}}/>
                     </div>
                     {c.meal_plan_name&&<div style={{marginTop:7,fontSize:10,color:C.green,display:"flex",alignItems:"center",gap:4,fontFamily:CONDENSED_FONT,letterSpacing:"0.06em"}}>🥗 <span>{c.meal_plan_name}</span></div>}
                   </div>
@@ -2139,7 +2135,7 @@ function QuickActionsFAB({onNav}:any){
           border:open?`1px solid ${C.border}`:"none",
           color:open?C.muted:"#0A0608",
           fontSize:open?20:22,cursor:"pointer",
-          boxShadow:`0 4px 24px ${C.gold}44`,
+          boxShadow:`0 4px 24px ${C.goldGlow}`,
           display:"flex",alignItems:"center",justifyContent:"center",
           transition:"all .2s",
           transform:open?"rotate(45deg)":"rotate(0deg)",
@@ -2542,7 +2538,7 @@ function RevenueChart({payments}:{payments:any[]}){
               <div style={{
                 width:"100%",
                 height:barH,
-                background:isCurrentMonth?`linear-gradient(to top,${C.gold},${C.gold}80)`:`linear-gradient(to top,${C.border},${C.surface2})`,
+                background:isCurrentMonth?`linear-gradient(to top,${C.gold},${C.goldStrong})`:`linear-gradient(to top,${C.border},${C.surface2})`,
                 transition:"height .4s ease",
                 position:"relative" as const,
               }}/>
@@ -2725,7 +2721,7 @@ function FoodManagerModal({onClose}:{onClose:()=>void}){
                   {l:"🔥 Kalorijos (kcal) *",k:"kcal",c:C.gold},
                   {l:"💪 Baltymai (g)",k:"protein",c:"#4E9068"},
                   {l:"🫙 Riebalai (g)",k:"fat",c:"#7B6DB0"},
-                  {l:"🌾 Angliavandeniai (g)",k:"carbs",c:"#D4A853"},
+                  {l:"🌾 Angliavandeniai (g)",k:"carbs",c:C.gold},
                 ].map(f=>(
                   <div key={f.k}>
                     <span style={{...css.label,color:f.c}}>{f.l}</span>
@@ -2749,7 +2745,7 @@ function FoodManagerModal({onClose}:{onClose:()=>void}){
                     {l:"Kcal",v:form.kcal,c:C.gold},
                     {l:"B",v:(form.protein||"0")+"g",c:"#4E9068"},
                     {l:"R",v:(form.fat||"0")+"g",c:"#7B6DB0"},
-                    {l:"A",v:(form.carbs||"0")+"g",c:"#D4A853"},
+                    {l:"A",v:(form.carbs||"0")+"g",c:C.gold},
                   ].map(x=>(
                     <div key={x.l} style={{textAlign:"center" as const,flex:1}}>
                       <div style={{fontFamily:CONDENSED_FONT,fontSize:8,color:C.muted,letterSpacing:"0.1em"}}>{x.l}</div>
@@ -2861,7 +2857,7 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
       name:"Formos palaikymas",
       nameEn:"MAINTENANCE",
       desc:"Balansas. Kūno sudėties gerinimas.",
-      color:"#D4A853",
+      color:C.gold,
       shadow:"#7A5A10",
       kcal:nut.tdee,
       prot:Math.round(parseFloat(weight||"0")*2.0),
@@ -2982,7 +2978,7 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
     const segs=[
       {val:Math.round(prot*4/total*100),color:"#4E9068"},
       {val:Math.round(fat*9/total*100),color:"#7B6DB0"},
-      {val:Math.round(carbs*4/total*100),color:"#D4A853"},
+      {val:Math.round(carbs*4/total*100),color:C.gold},
     ];
     let off=0;
     return(
@@ -3051,7 +3047,7 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
                 <span style={css.label}>Valgymai/dieną: {meals}</span>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginTop:8}}>
                   {[2,3,4,5,6].map(n=>(
-                    <button key={n} onClick={()=>setMeals(n)} style={{width:28,height:28,borderRadius:"6px",background:meals===n?"linear-gradient(145deg,#E8BE6A,#B8902A)":"linear-gradient(145deg,#1E2535,#141820)",color:meals===n?"#1A0E00":C.muted,border:"none",fontFamily:CONDENSED_FONT,fontSize:11,fontWeight:700,cursor:"pointer",boxShadow:meals===n?"0 3px 0 #7A5A10":"0 2px 0 #0A0E14"}}>{n}</button>
+                    <button key={n} onClick={()=>setMeals(n)} style={{width:28,height:28,borderRadius:"6px",background:meals===n?`linear-gradient(145deg,${C.gold},${C.goldDark})`:C.surface2,color:meals===n?"#fff":C.muted,border:meals===n?"none":`1px solid ${C.border}`,fontFamily:CONDENSED_FONT,fontSize:11,fontWeight:700,cursor:"pointer",boxShadow:meals===n?`0 2px 0 ${C.goldDark}`:"none"}}>{n}</button>
                   ))}
                 </div>
               </div>
@@ -3060,7 +3056,7 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
 
           {/* TDEE summary if data entered */}
           {nut&&(
-            <div style={{background:"linear-gradient(145deg,#0E1016,#0A0C12)",border:`1px solid ${C.goldBorder}`,padding:"16px 20px",marginBottom:20,display:"flex",alignItems:"center",gap:20,flexWrap:"wrap" as const,boxShadow:`0 4px 20px rgba(212,168,83,0.1)`}}>
+            <div style={{background:`linear-gradient(145deg,${C.surface},${C.surface2})`,border:`1px solid ${C.goldBorder}`,padding:"16px 20px",marginBottom:20,display:"flex",alignItems:"center",gap:20,flexWrap:"wrap" as const,boxShadow:`0 4px 20px rgba(var(--gold-rgb),0.08)`}}>
               <div>
                 <div style={{fontFamily:CONDENSED_FONT,fontSize:9,color:C.muted,letterSpacing:"0.2em",textTransform:"uppercase" as const,marginBottom:4}}>Bazinės kalorijos (TDEE)</div>
                 <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:48,color:C.gold,lineHeight:1,letterSpacing:"0.04em"}}>{nut.tdee} <span style={{fontSize:14,color:C.muted}}>kcal/d.</span></div>
@@ -3085,7 +3081,7 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
               <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,color:C.text,letterSpacing:"0.04em",marginBottom:16}}>3 TIKSLŲ REKOMENDACIJOS</div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:20}}>
                 {profiles.map(p=>(
-                  <div key={p.id} style={{background:"linear-gradient(145deg,#0E1016,#0A0C12)",border:`1px solid ${p.color}40`,overflow:"hidden",boxShadow:`0 4px 20px rgba(0,0,0,0.3)`}}>
+                  <div key={p.id} style={{background:`linear-gradient(145deg,${C.surface},${C.surface2})`,border:`1px solid ${p.color}40`,overflow:"hidden",boxShadow:`0 4px 20px rgba(var(--shadow-rgb),0.1)`}}>
                     {/* Profile header */}
                     <div style={{background:`linear-gradient(135deg,${p.color}25,${p.color}10)`,borderBottom:`1px solid ${p.color}30`,padding:"14px 16px"}}>
                       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
@@ -3115,7 +3111,7 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
                         {[
                           {l:"Baltymai",v:p.prot,g:"g",color:"#4E9068",kcal:p.prot*4,note:`${Math.round(p.prot/parseFloat(weight||"1")*10)/10}g/kg`},
                           {l:"Riebalai",v:p.fat,g:"g",color:"#7B6DB0",kcal:p.fat*9,note:`${Math.round(p.fat*9/p.kcal*100)}% kalorijų`},
-                          {l:"Angliavandeniai",v:p.carbs,g:"g",color:"#D4A853",kcal:p.carbs*4,note:`${Math.round(p.carbs*4/p.kcal*100)}% kalorijų`},
+                          {l:"Angliavandeniai",v:p.carbs,g:"g",color:C.gold,kcal:p.carbs*4,note:`${Math.round(p.carbs*4/p.kcal*100)}% kalorijų`},
                         ].map(m=>(
                           <div key={m.l}>
                             <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
@@ -3137,7 +3133,7 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
                             {l:"Kcal",v:Math.round(p.kcal/meals),c:p.color},
                             {l:"B",v:Math.round(p.prot/meals*10)/10+"g",c:"#4E9068"},
                             {l:"R",v:Math.round(p.fat/meals*10)/10+"g",c:"#7B6DB0"},
-                            {l:"A",v:Math.round(p.carbs/meals*10)/10+"g",c:"#D4A853"},
+                            {l:"A",v:Math.round(p.carbs/meals*10)/10+"g",c:C.gold},
                           ].map(x=>(
                             <div key={x.l}>
                               <div style={{fontFamily:CONDENSED_FONT,fontSize:7,color:C.muted,letterSpacing:"0.1em",textTransform:"uppercase" as const}}>{x.l}</div>
@@ -3217,8 +3213,6 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
             </div>
           )}
         </div>
-      </div>
-    </div>
       )}
 
       {/* ── FOOD LOG TAB ── */}
@@ -3260,7 +3254,7 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
                       {l:"🔥 Kalorijos (kcal)",k:"kcal",c:C.gold,ph:"pvz. 165"},
                       {l:"💪 Baltymai (g)",k:"protein",c:"#4E9068",ph:"pvz. 31"},
                       {l:"🫙 Riebalai (g)",k:"fat",c:"#7B6DB0",ph:"pvz. 3.6"},
-                      {l:"🌾 Angliavandeniai (g)",k:"carbs",c:"#D4A853",ph:"pvz. 0"},
+                      {l:"🌾 Angliavandeniai (g)",k:"carbs",c:C.gold,ph:"pvz. 0"},
                     ] as const).map(f=>(
                       <div key={f.k}>
                         <span style={{...css.label,color:f.c}}>{f.l}</span>
@@ -3297,7 +3291,7 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
                         {l:"Kcal",v:Math.round((parseFloat(dForm.kcal)||0)*(parseFloat(dForm.weight)||100)/100),c:C.gold},
                         {l:"Baltymai",v:Math.round((parseFloat(dForm.protein)||0)*(parseFloat(dForm.weight)||100)/100*10)/10+"g",c:"#4E9068"},
                         {l:"Riebalai",v:Math.round((parseFloat(dForm.fat)||0)*(parseFloat(dForm.weight)||100)/100*10)/10+"g",c:"#7B6DB0"},
-                        {l:"Angliavandeniai",v:Math.round((parseFloat(dForm.carbs)||0)*(parseFloat(dForm.weight)||100)/100*10)/10+"g",c:"#D4A853"},
+                        {l:"Angliavandeniai",v:Math.round((parseFloat(dForm.carbs)||0)*(parseFloat(dForm.weight)||100)/100*10)/10+"g",c:C.gold},
                       ].map(x=>(
                         <div key={x.l} style={{background:C.faint,border:`1px solid ${C.border}`,padding:"6px 4px"}}>
                           <div style={{fontFamily:CONDENSED_FONT,fontSize:7,color:C.muted,letterSpacing:"0.1em",textTransform:"uppercase" as const,marginBottom:2}}>{x.l}</div>
@@ -3324,7 +3318,7 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
             {/* ── RIGHT: Diary list + totals ── */}
             <div>
               {/* Totals card */}
-              <div style={{...css.card,background:"linear-gradient(145deg,#0E1016,#0A0C12)",marginBottom:12}}>
+              <div style={{...css.card,background:`linear-gradient(145deg,${C.surface},${C.surface2})`,marginBottom:12}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
                   <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:C.text,letterSpacing:"0.04em"}}>DIENOS SUVESTINĖ</div>
                   <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:36,color:C.gold,lineHeight:1}}>
@@ -3335,7 +3329,7 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
                   {[
                     {l:"Baltymai",v:logTotals.prot+"g",c:"#4E9068"},
                     {l:"Riebalai",v:logTotals.fat+"g",c:"#7B6DB0"},
-                    {l:"Angliavandeniai",v:logTotals.carbs+"g",c:"#D4A853"},
+                    {l:"Angliavandeniai",v:logTotals.carbs+"g",c:C.gold},
                   ].map(m=>(
                     <div key={m.l} style={{background:C.faint,border:`1px solid ${C.border}`,padding:"10px",textAlign:"center" as const,borderTop:`3px solid ${m.c}`}}>
                       <div style={{fontFamily:CONDENSED_FONT,fontSize:8,color:C.muted,letterSpacing:"0.12em",textTransform:"uppercase" as const,marginBottom:4}}>{m.l}</div>
@@ -3400,8 +3394,6 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
         </div>
       )}
     </div>
-  </div>
-  </div>
   );
 }
 
@@ -3444,7 +3436,7 @@ function MainApp(){
   return(
     <div style={css.page}>
       <style>{RESPONSIVE_CSS}</style>
-      <div style={{...css.header,position:"fixed" as const,top:0,left:0,right:0,zIndex:100,background:"rgba(4,6,9,0.97)",backdropFilter:"blur(28px)",borderBottom:"1px solid rgba(212,168,83,0.12)",boxShadow:"0 1px 0 rgba(212,168,83,0.08),0 4px 20px rgba(0,0,0,0.6)"}} className="header-pad">
+      <div style={{...css.header,position:"fixed" as const,top:0,left:0,right:0,zIndex:100,background:C.bgFade2,backdropFilter:"blur(28px)",borderBottom:`1px solid ${C.border}`,boxShadow:"0 1px 0 rgba(var(--gold-rgb),0.1),0 4px 20px rgba(var(--shadow-rgb),0.08)"}} className="header-pad">
         {/* Logo — bigger */}
         <svg width="32" height="32" viewBox="0 0 48 48" fill="none" style={{flexShrink:0}}>
           <circle cx="24" cy="24" r="21" stroke={C.gold} strokeWidth="1.2" opacity={0.7}/>
@@ -3463,6 +3455,8 @@ function MainApp(){
         </div>
         {/* Bell */}
         <NotificationBell upcomingBookings={allBookings} clients={allClients}/>
+        {/* Theme switcher */}
+        <ThemeSwitcher/>
         {/* Search */}
         <button onClick={()=>setGlobalSearch(true)} style={{display:"flex",alignItems:"center",gap:6,background:"transparent",border:`1px solid ${C.border}`,padding:"5px 12px",color:C.muted,fontSize:10,cursor:"pointer",fontFamily:CONDENSED_FONT,letterSpacing:"0.12em",textTransform:"uppercase" as const}} className="search-btn">
           <span>🔍</span>
@@ -3475,39 +3469,33 @@ function MainApp(){
             return(
               <button key={n.id} onClick={()=>navigate(n.id)} style={{
                 display:"flex",alignItems:"center",gap:a?8:0,
-                padding:"9px 14px",
-                background:a?"linear-gradient(135deg,rgba(212,168,83,0.18) 0%,rgba(212,168,83,0.06) 100%)":"transparent",
+                padding:"9px 16px",
+                background:a?`linear-gradient(135deg,rgba(var(--gold-rgb),0.16) 0%,rgba(var(--gold-rgb),0.05) 100%)`:"transparent",
                 border:"none",cursor:"pointer",
+                borderRadius:10,
                 position:"relative" as const,
                 transition:"all .2s ease",
-                clipPath:a?"polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%,10px 50%)":"none",
+                boxShadow:a?`inset 0 0 0 1px rgba(var(--gold-rgb),0.25)`:"none",
               }}>
-                {/* Left glow edge */}
-                {a&&<div style={{position:"absolute" as const,left:0,top:0,bottom:0,width:3,background:"linear-gradient(180deg,transparent,#D4A853,transparent)",filter:"blur(2px)",zIndex:1}}/>}
-                {/* Top edge highlight */}
-                {a&&<div style={{position:"absolute" as const,top:0,left:"10%",right:"15%",height:1,background:"linear-gradient(90deg,transparent,rgba(212,168,83,0.6),transparent)"}}/>}
-                {/* Bottom 3D face */}
-                {a&&<div style={{position:"absolute" as const,bottom:-3,left:10,right:10,height:3,background:"linear-gradient(180deg,#8A6018,#3A2505)",transform:"skewX(-3deg)",borderRadius:"0 0 2px 2px"}}/>}
-                {/* Right 3D face */}
-                {a&&<div style={{position:"absolute" as const,right:-4,top:"15%",bottom:"15%",width:5,background:"linear-gradient(90deg,#9A7020,#2A1803)"}}/>}
+                {/* Bottom active indicator bar */}
+                {a&&<div style={{position:"absolute" as const,bottom:-1,left:10,right:10,height:2,borderRadius:2,background:"var(--gold)"}}/>}
                 {/* Icon */}
                 <span style={{
                   fontSize:18,lineHeight:1,
-                  filter:a?"drop-shadow(0 0 8px rgba(212,168,83,0.9))":"opacity(0.4)",
+                  filter:a?"none":"none",
                   transition:"all .2s",
                   position:"relative" as const,zIndex:2,
-                  opacity:a?1:0.45,
+                  opacity:a?1:0.5,
                 }}>{n.icon}</span>
                 {/* Label — only shows when active */}
                 <span style={{
                   fontFamily:CONDENSED_FONT,fontSize:10,fontWeight:800,
-                  color:a?"#F5D87A":"transparent",
+                  color:a?"var(--gold-dark)":"transparent",
                   letterSpacing:"0.14em",textTransform:"uppercase" as const,
                   maxWidth:a?90:0,overflow:"hidden",
                   transition:"all .2s ease",
                   whiteSpace:"nowrap" as const,
                   position:"relative" as const,zIndex:2,
-                  textShadow:a?"0 0 12px rgba(212,168,83,0.8)":"none",
                 }}>{n.label}</span>
               </button>
             );
@@ -3516,14 +3504,13 @@ function MainApp(){
           {/* User info */}
           <div style={{
             display:"flex",alignItems:"center",gap:6,padding:"6px 12px",
-            background:"linear-gradient(135deg,rgba(212,168,83,0.08),rgba(212,168,83,0.02))",
+            background:`linear-gradient(135deg,rgba(var(--gold-rgb),0.09),rgba(var(--gold-rgb),0.02))`,
             border:`1px solid ${C.goldBorder}`,
+            borderRadius:10,
             position:"relative" as const,
-            clipPath:"polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%,8px 50%)",
           }}>
-            <div style={{position:"absolute" as const,left:0,top:0,bottom:0,width:2,background:"linear-gradient(180deg,transparent,#D4A853,transparent)"}}/>
-            <div style={{width:26,height:26,background:`linear-gradient(135deg,${C.gold},#8B6520)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:900,color:"#060709",flexShrink:0,borderRadius:"4px",boxShadow:`0 0 10px rgba(212,168,83,0.4)`}}>{(coach?.full_name||"?")[0].toUpperCase()}</div>
-            <span className="logout-label" style={{fontSize:10,fontWeight:700,color:C.gold,letterSpacing:"0.08em"}}>{coach?.full_name}</span>
+            <div style={{width:26,height:26,background:`linear-gradient(135deg,${C.gold},${C.goldDark})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:900,color:"#fff",flexShrink:0,borderRadius:"6px"}}>{(coach?.full_name||"?")[0].toUpperCase()}</div>
+            <span className="logout-label" style={{fontSize:10,fontWeight:700,color:C.goldDark,letterSpacing:"0.08em"}}>{coach?.full_name}</span>
             {isAdmin&&<span style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,padding:"1px 6px",fontSize:8,color:C.gold,fontWeight:800,fontFamily:CONDENSED_FONT,letterSpacing:"0.12em"}}>ADMIN</span>}
           </div>
           <button onClick={handleLogout} style={{
@@ -3559,7 +3546,7 @@ function MainApp(){
       <AIAssistantButton clients={allClients} exercises={exercises}/>
 
       {/* Mobile bottom navigation — Holographic Prism */}
-      <nav className="bottom-nav" style={{background:"rgba(4,6,9,0.97)",borderTop:"1px solid rgba(212,168,83,0.15)",boxShadow:"0 -4px 20px rgba(0,0,0,0.6)"}}>
+      <nav className="bottom-nav" style={{background:C.bgFade2,borderTop:`1px solid ${C.border}`,boxShadow:"0 -4px 20px rgba(var(--shadow-rgb),0.08)"}}>
         {[
           {id:"dashboard",icon:"🏠",label:"Pradžia"},
           {id:"clients",icon:"👥",label:"Klientai"},
@@ -3573,9 +3560,9 @@ function MainApp(){
           return(
             <div key={n.id} className={`bottom-nav-item${a?" active":""}`} onClick={()=>navigate(n.id)} style={{position:"relative" as const}}>
               {/* Active: prism glow top */}
-              {a&&<div style={{position:"absolute" as const,top:0,left:"15%",right:"15%",height:2,background:"linear-gradient(90deg,transparent,#D4A853,transparent)",boxShadow:"0 0 8px rgba(212,168,83,0.8)"}}/>}
-              <span className="bottom-nav-icon" style={{filter:a?"drop-shadow(0 0 6px rgba(212,168,83,0.9))":"none",transition:"filter .2s"}}>{n.icon}</span>
-              <span className="bottom-nav-label" style={{color:a?"#D4A853":"#3A4A5A"}}>{n.label}</span>
+              {a&&<div style={{position:"absolute" as const,top:0,left:"15%",right:"15%",height:2,background:`linear-gradient(90deg,transparent,${C.gold},transparent)`}}/>}
+              <span className="bottom-nav-icon" style={{opacity:a?1:0.55,transition:"opacity .2s"}}>{n.icon}</span>
+              <span className="bottom-nav-label" style={{color:a?C.goldDark:C.muted}}>{n.label}</span>
             </div>
           );
         })}
