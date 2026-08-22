@@ -359,21 +359,42 @@ export function CalendarTab(){
   const [blockDate, setBlockDate] = useState("");
   const [bookingLink] = useState(()=>window.location.origin+window.location.pathname+`?type=booking&coach=${getCoachId()}`);
   const [newBookingAlert, setNewBookingAlert] = useState<Booking|null>(null);
+  const [calToken, setCalToken] = useState<string|null>(null);
+  const [calCopied, setCalCopied] = useState(false);
   const lastCountRef = {current: -1};
 
   const load = useCallback(async()=>{
     setLoading(true);
     try{
       const coachId = getCoachId();
-      const [sch,bk] = await Promise.all([
+      const [sch,bk,coachRows] = await Promise.all([
         sb.get("schedule",`?coach_id=eq.${coachId}&limit=1`).catch(()=>[]),
         sb.get("bookings",`?coach_id=eq.${coachId}&order=date,time`).catch(()=>[]),
+        sb.get("coaches",`?id=eq.${coachId}&select=calendar_token&limit=1`).catch(()=>[]),
       ]);
       if(sch.length){ setSchedule({...DEFAULT_SCHEDULE,...sch[0]}); setSchedForm({...DEFAULT_SCHEDULE,...sch[0]}); setScheduleId(sch[0].id); }
       setBookings(bk);
+      setCalToken(coachRows[0]?.calendar_token||null);
     }finally{ setLoading(false); }
   },[]);
   useEffect(()=>{ load(); },[load]);
+
+  const ensureCalToken = async():Promise<string>=>{
+    if(calToken)return calToken;
+    const t=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
+    const coachId=getCoachId();
+    await sb.update("coaches",coachId,{calendar_token:t});
+    setCalToken(t);
+    return t;
+  };
+  const calendarFeedUrl = calToken ? `${SUPABASE_URL}/functions/v1/calendar-feed?token=${calToken}` : "";
+  const calendarFeedUrlWebcal = calendarFeedUrl.replace(/^https?:\/\//,"webcal://");
+  const copyCalendarLink = async()=>{
+    const t=await ensureCalToken();
+    const link=`${SUPABASE_URL}/functions/v1/calendar-feed?token=${t}`.replace(/^https?:\/\//,"webcal://");
+    try{await navigator.clipboard.writeText(link);}catch{}
+    setCalCopied(true);setTimeout(()=>setCalCopied(false),2500);
+  };
 
   // Poll for new bookings every 30 seconds
   useEffect(()=>{
@@ -539,6 +560,29 @@ export function CalendarTab(){
         <button onClick={()=>navigator.clipboard?.writeText(bookingLink)} style={{...css.btnTeal,fontSize:11,flexShrink:0}}>📋 Kopijuoti</button>
         <a href={bookingLink} target="_blank" rel="noopener noreferrer" style={{...css.btnGhost,fontSize:11,textDecoration:"none",flexShrink:0}}>🔗 Atidaryti</a>
       </div>
+
+      {/* Phone calendar sync banner */}
+      <div style={{background:C.tealSoft,border:`1px solid ${C.tealBorder}`,borderRadius:12,padding:"12px 16px",marginBottom:20,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap" as const}}>
+        <div style={{fontSize:18}}>📲</div>
+        <div style={{flex:1,minWidth:200}}>
+          <div style={{fontSize:11,color:C.teal,fontWeight:700,textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:2}}>Sinchronizuoti su telefono kalendoriumi</div>
+          {calToken?(
+            <div style={{fontSize:11,color:C.muted,wordBreak:"break-all" as const}}>{calendarFeedUrlWebcal}</div>
+          ):(
+            <div style={{fontSize:11,color:C.muted}}>Sukurkite nuorodą, kurią pridėsite kaip prenumeruojamą kalendorių — naujos rezervacijos atsiras automatiškai.</div>
+          )}
+        </div>
+        <button onClick={copyCalendarLink} style={{...css.btnTeal,fontSize:11,flexShrink:0}}>
+          {calCopied?"✅ Nukopijuota!":calToken?"📋 Kopijuoti":"⚡ Sukurti nuorodą"}
+        </button>
+        {calToken&&<a href={calendarFeedUrl} target="_blank" rel="noopener noreferrer" style={{...css.btnGhost,fontSize:11,textDecoration:"none",flexShrink:0}}>⬇️ Atsisiųsti .ics</a>}
+      </div>
+      {calToken&&(
+        <div style={{fontSize:10,color:C.muted,marginTop:-14,marginBottom:20,lineHeight:1.6,paddingLeft:2}}>
+          <b style={{color:C.text}}>Google Calendar (telefone/kompiuteryje):</b> calendar.google.com → „+" prie „Kiti kalendoriai" → „Iš URL" → įklijuokite nuorodą.<br/>
+          <b style={{color:C.text}}>iPhone (Apple kalendorius):</b> Nustatymai → Kalendorius → Paskyros → Pridėti paskyrą → Kita → Pridėti prenumeruojamą kalendorių → įklijuokite nuorodą.
+        </div>
+      )}
 
       {/* SETTINGS VIEW */}
       {view==="settings"&&(
