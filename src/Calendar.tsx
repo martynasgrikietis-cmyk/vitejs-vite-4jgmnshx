@@ -228,7 +228,7 @@ export function BookingPage({coachId}:{coachId:string|null}){
 
       {/* Hero */}
       <div style={{background:`linear-gradient(180deg,#F0F0F0 0%,${C.bg} 100%)`,padding:"36px 20px 28px",textAlign:"center",borderBottom:`1px solid ${C.border}`,position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:500,height:200,background:`radial-gradient(ellipse at 50% 0%,${C.gold}12 0%,transparent 70%)`,pointerEvents:"none"}}/>
+        <div style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:500,height:200,background:`radial-gradient(ellipse at 50% 0%,${C.goldFaint} 0%,transparent 70%)`,pointerEvents:"none"}}/>
         <svg width="64" height="64" viewBox="0 0 48 48" fill="none" style={{margin:"0 auto 16px",display:"block"}} className="fu">
           <circle cx="24" cy="24" r="22" stroke={C.text} strokeWidth="1" opacity={0.35}/>
           <ellipse cx="24" cy="24" rx="12" ry="5.5" stroke={C.text} strokeWidth="1.3" fill="none"/>
