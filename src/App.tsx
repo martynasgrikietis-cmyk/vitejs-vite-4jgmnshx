@@ -3517,7 +3517,7 @@ function MainApp(){
             ...css.btnGhost,fontSize:10,padding:"6px 10px",marginLeft:2,
             clipPath:"polygon(0 0,calc(100% - 6px) 0,100% 50%,calc(100% - 6px) 100%,0 100%,6px 50%)",
           }}>
-            <span className="logout-label">🚪 </span>Atsijungti
+            🚪 <span className="logout-label-text">Atsijungti</span>
           </button>
         </div>
       </div>
