@@ -632,15 +632,15 @@ function SharePage({token,type}:{token:string,type:string}){
         <img src="/hero-gym.jpg" alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",filter:"brightness(0.55) saturate(0.95)"}} onError={e=>(e.target as HTMLImageElement).style.display="none"}/>
         <div style={{position:"absolute",inset:0,background:`linear-gradient(180deg,${C.bgFade1} 0%,${C.bgFade2} 48%,${C.bg} 100%)`}}/>
         <div style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:500,height:220,background:`radial-gradient(ellipse at 50% 0%,${accentColor}14 0%,transparent 70%)`,pointerEvents:"none"}}/>
-        <div style={{width:72,height:72,background:`linear-gradient(135deg,${C.gold},#B06A08)`,borderRadius:20,display:"flex",alignItems:"center",justifyContent:"center",fontSize:30,fontWeight:900,color:C.bg,margin:"0 auto 18px",boxShadow:`0 8px 28px ${C.goldGlow}`}} className="fu">{(client.name||"?")[0].toUpperCase()}</div>
-        <div style={{fontSize:26,fontWeight:900,color:C.text,marginBottom:4,letterSpacing:"-0.02em",textShadow:`0 1px 12px ${C.bg}`}} className="fu1">{client.name}</div>
-        <div style={{fontSize:13,color:C.muted,marginBottom:16,textShadow:`0 1px 10px ${C.bg}`}} className="fu1">{planEmoji} {planName}</div>
+        <div style={{width:72,height:72,background:`linear-gradient(135deg,${C.gold},#B06A08)`,borderRadius:20,display:"flex",alignItems:"center",justifyContent:"center",fontSize:30,fontWeight:900,color:"#FFFFFF",margin:"0 auto 18px",boxShadow:"0 8px 28px rgba(0,0,0,0.5)"}} className="fu">{(client.name||"?")[0].toUpperCase()}</div>
+        <div style={{fontSize:26,fontWeight:900,color:"#FFFFFF",marginBottom:4,letterSpacing:"-0.02em",textShadow:"0 2px 10px rgba(0,0,0,0.85), 0 1px 3px rgba(0,0,0,0.9)"}} className="fu1">{client.name}</div>
+        <div style={{fontSize:13,color:"rgba(255,255,255,0.88)",marginBottom:16,textShadow:"0 1px 6px rgba(0,0,0,0.8)"}} className="fu1">{planEmoji} {planName}</div>
         <div style={{display:"flex",justifyContent:"center",gap:8,flexWrap:"wrap"}} className="fu2">
-          {client.goal&&<span style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:20,padding:"4px 14px",fontSize:12,fontWeight:700,color:C.gold}}>{client.goal}</span>}
-          {client.level&&<span style={{background:C.tealSoft,border:`1px solid ${C.tealBorder}`,borderRadius:20,padding:"4px 14px",fontSize:12,fontWeight:700,color:C.teal}}>{client.level}</span>}
-          {bmiN&&<span style={{background:bmiCat(bmiN).color+"22",border:`1px solid ${bmiCat(bmiN).color}44`,borderRadius:20,padding:"4px 14px",fontSize:12,fontWeight:700,color:bmiCat(bmiN).color}}>KMI {bmiN}</span>}
+          {client.goal&&<span style={{background:"rgba(0,0,0,0.45)",backdropFilter:"blur(6px)",border:"1px solid rgba(255,255,255,0.25)",borderRadius:20,padding:"4px 14px",fontSize:12,fontWeight:700,color:"#FFFFFF"}}>{client.goal}</span>}
+          {client.level&&<span style={{background:"rgba(0,0,0,0.45)",backdropFilter:"blur(6px)",border:"1px solid rgba(255,255,255,0.25)",borderRadius:20,padding:"4px 14px",fontSize:12,fontWeight:700,color:"#FFFFFF"}}>{client.level}</span>}
+          {bmiN&&<span style={{background:"rgba(0,0,0,0.45)",backdropFilter:"blur(6px)",border:"1px solid rgba(255,255,255,0.25)",borderRadius:20,padding:"4px 14px",fontSize:12,fontWeight:700,color:"#FFFFFF"}}>KMI {bmiN}</span>}
         </div>
-        <button onClick={downloadPdf} disabled={dlBusy} style={{marginTop:16,display:"inline-flex",alignItems:"center",gap:8,background:C.faint,border:`1px solid ${C.border}`,borderRadius:10,padding:"9px 18px",color:C.text,fontSize:12,fontWeight:700,cursor:dlBusy?"not-allowed":"pointer",opacity:dlBusy?0.6:1}} className="fu2 no-print">
+        <button onClick={downloadPdf} disabled={dlBusy} style={{marginTop:16,display:"inline-flex",alignItems:"center",gap:8,background:"rgba(0,0,0,0.45)",backdropFilter:"blur(6px)",border:"1px solid rgba(255,255,255,0.25)",borderRadius:10,padding:"9px 18px",color:"#FFFFFF",fontSize:12,fontWeight:700,cursor:dlBusy?"not-allowed":"pointer",opacity:dlBusy?0.6:1}} className="fu2 no-print">
           {dlBusy?"⏳ Ruošiama...":"📊 Detali PDF ataskaita"}
         </button>
         <button onClick={()=>window.print()} style={{marginTop:16,marginLeft:8,display:"inline-flex",alignItems:"center",gap:8,background:C.gold,border:"none",borderRadius:10,padding:"9px 18px",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}} className="fu2 no-print">
