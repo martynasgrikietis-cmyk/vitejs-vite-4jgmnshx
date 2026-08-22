@@ -573,6 +573,7 @@ function SharePage({token,type}:{token:string,type:string}){
   const [client,setClient]=useState<any>(null);
   const [loading,setLoading]=useState(true);
   const [notFound,setNotFound]=useState(false);
+  const [dlBusy,setDlBusy]=useState(false);
 
   useEffect(()=>{
     sb.get("clients",`?share_token=eq.${token}&limit=1`)
@@ -590,7 +591,6 @@ function SharePage({token,type}:{token:string,type:string}){
   const accentColor=isTraining?C.gold:C.green;
   const planName=isTraining?(client.program_name||"Programa"):(client.meal_plan_name||"Mitybos planas");
   const planEmoji=isTraining?"🏋️":"🥗";
-  const [dlBusy,setDlBusy]=useState(false);
 
   const downloadPdf=async()=>{
     if(dlBusy)return;
