@@ -296,6 +296,19 @@ export const RESPONSIVE_CSS = `
     input,select,textarea{font-size:16px !important;min-height:44px;}
     *{-webkit-tap-highlight-color:transparent;}
   }
+  /* ── HEADER NAV — never overflow off-screen; scroll internally instead ── */
+  .header-nav-items{min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;}
+  .header-nav-items::-webkit-scrollbar{display:none;}
+  /* ── TABLET — compact the header chrome so the full nav fits ── */
+  @media(min-width:641px) and (max-width:1024px){
+    .header-pad{padding-left:16px !important;padding-right:16px !important;gap:8px !important;}
+    .header-nav-items{gap:0 !important;}
+    .header-nav-items button{padding:8px 8px !important;}
+    .logout-label,.logout-label-text{display:none !important;}
+    .hsubtitle{display:none !important;}
+    .search-btn{padding:6px 8px !important;}
+    .theme-switch-btn{padding:6px 8px !important;}
+  }
   @media(min-width:641px) and (max-width:960px){
     .cl-grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));}
     .cf-grid{grid-template-columns:1fr;}
@@ -384,7 +397,7 @@ export function ThemeSwitcher(){
 
   return (
     <div ref={ref} style={{position:"relative" as const}}>
-      <button onClick={()=>setOpen(o=>!o)} title="Pakeisti temą" style={{display:"flex",alignItems:"center",gap:7,background:C.faint,border:`1px solid ${C.border}`,padding:"6px 12px",cursor:"pointer",borderRadius:20,fontFamily:CONDENSED_FONT}}>
+      <button onClick={()=>setOpen(o=>!o)} title="Pakeisti temą" className="theme-switch-btn" style={{display:"flex",alignItems:"center",gap:7,background:C.faint,border:`1px solid ${C.border}`,padding:"6px 12px",cursor:"pointer",borderRadius:20,fontFamily:CONDENSED_FONT}}>
         <span style={{width:13,height:13,borderRadius:"50%",background:active.accent,display:"inline-block",boxShadow:`0 0 0 2px ${C.surface}, 0 0 0 3px ${C.border}`}}/>
         <span style={{fontSize:10,color:C.text,letterSpacing:"0.1em",textTransform:"uppercase" as const,fontWeight:600}} className="logout-label">{active.name}</span>
         <span style={{fontSize:9,color:C.muted,transform:open?"rotate(180deg)":"none",transition:"transform .15s"}}>▾</span>
