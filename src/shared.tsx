@@ -908,7 +908,7 @@ function roundRectPath(ctx:CanvasRenderingContext2D,x:number,y:number,w:number,h
 }
 
 export async function generateTrainingJpg(c:any):Promise<void>{
-  const W=880,PAD=32,SCALE=2;
+  const W=880,PAD=24,SCALE=2;
   const prog=c.program||{};
   const days2=DAYS.filter(d=>(c.training_days||[]).includes(d));
   const today2=new Date().toLocaleDateString("lt-LT");
@@ -917,27 +917,30 @@ export async function generateTrainingJpg(c:any):Promise<void>{
   const exMap:any={};
   if(allExIds.length){const full=await sb.get("exercises",`?id=in.(${allExIds.join(",")})&select=id,imgs,cover_img`);full.forEach((e:any)=>{exMap[e.id]=e;});}
 
-  // measure pass
+  const IMG_ROW_H=230;
+  const STATS_H=64;
+  const GAP=14;
+
   const meas=document.createElement("canvas");
   const mctx=meas.getContext("2d")!;
-  mctx.font="600 13px Arial";
-  const rows:{day:string,ex:any,lines:string[],height:number}[]=[];
-  const chipFont="700 10px Arial";
+
+  type Row={kind:"dayhead",day?:string,count?:number,height:number}|{kind:"ex",day:string,ex:any,imgs:string[],descLines:string[],height:number};
+  const rows:Row[]=[];
   days2.forEach(day=>{
-    (prog[day]||[]).forEach((ex:any)=>{
-      mctx.font="600 13px Arial";
-      const lines=wrapCanvasText(mctx,ex.description||"",W-PAD*2-84-14);
-      const descLines=ex.description?Math.min(lines.length,3):0;
-      const h=Math.max(74,40+descLines*15+16);
-      rows.push({day,ex,lines:ex.description?lines.slice(0,3):[],height:h});
+    const exs=(prog[day]||[]) as any[];
+    rows.push({kind:"dayhead",day,count:exs.length,height:44});
+    exs.forEach((ex:any)=>{
+      const fullEx=exMap[ex.id]||ex;
+      const imgs=(fullEx.imgs&&fullEx.imgs.length?fullEx.imgs:fullEx.cover_img?[fullEx.cover_img]:[]).filter(Boolean).slice(0,4);
+      mctx.font="13px Arial";
+      const descLines=ex.description?wrapCanvasText(mctx,ex.description,W-PAD*2).slice(0,3):[];
+      const descH=descLines.length?descLines.length*17+10:0;
+      rows.push({kind:"ex",day,ex,imgs,descLines,height:IMG_ROW_H+STATS_H+descH+GAP});
     });
   });
-  const headerH=150;
-  const dayHeaderH=40;
-  const footerH=50;
-  let totalH=headerH+footerH;
-  let curDay="";
-  rows.forEach(r=>{ if(r.day!==curDay){totalH+=dayHeaderH;curDay=r.day;} totalH+=r.height; });
+
+  const headerH=150,footerH=50;
+  let totalH=headerH+footerH+rows.reduce((a,r)=>a+r.height,0);
   if(rows.length===0)totalH+=60;
 
   const canvas=document.createElement("canvas");
@@ -960,62 +963,81 @@ export async function generateTrainingJpg(c:any):Promise<void>{
   if(metaBits){ctx.fillStyle="#8A93A0";ctx.font="11px Arial";ctx.fillText(metaBits,PAD,126);}
 
   let y=headerH;
-  curDay="";
   for(const r of rows){
-    if(r.day!==curDay){
-      ctx.fillStyle="#F5F2EC";ctx.fillRect(0,y,W,dayHeaderH);
-      ctx.fillStyle="#0B0D12";ctx.font="700 15px Arial";
-      ctx.fillText(r.day.toUpperCase(),PAD,y+26);
-      y+=dayHeaderH;
-      curDay=r.day;
+    if(r.kind==="dayhead"){
+      ctx.fillStyle="#FFFFFF";ctx.fillRect(0,y,W,r.height);
+      ctx.fillStyle="#0B0D12";ctx.font="700 17px Arial";
+      ctx.fillText(r.day!.toUpperCase(),PAD,y+29);
+      const dtxt=`— ${r.count} pratimas(-ai)`;
+      ctx.fillStyle="#8A93A0";ctx.font="12px Arial";
+      ctx.fillText(dtxt,PAD+ctx.measureText(r.day!.toUpperCase()).width+90,y+29);
+      y+=r.height;
+      continue;
     }
-    const rowTop=y;
-    ctx.strokeStyle="#EEEBE4";ctx.beginPath();ctx.moveTo(0,rowTop);ctx.lineTo(W,rowTop);ctx.stroke();
 
-    // photo
-    const fullEx=exMap[r.ex.id]||r.ex;
-    const imgUrl=(fullEx.imgs&&fullEx.imgs[0])||fullEx.cover_img;
-    const px=PAD,py=rowTop+10,pw=64,ph=r.height-20;
-    if(imgUrl){
-      const img=await loadImageViaProxy(imgUrl);
-      if(img){
-        roundRectPath(ctx,px,py,pw,ph,8);ctx.save();ctx.clip();
-        const scale=Math.max(pw/img.width,ph/img.height);
-        const dw=img.width*scale,dh=img.height*scale;
-        ctx.drawImage(img,px-(dw-pw)/2,py-(dh-ph)/2,dw,dh);
-        ctx.restore();
+    const {ex,imgs,descLines}=r;
+    const rowTop=y;
+
+    // ── image row: all photos side by side, equal width ──
+    const n=Math.max(1,imgs.length);
+    const cellW=W/n;
+    if(imgs.length===0){
+      ctx.fillStyle="#F0EDE6";ctx.fillRect(0,rowTop,W,IMG_ROW_H);
+      ctx.fillStyle="#B8B2A6";ctx.font="34px Arial";
+      ctx.fillText("📷",W/2-17,rowTop+IMG_ROW_H/2+12);
+    }else{
+      for(let i=0;i<imgs.length;i++){
+        const img=await loadImageViaProxy(imgs[i]);
+        const cx=i*cellW;
+        if(img){
+          ctx.save();
+          ctx.beginPath();ctx.rect(cx,rowTop,cellW,IMG_ROW_H);ctx.clip();
+          const scale=Math.max(cellW/img.width,IMG_ROW_H/img.height);
+          const dw=img.width*scale,dh=img.height*scale;
+          ctx.drawImage(img,cx+(cellW-dw)/2,rowTop+(IMG_ROW_H-dh)/2,dw,dh);
+          ctx.restore();
+        }else{
+          ctx.fillStyle="#F0EDE6";ctx.fillRect(cx,rowTop,cellW,IMG_ROW_H);
+          ctx.fillStyle="#B8B2A6";ctx.font="26px Arial";
+          ctx.fillText("📷",cx+cellW/2-13,rowTop+IMG_ROW_H/2+9);
+        }
+        if(i>0){ctx.fillStyle="#FFFFFF";ctx.fillRect(cx-1,rowTop,2,IMG_ROW_H);}
       }
     }
-    if(!imgUrl){
-      ctx.fillStyle="#F5F2EC";roundRectPath(ctx,px,py,pw,ph,8);ctx.fill();
-      ctx.fillStyle="#B8B2A6";ctx.font="20px Arial";ctx.fillText("📷",px+pw/2-10,py+ph/2+7);
+    // dark bottom gradient + name overlay (matches on-screen card style)
+    const grad=ctx.createLinearGradient(0,rowTop+IMG_ROW_H-90,0,rowTop+IMG_ROW_H);
+    grad.addColorStop(0,"rgba(0,0,0,0)");grad.addColorStop(1,"rgba(0,0,0,0.72)");
+    ctx.fillStyle=grad;ctx.fillRect(0,rowTop+IMG_ROW_H-90,W,90);
+    ctx.fillStyle="#FFFFFF";ctx.font="700 19px Arial";
+    ctx.fillText(ex.name||"",PAD,rowTop+IMG_ROW_H-32);
+    ctx.fillStyle="rgba(255,255,255,0.8)";ctx.font="12px Arial";
+    ctx.fillText(ex.muscle||"",PAD,rowTop+IMG_ROW_H-14);
+
+    // ── stats row (Serijos / Kartojimai / Svoris / Poilsis) ──
+    const statsTop=rowTop+IMG_ROW_H;
+    ctx.fillStyle="#FFFFFF";ctx.fillRect(0,statsTop,W,STATS_H);
+    const stats=[
+      {label:"SERIJOS",val:ex.customSets},
+      {label:"KARTOJIMAI",val:ex.customReps},
+      {label:"SVORIS",val:ex.customWeight?ex.customWeight+" kg":""},
+      {label:"POILSIS",val:ex.customRest},
+    ].filter(s=>s.val);
+    const colW=W/Math.max(1,stats.length);
+    stats.forEach((s,i)=>{
+      const cx=i*colW+PAD;
+      ctx.fillStyle="#8A93A0";ctx.font="700 10px Arial";
+      ctx.fillText(s.label,cx,statsTop+24);
+      ctx.fillStyle="#0B0D12";ctx.font="700 22px Arial";
+      ctx.fillText(String(s.val),cx,statsTop+50);
+    });
+
+    let dy=statsTop+STATS_H+16;
+    if(descLines.length){
+      ctx.fillStyle="#8A93A0";ctx.font="italic 12px Arial";
+      descLines.forEach((line:string,i:number)=>ctx.fillText(line,PAD,dy+i*17));
     }
 
-    const tx=px+pw+14;
-    ctx.fillStyle="#0B0D12";ctx.font="700 14px Arial";
-    ctx.fillText(r.ex.name||"",tx,rowTop+24);
-    ctx.fillStyle="#B8902A";ctx.font="700 10px Arial";
-    ctx.fillText((r.ex.muscle||"")+(r.ex.equipment?" · "+r.ex.equipment:""),tx,rowTop+40);
-
-    let cx=tx;
-    const chip=(label:string,val:string,bg:string,fg:string)=>{
-      if(!val)return;
-      const text=`${label}: ${val}`;
-      ctx.font=chipFont;
-      const tw=ctx.measureText(text).width;
-      ctx.fillStyle=bg;roundRectPath(ctx,cx,rowTop+48,tw+14,18,5);ctx.fill();
-      ctx.fillStyle=fg;ctx.fillText(text,cx+7,rowTop+61);
-      cx+=tw+14+6;
-    };
-    chip("Ser",r.ex.customSets,"#D4A85320","#8B6520");
-    chip("Kart",r.ex.customReps,"#5B8DB820","#3A6A90");
-    chip("Sv",r.ex.customWeight?r.ex.customWeight+"kg":"","#4E906820","#2A6040");
-    chip("Poilsis",r.ex.customRest,"#7B6DB020","#5A4A90");
-
-    if(r.lines.length){
-      ctx.fillStyle="#8A93A0";ctx.font="italic 11px Arial";
-      r.lines.forEach((line,i)=>ctx.fillText(line,tx,rowTop+74+i*15));
-    }
+    ctx.strokeStyle="#EEEBE4";ctx.beginPath();ctx.moveTo(0,rowTop+r.height);ctx.lineTo(W,rowTop+r.height);ctx.stroke();
     y+=r.height;
   }
 
