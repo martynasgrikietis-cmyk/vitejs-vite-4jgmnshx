@@ -622,8 +622,9 @@ function SharePage({token,type}:{token:string,type:string}){
         .fu4{animation:fadeUp .4s .32s ease both;}
         @media print{
           .no-print{display:none !important;}
+          .print-fx{display:none !important;}
           body{background:#fff !important;}
-          *{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-shadow:none !important;}
+          *{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-shadow:none !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important;}
         }
       `}</style>
 
