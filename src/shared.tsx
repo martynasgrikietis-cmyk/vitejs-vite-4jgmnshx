@@ -497,12 +497,29 @@ export function MultiImgUploader({imgs,onChange,maxImgs=4}:{imgs:string[],onChan
     }
   };
 
-  const addUrl=()=>{
+  const addUrl=async()=>{
     const v=urlRef.current?.value?.trim();
-    if(v&&!(imgs||[]).includes(v)&&(imgs||[]).length<maxImgs){
+    if(!v||(imgs||[]).includes(v)||(imgs||[]).length>=maxImgs)return;
+    if(urlRef.current)urlRef.current.value="";
+    setShowUrl(false);
+    setUploading(true);
+    setUploadError("");
+    try{
+      // Fetch + compress + host the pasted image ourselves, so a pasted link
+      // behaves exactly like an uploaded file (small, reliable, no giant
+      // originals ending up in PDFs later).
+      const resp=await fetch(v,{mode:"cors"});
+      if(!resp.ok)throw new Error("fetch failed");
+      const blob=await resp.blob();
+      const file=new File([blob],"pasted-image.jpg",{type:blob.type||"image/jpeg"});
+      const hostedUrl=await sb.uploadImage(file);
+      onChange((p:string[])=>[...(p||[]),hostedUrl]);
+    }catch{
+      // CORS blocked or fetch failed — fall back to using the link as-is.
       onChange((p:string[])=>[...(p||[]),v]);
-      if(urlRef.current)urlRef.current.value="";
-      setShowUrl(false);
+      setUploadError("Nepavyko automatiškai suspausti nuotraukos iš šios nuorodos — pridėta kaip yra, bet gali būti didelė. Jei įmanoma, atsisiųskite nuotrauką ir įkelkite ją kaip failą (📁 Pasirinkti failus).");
+    }finally{
+      setUploading(false);
     }
   };
 
@@ -671,7 +688,7 @@ function pdfSafeColor(c:string|null|undefined):string{
 // Pre-shrink each image to the exact size it's displayed at before it goes
 // into the printable HTML, so quality stays crisp but the file stays small.
 const pdfImgCache=new Map<string,Promise<string>>();
-function shrinkForPdf(url:string,maxW:number,maxH:number,quality=0.68):Promise<string>{
+export function shrinkForPdf(url:string,maxW:number,maxH:number,quality=0.68):Promise<string>{
   if(!url) return Promise.resolve(url);
   if(pdfImgCache.has(url)) return pdfImgCache.get(url)!;
   const p=new Promise<string>((resolve)=>{
@@ -850,4 +867,289 @@ export async function printMealPDF(c:any){
   });
   h+=`<div class="ft">© DNA Trainer · Mitybos planas · ${today2}</div></body></html>`;
   win.document.open();win.document.write(h);win.document.close();
+}
+
+// ── SINGLE-IMAGE (JPG) EXPORT ──────────────────────────────
+// Renders the whole program/meal plan as one tall JPG using <canvas>.
+// Images are fetched through our own edge function (image-proxy) so a
+// canvas export never fails due to the source host's CORS policy.
+function loadImageViaProxy(url:string):Promise<HTMLImageElement|null>{
+  return new Promise((resolve)=>{
+    if(!url){resolve(null);return;}
+    const img=new Image();
+    img.crossOrigin="anonymous";
+    img.onload=()=>resolve(img);
+    img.onerror=()=>resolve(null);
+    img.src=`${SUPABASE_URL}/functions/v1/image-proxy?url=${encodeURIComponent(url)}`;
+  });
+}
+
+function wrapCanvasText(ctx:CanvasRenderingContext2D,text:string,maxWidth:number):string[]{
+  const words=(text||"").split(/\s+/).filter(Boolean);
+  const lines:string[]=[];
+  let cur="";
+  for(const w of words){
+    const test=cur?cur+" "+w:w;
+    if(ctx.measureText(test).width>maxWidth&&cur){lines.push(cur);cur=w;}
+    else cur=test;
+  }
+  if(cur)lines.push(cur);
+  return lines.length?lines:[""];
+}
+
+function roundRectPath(ctx:CanvasRenderingContext2D,x:number,y:number,w:number,h:number,r:number){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+export async function generateTrainingJpg(c:any):Promise<void>{
+  const W=880,PAD=32,SCALE=2;
+  const prog=c.program||{};
+  const days2=DAYS.filter(d=>(c.training_days||[]).includes(d));
+  const today2=new Date().toLocaleDateString("lt-LT");
+
+  const allExIds=[...new Set(Object.values(prog).flat().map((e:any)=>e.id).filter(Boolean))];
+  const exMap:any={};
+  if(allExIds.length){const full=await sb.get("exercises",`?id=in.(${allExIds.join(",")})&select=id,imgs,cover_img`);full.forEach((e:any)=>{exMap[e.id]=e;});}
+
+  // measure pass
+  const meas=document.createElement("canvas");
+  const mctx=meas.getContext("2d")!;
+  mctx.font="600 13px Arial";
+  const rows:{day:string,ex:any,lines:string[],height:number}[]=[];
+  const chipFont="700 10px Arial";
+  days2.forEach(day=>{
+    (prog[day]||[]).forEach((ex:any)=>{
+      mctx.font="600 13px Arial";
+      const lines=wrapCanvasText(mctx,ex.description||"",W-PAD*2-84-14);
+      const descLines=ex.description?Math.min(lines.length,3):0;
+      const h=Math.max(74,40+descLines*15+16);
+      rows.push({day,ex,lines:ex.description?lines.slice(0,3):[],height:h});
+    });
+  });
+  const headerH=150;
+  const dayHeaderH=40;
+  const footerH=50;
+  let totalH=headerH+footerH;
+  let curDay="";
+  rows.forEach(r=>{ if(r.day!==curDay){totalH+=dayHeaderH;curDay=r.day;} totalH+=r.height; });
+  if(rows.length===0)totalH+=60;
+
+  const canvas=document.createElement("canvas");
+  canvas.width=W*SCALE;canvas.height=totalH*SCALE;
+  const ctx=canvas.getContext("2d")!;
+  ctx.scale(SCALE,SCALE);
+  ctx.fillStyle="#FFFFFF";ctx.fillRect(0,0,W,totalH);
+
+  // header
+  ctx.fillStyle="#0B0D12";ctx.fillRect(0,0,W,headerH);
+  ctx.fillStyle="#D4A853";ctx.font="700 11px Arial";ctx.textBaseline="alphabetic";
+  ctx.fillText("DNA TRAINER",PAD,36);
+  ctx.fillStyle="#606878";ctx.font="10px Arial";
+  ctx.fillText(today2,W-PAD-ctx.measureText(today2).width,36);
+  ctx.fillStyle="#FFFFFF";ctx.font="700 30px Arial";
+  ctx.fillText(c.program_name||"Treniruočių programa",PAD,80);
+  ctx.fillStyle="#D4A853";ctx.font="600 13px Arial";
+  ctx.fillText(c.name||"",PAD,106);
+  const metaBits=[c.goal,c.level].filter(Boolean).join("  ·  ");
+  if(metaBits){ctx.fillStyle="#8A93A0";ctx.font="11px Arial";ctx.fillText(metaBits,PAD,126);}
+
+  let y=headerH;
+  curDay="";
+  for(const r of rows){
+    if(r.day!==curDay){
+      ctx.fillStyle="#F5F2EC";ctx.fillRect(0,y,W,dayHeaderH);
+      ctx.fillStyle="#0B0D12";ctx.font="700 15px Arial";
+      ctx.fillText(r.day.toUpperCase(),PAD,y+26);
+      y+=dayHeaderH;
+      curDay=r.day;
+    }
+    const rowTop=y;
+    ctx.strokeStyle="#EEEBE4";ctx.beginPath();ctx.moveTo(0,rowTop);ctx.lineTo(W,rowTop);ctx.stroke();
+
+    // photo
+    const fullEx=exMap[r.ex.id]||r.ex;
+    const imgUrl=(fullEx.imgs&&fullEx.imgs[0])||fullEx.cover_img;
+    const px=PAD,py=rowTop+10,pw=64,ph=r.height-20;
+    if(imgUrl){
+      const img=await loadImageViaProxy(imgUrl);
+      if(img){
+        roundRectPath(ctx,px,py,pw,ph,8);ctx.save();ctx.clip();
+        const scale=Math.max(pw/img.width,ph/img.height);
+        const dw=img.width*scale,dh=img.height*scale;
+        ctx.drawImage(img,px-(dw-pw)/2,py-(dh-ph)/2,dw,dh);
+        ctx.restore();
+      }
+    }
+    if(!imgUrl){
+      ctx.fillStyle="#F5F2EC";roundRectPath(ctx,px,py,pw,ph,8);ctx.fill();
+      ctx.fillStyle="#B8B2A6";ctx.font="20px Arial";ctx.fillText("📷",px+pw/2-10,py+ph/2+7);
+    }
+
+    const tx=px+pw+14;
+    ctx.fillStyle="#0B0D12";ctx.font="700 14px Arial";
+    ctx.fillText(r.ex.name||"",tx,rowTop+24);
+    ctx.fillStyle="#B8902A";ctx.font="700 10px Arial";
+    ctx.fillText((r.ex.muscle||"")+(r.ex.equipment?" · "+r.ex.equipment:""),tx,rowTop+40);
+
+    let cx=tx;
+    const chip=(label:string,val:string,bg:string,fg:string)=>{
+      if(!val)return;
+      const text=`${label}: ${val}`;
+      ctx.font=chipFont;
+      const tw=ctx.measureText(text).width;
+      ctx.fillStyle=bg;roundRectPath(ctx,cx,rowTop+48,tw+14,18,5);ctx.fill();
+      ctx.fillStyle=fg;ctx.fillText(text,cx+7,rowTop+61);
+      cx+=tw+14+6;
+    };
+    chip("Ser",r.ex.customSets,"#D4A85320","#8B6520");
+    chip("Kart",r.ex.customReps,"#5B8DB820","#3A6A90");
+    chip("Sv",r.ex.customWeight?r.ex.customWeight+"kg":"","#4E906820","#2A6040");
+    chip("Poilsis",r.ex.customRest,"#7B6DB020","#5A4A90");
+
+    if(r.lines.length){
+      ctx.fillStyle="#8A93A0";ctx.font="italic 11px Arial";
+      r.lines.forEach((line,i)=>ctx.fillText(line,tx,rowTop+74+i*15));
+    }
+    y+=r.height;
+  }
+
+  if(rows.length===0){
+    ctx.fillStyle="#B8B2A6";ctx.font="13px Arial";
+    ctx.fillText("Pratimų nėra",PAD,y+34);
+    y+=60;
+  }
+
+  ctx.fillStyle="#F5F2EC";ctx.fillRect(0,y,W,footerH);
+  ctx.fillStyle="#B8B2A6";ctx.font="10px Arial";
+  const ftext="DNA Trainer · Coach Platform";
+  ctx.fillText(ftext,(W-ctx.measureText(ftext).width)/2,y+29);
+
+  const blob:Blob=await new Promise((res)=>canvas.toBlob(b=>res(b as Blob),"image/jpeg",0.85));
+  const link=document.createElement("a");
+  link.href=URL.createObjectURL(blob);
+  link.download=`${(c.program_name||"programa").replace(/[^\w\s-]/g,"")}-${(c.name||"").replace(/[^\w\s-]/g,"")}.jpg`;
+  link.click();
+  setTimeout(()=>URL.revokeObjectURL(link.href),4000);
+}
+
+export async function generateMealJpg(c:any):Promise<void>{
+  const W=880,PAD=32,SCALE=2;
+  const mp=c.meal_plan||{};
+  const days2=DAYS.filter(d=>(c.training_days||[]).includes(d));
+  const today2=new Date().toLocaleDateString("lt-LT");
+  const MEAL_TIMES_ORDER=["🌅 Pusryčiai","☀️ Priešpiečiai","🍽️ Pietūs","🌤️ Užkandis","🌙 Vakarienė"];
+
+  const meas=document.createElement("canvas");
+  const mctx=meas.getContext("2d")!;
+
+  type Row={kind:"day"|"meal"|"food",text?:string,food?:any,height:number};
+  const rows:Row[]=[];
+  days2.forEach(day=>{
+    const dayData=mp[day]||{};
+    const items:any[]=Object.values(dayData).flat();
+    if(!items.length)return;
+    rows.push({kind:"day",text:day,height:38});
+    MEAL_TIMES_ORDER.forEach(mt=>{
+      const mtItems=(dayData[mt]||[]) as any[];
+      if(!mtItems.length)return;
+      rows.push({kind:"meal",text:mt,height:26});
+      mtItems.forEach(f=>rows.push({kind:"food",food:f,height:66}));
+    });
+  });
+
+  const headerH=140,footerH=50;
+  let totalH=headerH+footerH+rows.reduce((a,r)=>a+r.height,0);
+  if(rows.length===0)totalH+=60;
+
+  const canvas=document.createElement("canvas");
+  canvas.width=W*SCALE;canvas.height=totalH*SCALE;
+  const ctx=canvas.getContext("2d")!;
+  ctx.scale(SCALE,SCALE);
+  ctx.fillStyle="#FFFFFF";ctx.fillRect(0,0,W,totalH);
+
+  ctx.fillStyle="#1A1A1A";ctx.fillRect(0,0,W,headerH);
+  ctx.fillStyle="#22c55e";ctx.font="700 11px Arial";
+  ctx.fillText("DNA TRAINER · MITYBOS PLANAS",PAD,36);
+  ctx.fillStyle="#888";ctx.font="10px Arial";
+  ctx.fillText(today2,W-PAD-ctx.measureText(today2).width,36);
+  ctx.fillStyle="#FFFFFF";ctx.font="700 28px Arial";
+  ctx.fillText(c.meal_plan_name||"Mitybos planas",PAD,78);
+  ctx.fillStyle="#22c55e";ctx.font="600 13px Arial";
+  ctx.fillText(c.name||"",PAD,102);
+  if(c.goal){ctx.fillStyle="#aaa";ctx.font="11px Arial";ctx.fillText(c.goal,PAD,122);}
+
+  let y=headerH;
+  for(const r of rows){
+    if(r.kind==="day"){
+      ctx.fillStyle="#1A1A1A";ctx.fillRect(0,y,W,r.height);
+      ctx.fillStyle="#FFFFFF";ctx.font="700 15px Arial";
+      ctx.fillText(r.text!.toUpperCase(),PAD,y+25);
+    }else if(r.kind==="meal"){
+      ctx.fillStyle="#F0FDF4";ctx.fillRect(0,y,W,r.height);
+      ctx.fillStyle="#16a34a";ctx.font="700 11px Arial";
+      ctx.fillText(r.text!,PAD,y+18);
+    }else if(r.kind==="food"){
+      const f=r.food;
+      ctx.strokeStyle="#F0F0F0";ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+      const px=PAD,py=y+7,pw=52,ph=52;
+      const imgUrl=(f.imgs||[]).filter(Boolean)[0];
+      if(imgUrl){
+        const img=await loadImageViaProxy(imgUrl);
+        if(img){
+          roundRectPath(ctx,px,py,pw,ph,8);ctx.save();ctx.clip();
+          const scale=Math.max(pw/img.width,ph/img.height);
+          const dw=img.width*scale,dh=img.height*scale;
+          ctx.drawImage(img,px-(dw-pw)/2,py-(dh-ph)/2,dw,dh);
+          ctx.restore();
+        }
+      }
+      if(!imgUrl){
+        ctx.fillStyle="#F5F5F8";roundRectPath(ctx,px,py,pw,ph,8);ctx.fill();
+        ctx.fillStyle="#B0B0B8";ctx.font="18px Arial";ctx.fillText("🍽️",px+pw/2-9,py+ph/2+6);
+      }
+      const tx=px+pw+14;
+      ctx.fillStyle="#111";ctx.font="700 13px Arial";
+      ctx.fillText(f.name||"",tx,y+24);
+      ctx.fillStyle="#888";ctx.font="10px Arial";
+      ctx.fillText(`${f.grams||""}g${f.category?" · "+f.category:""}`,tx,y+38);
+      let cx=tx;
+      const chip=(text:string,bg:string,fg:string)=>{
+        if(!text)return;
+        ctx.font="700 9px Arial";
+        const tw=ctx.measureText(text).width;
+        ctx.fillStyle=bg;roundRectPath(ctx,cx,y+44,tw+12,16,5);ctx.fill();
+        ctx.fillStyle=fg;ctx.fillText(text,cx+6,y+56);
+        cx+=tw+12+5;
+      };
+      if(f.kcalActual)chip(`${f.kcalActual} kcal`,"#f0b42920","#c9a000");
+      if(f.protActual)chip(`B:${f.protActual}g`,"#ef444420","#dc2626");
+      if(f.carbsActual)chip(`A:${f.carbsActual}g`,"#f9731620","#ea6100");
+      if(f.fatActual)chip(`R:${f.fatActual}g`,"#a78bfa20","#7c3aed");
+    }
+    y+=r.height;
+  }
+
+  if(rows.length===0){
+    ctx.fillStyle="#B0B0B8";ctx.font="13px Arial";
+    ctx.fillText("Maisto plano nėra",PAD,y+34);
+    y+=60;
+  }
+
+  ctx.fillStyle="#FAFAFA";ctx.fillRect(0,y,W,footerH);
+  ctx.fillStyle="#B0B0B8";ctx.font="10px Arial";
+  const ftext="© DNA Trainer · Mitybos planas";
+  ctx.fillText(ftext,(W-ctx.measureText(ftext).width)/2,y+29);
+
+  const blob:Blob=await new Promise((res)=>canvas.toBlob(b=>res(b as Blob),"image/jpeg",0.85));
+  const link=document.createElement("a");
+  link.href=URL.createObjectURL(blob);
+  link.download=`${(c.meal_plan_name||"mityba").replace(/[^\w\s-]/g,"")}-${(c.name||"").replace(/[^\w\s-]/g,"")}.jpg`;
+  link.click();
+  setTimeout(()=>URL.revokeObjectURL(link.href),4000);
 }
