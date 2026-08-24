@@ -666,6 +666,45 @@ function pdfSafeColor(c:string|null|undefined):string{
   return c.indexOf("var(")===0 ? "#D4A853" : c;
 }
 
+// PDF images are shown as small thumbnails, but browsers embed the FULL
+// source resolution when printing/saving — that's what bloats file size.
+// Pre-shrink each image to the exact size it's displayed at before it goes
+// into the printable HTML, so quality stays crisp but the file stays small.
+const pdfImgCache=new Map<string,Promise<string>>();
+function shrinkForPdf(url:string,maxW:number,maxH:number,quality=0.68):Promise<string>{
+  if(!url) return Promise.resolve(url);
+  if(pdfImgCache.has(url)) return pdfImgCache.get(url)!;
+  const p=new Promise<string>((resolve)=>{
+    const img=new Image();
+    img.crossOrigin="anonymous";
+    const fallback=()=>resolve(url); // if it fails (e.g. CORS), just use the original URL
+    img.onerror=fallback;
+    img.onload=()=>{
+      try{
+        const scale=Math.min(1,maxW/img.naturalWidth,maxH/img.naturalHeight);
+        const w=Math.max(1,Math.round(img.naturalWidth*scale));
+        const h=Math.max(1,Math.round(img.naturalHeight*scale));
+        const canvas=document.createElement("canvas");
+        canvas.width=w;canvas.height=h;
+        const ctx=canvas.getContext("2d");
+        if(!ctx){fallback();return;}
+        ctx.drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL("image/jpeg",quality));
+      }catch{fallback();}
+    };
+    img.src=url;
+  });
+  pdfImgCache.set(url,p);
+  return p;
+}
+async function shrinkAll(urls:string[],maxW:number,maxH:number,quality=0.68):Promise<Record<string,string>>{
+  const unique=[...new Set(urls.filter(Boolean))];
+  const results=await Promise.all(unique.map(u=>shrinkForPdf(u,maxW,maxH,quality)));
+  const map:Record<string,string>={};
+  unique.forEach((u,i)=>{map[u]=results[i];});
+  return map;
+}
+
 // ── PDF EXPORT: training program ──────────────────────────
 export async function printPDF(c:any,pl:any[]){
   const allExIds=[...new Set(Object.values(c.program||{}).flat().map((e:any)=>e.id).filter(Boolean))];
@@ -680,6 +719,17 @@ export async function printPDF(c:any,pl:any[]){
   const diff=diffRaw?{...diffRaw,color:pdfSafeColor(diffRaw.color)}:null;
   const win=window.open("","_blank");
   if(!win){alert("Leiskite iššokančius langus!");return;}
+  win.document.write(`<!DOCTYPE html><html lang="lt"><head><meta charset="UTF-8"><title>Ruošiama...</title></head><body style="font-family:sans-serif;color:#888;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">⏳ Ruošiama PDF...</body></html>`);
+
+  // Shrink exercise photos to the exact size they're displayed at (78×62px)
+  // BEFORE building the document — this is what keeps the saved PDF small.
+  const allImgUrls:string[]=[];
+  Object.values(exMap).forEach((e:any)=>{
+    const imgs=(e.imgs&&e.imgs.length?e.imgs:e.cover_img?[e.cover_img]:[]).filter(Boolean);
+    allImgUrls.push(imgs[0],imgs[1]);
+  });
+  const shrunk=await shrinkAll(allImgUrls,220,180,0.68);
+
   const goldHex="#D4A853";
   const css2=`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap');*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Barlow',Arial,sans-serif;background:#F5F2EC;color:#1A1A1A;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-size:11px;}.cover{background:#060709;position:relative;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact;}.cover-inner{padding:32px 36px 28px;position:relative;z-index:1;}.cover-bg{position:absolute;inset:0;background:linear-gradient(135deg,#060709 40%,#0F1118 100%);}.cover-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(212,168,83,0.06)1px,transparent 1px),linear-gradient(90deg,rgba(212,168,83,0.06)1px,transparent 1px);background-size:40px 40px;}.cover-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;}.logo-wrap{display:flex;align-items:center;gap:12px;}.logo-text{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:#F5F0E8;letter-spacing:0.22em;text-transform:uppercase;line-height:1;}.logo-sub{font-family:'Barlow Condensed',sans-serif;font-size:8px;color:#404858;letter-spacing:0.2em;text-transform:uppercase;margin-top:2px;}.date-tag{font-family:'Barlow Condensed',sans-serif;font-size:9px;color:#606878;letter-spacing:0.14em;text-align:right;}.cover-label{display:flex;align-items:center;gap:10px;margin-bottom:8px;}.cover-num{font-family:'Bebas Neue',sans-serif;font-size:10px;color:#D4A853;letter-spacing:0.3em;}.cover-line{width:20px;height:1px;background:#D4A853;}.cover-main{font-family:'Bebas Neue',sans-serif;font-size:52px;color:#FFFFFF;line-height:0.9;letter-spacing:0.03em;}.cover-gold{color:#D4A853;}.cover-meta{display:flex;gap:20px;margin-top:16px;flex-wrap:wrap;}.meta-item{}.meta-label{font-family:'Barlow Condensed',sans-serif;font-size:8px;color:#505868;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:2px;}.meta-val{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:#F5F0E8;}.meta-gold{color:#D4A853;}.diff-bar{background:#0C0E14;border-top:1px solid #1E2330;padding:10px 36px;display:flex;align-items:center;gap:14px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}.diff-lbl{font-family:'Barlow Condensed',sans-serif;font-size:9px;color:#505868;letter-spacing:0.18em;text-transform:uppercase;}.diff-track{flex:1;height:3px;background:#1E2330;max-width:180px;}.diff-fill{height:100%;}.diff-tag{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.12em;padding:2px 9px;border:1px solid;}.pb{position:fixed;top:10px;right:10px;padding:9px 18px;background:#D4A853;color:#060709;border:none;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;z-index:999;}.sec{margin:14px 18px;background:#FFFFFF;border:1px solid #E8E4DC;}.sh{background:#060709;padding:9px 16px;display:flex;align-items:center;gap:8px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}.sn{font-family:'Bebas Neue',sans-serif;font-size:9px;color:#D4A853;letter-spacing:0.3em;}.sl{width:14px;height:1px;background:#D4A853;}.st{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;color:#F5F0E8;letter-spacing:0.16em;text-transform:uppercase;}.ig{display:flex;flex-wrap:wrap;gap:1px;background:#E8E4DC;}.ib{background:#FFFFFF;padding:9px 12px;min-width:75px;}.il{font-size:8px;color:#9A9888;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:2px;font-family:'Barlow Condensed',sans-serif;}.iv{font-size:13px;font-weight:700;font-family:'Barlow Condensed',sans-serif;}.dh{background:#F5F2EC;padding:8px 16px;border-bottom:1px solid #E8E4DC;display:flex;align-items:center;justify-content:space-between;}.dn{font-family:'Bebas Neue',sans-serif;font-size:16px;color:#1A1A1A;letter-spacing:0.06em;}.dc{font-family:'Barlow Condensed',sans-serif;font-size:9px;color:#9A9888;letter-spacing:0.12em;text-transform:uppercase;}.er{display:flex;gap:10px;padding:9px 14px;border-top:1px solid #F0EDE8;align-items:flex-start;page-break-inside:avoid;}.en{width:18px;height:18px;background:#060709;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:10px;color:#D4A853;flex-shrink:0;margin-top:3px;}.ei{width:78px;height:62px;object-fit:cover;flex-shrink:0;border:1px solid #E8E4DC;}.ep{width:78px;height:62px;background:#F5F2EC;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;border:1px solid #E8E4DC;}.en2{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:#1A1A1A;letter-spacing:0.04em;margin-bottom:1px;}.em{font-family:'Barlow Condensed',sans-serif;font-size:9px;color:#D4A853;letter-spacing:0.1em;text-transform:uppercase;font-weight:600;margin-bottom:5px;}.chips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:3px;}.chip{padding:2px 8px;font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.08em;border:1px solid;}.cg{background:#D4A85318;border-color:#D4A85140;color:#8B6520;}.cb{background:#5B8DB818;border-color:#5B8DB840;color:#3A6A90;}.cv{background:#7B6DB018;border-color:#7B6DB040;color:#5A4A90;}.cn{background:#4E906818;border-color:#4E906840;color:#2A6040;}.css2{background:#7B6DB030;border-color:#7B6DB060;color:#5A4A90;}.ed{font-size:9px;color:#9A9888;font-style:italic;line-height:1.5;margin-top:2px;}.ng{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #E8E4DC;}.nc{padding:12px 14px;}.nt{font-family:'Barlow Condensed',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid;}.pt{width:100%;border-collapse:collapse;}.pt th{font-family:'Barlow Condensed',sans-serif;font-size:8px;color:#9A9888;letter-spacing:0.14em;text-transform:uppercase;padding:6px 10px;background:#F5F2EC;border-bottom:1px solid #E8E4DC;text-align:left;}.pt td{padding:6px 10px;border-bottom:1px solid #F5F2EC;font-size:10px;}.ft{text-align:center;padding:12px;color:#C8C4BC;font-size:9px;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.14em;text-transform:uppercase;border-top:1px solid #E8E4DC;margin:14px 18px 18px;}@media print{.pb{display:none;}body{background:#fff;}.sec{margin:10px 14px;}}`;
   let h=`<!DOCTYPE html><html lang="lt"><head><meta charset="UTF-8"><title>${pn||"Programa"} · ${c.name}</title><style>${css2}</style></head><body>`;
@@ -714,7 +764,7 @@ export async function printPDF(c:any,pl:any[]){
     else exs.forEach((ex:any,i:number)=>{
       const fullEx=exMap[ex.id]||ex;const imgs=(fullEx.imgs&&fullEx.imgs.length?fullEx.imgs:fullEx.cover_img?[fullEx.cover_img]:[]).filter(Boolean);
       h+=`<div class="er"><div class="en">${i+1}</div>`;
-      h+=imgs[0]?`<img src="${imgs[0]}" class="ei" onerror="this.style.display='none'"/>`:`<div class="ep">📷</div>`; h+=imgs[1]?`<img src="${imgs[1]}" class="ei" onerror="this.style.display='none'"/>`:``;
+      h+=imgs[0]?`<img src="${shrunk[imgs[0]]||imgs[0]}" class="ei" onerror="this.style.display='none'"/>`:`<div class="ep">📷</div>`; h+=imgs[1]?`<img src="${shrunk[imgs[1]]||imgs[1]}" class="ei" onerror="this.style.display='none'"/>`:``;
       h+=`<div style="flex:1"><div class="en2">${ex.superset?`<span class="chip css2">SS</span> `:""}${ex.name}</div><div class="em">${ex.muscle||""}${ex.equipment?` · ${ex.equipment}`:""}</div><div class="chips">`;
       if(ex.customSets)h+=`<span class="chip cg">Ser: ${ex.customSets}</span>`;
       if(ex.customReps)h+=`<span class="chip cb">Kart: ${ex.customReps}</span>`;
@@ -730,17 +780,32 @@ export async function printPDF(c:any,pl:any[]){
     pl.forEach((p:any,i:number)=>{h+=`<tr style="background:${i%2?"#FAFAF8":"#FFF"}"><td>${new Date(p.date).toLocaleDateString("lt-LT")}</td><td style="font-weight:700;color:#D4A853;font-family:'Barlow Condensed'">${p.weight?p.weight+" kg":"—"}</td><td>${p.chest?p.chest+" cm":"—"}</td><td>${p.waist?p.waist+" cm":"—"}</td><td>${p.hips?p.hips+" cm":"—"}</td><td style="color:#9A9888;font-style:italic">${p.notes||"—"}</td></tr>`;});
     h+=`</tbody></table></div>`;
   }
-  h+=`<div class="ft">DNA Trainer · Coach Platform · ${today2}</div></body></html>`;
-  win.document.write(h);win.document.close();
+  const waitScript=`<script>(function(){var btn=document.querySelector('.pb');if(!btn)return;var imgs=Array.prototype.slice.call(document.images);var pending=imgs.filter(function(im){return !im.complete;}).length;if(pending>0){var orig=btn.textContent;btn.textContent='⏳ Kraunamos nuotraukos...';btn.disabled=true;btn.style.opacity='0.6';var done=function(){pending--;if(pending<=0){btn.textContent=orig;btn.disabled=false;btn.style.opacity='1';}};imgs.forEach(function(im){if(!im.complete){im.addEventListener('load',done);im.addEventListener('error',done);}});setTimeout(function(){if(pending>0){btn.textContent=orig;btn.disabled=false;btn.style.opacity='1';}},6000);}})();</script>`;
+  h+=`<div class="ft">DNA Trainer · Coach Platform · ${today2}</div>${waitScript}</body></html>`;
+  win.document.open();win.document.write(h);win.document.close();
 }
 
 // ── PDF EXPORT: meal plan ─────────────────────────────────
-export function printMealPDF(c:any){
+export async function printMealPDF(c:any){
   const mp=c.meal_plan||{},mpn=c.meal_plan_name||"Mitybos planas";
   const days2=DAYS.filter(d=>(c.training_days||[]).includes(d));
   const today2=new Date().toLocaleDateString("lt-LT");
   const win=window.open("","_blank");
   if(!win){alert("Leiskite iššokančius langus!");return;}
+  win.document.write(`<!DOCTYPE html><html lang="lt"><head><meta charset="UTF-8"><title>Ruošiama...</title></head><body style="font-family:sans-serif;color:#888;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">⏳ Ruošiama PDF...</body></html>`);
+
+  // Shrink food photos to the exact size they're displayed at (52×52px)
+  // BEFORE building the document — keeps the saved PDF small.
+  const allImgUrls:string[]=[];
+  days2.forEach(day=>{
+    const dayData=mp[day]||{};
+    (Object.values(dayData).flat() as any[]).forEach((f:any)=>{
+      const img=(f.imgs||[]).filter(Boolean)[0];
+      if(img)allImgUrls.push(img);
+    });
+  });
+  const shrunk=await shrinkAll(allImgUrls,150,150,0.68);
+
   const pstyle=`*{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,Arial,sans-serif;background:#fff;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}.hdr{background:#1A1A1A;padding:18px 24px;display:flex;align-items:center;gap:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.logo{width:42px;height:42px;background:linear-gradient(135deg,#2D7D46,#1F5C33);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;flex-shrink:0}.ht{font-size:17px;font-weight:900;color:#22c55e}.hs{font-size:9px;color:#888;letter-spacing:3px;text-transform:uppercase;margin-top:2px}.hr{margin-left:auto;text-align:right;color:#fff}.sec{margin:12px 18px;border:1.5px solid #e0e0e8;border-radius:11px;overflow:hidden}.sh{background:#1A1A1A;color:#fff;padding:9px 16px;font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;-webkit-print-color-adjust:exact;print-color-adjust:exact}.day-tot{display:flex;gap:8px;padding:8px 14px;background:#f9fafb;border-bottom:1px solid #eee;flex-wrap:wrap}.tot-badge{border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700}.mt-hdr{padding:8px 14px 4px;font-size:10px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:1px}.fr{display:flex;gap:10px;padding:6px 14px;border-top:1px solid #f5f5f5;align-items:center;page-break-inside:avoid}.fi{width:52px;height:52px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid #eee}.fp{width:52px;height:52px;background:#f0f0f5;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px}.fn{font-size:12px;font-weight:700;margin-bottom:2px}.fg{font-size:10px;color:#888}.fb{display:flex;gap:5px;margin-top:3px;flex-wrap:wrap}.fbb{border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600}.pb{position:fixed;top:10px;right:10px;padding:9px 18px;background:#2D7D46;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;z-index:999;box-shadow:0 2px 8px #0003}.ft{text-align:center;padding:14px;color:#aaa;font-size:10px;border-top:1px solid #eee;margin-top:10px}@media(max-width:600px){.sec{margin:8px 10px}.fr{gap:8px;padding:5px 10px}.fi,.fp{width:42px;height:42px}.pb{top:6px;right:6px;padding:7px 12px;font-size:12px}}@media print{.pb{display:none}}`;
   let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${mpn}-${c.name}</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet"><style>${pstyle}</style></head><body>`;
   h+=`<button class="pb" onclick="window.print()">🖨️ Išsaugoti kaip PDF</button>`;
@@ -771,7 +836,7 @@ export function printMealPDF(c:any){
       items.forEach(f=>{
         const img=(f.imgs||[]).filter(Boolean)[0];
         h+=`<div class="fr">`;
-        h+=img?`<img src="${img}" class="fi"/>`:`<div class="fp">🍽️</div>`;
+        h+=img?`<img src="${shrunk[img]||img}" class="fi"/>`:`<div class="fp">🍽️</div>`;
         h+=`<div style="flex:1"><div class="fn">${f.name}</div><div class="fg">${f.grams}g · ${f.category||""}</div>`;
         h+=`<div class="fb">`;
         if(f.kcalActual)h+=`<span class="fbb" style="background:#f0b42918;color:#c9a000">${f.kcalActual} kcal</span>`;
@@ -784,5 +849,5 @@ export function printMealPDF(c:any){
     h+=`</div>`;
   });
   h+=`<div class="ft">© DNA Trainer · Mitybos planas · ${today2}</div></body></html>`;
-  win.document.write(h);win.document.close();
+  win.document.open();win.document.write(h);win.document.close();
 }
