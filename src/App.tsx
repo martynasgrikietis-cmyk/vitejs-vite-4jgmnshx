@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { sb, C, FONT, RESPONSIVE_CSS, css, ALL_MUSCLES, GOALS, LEVELS, DAYS, REST_OPTIONS, ACTIVITY_LEVELS, calcBMI, bmiCat, calcNut, genToken, getCoachId, getIsAdmin, Tag, Badge, Spinner, Skeleton, SkeletonCard, Err, NutriBadge, ImgGallery, MultiImgUploader, HERO_IMG, GYM_IMG2, DISPLAY_FONT, CONDENSED_FONT, SectionHead, ThemeSwitcher, SUPABASE_URL, SUPABASE_KEY, calcDifficulty, printPDF, printMealPDF } from "./shared";
+import { sb, C, FONT, RESPONSIVE_CSS, css, ALL_MUSCLES, GOALS, LEVELS, DAYS, REST_OPTIONS, ACTIVITY_LEVELS, calcBMI, bmiCat, calcNut, genToken, getCoachId, getIsAdmin, Tag, Badge, Spinner, Skeleton, SkeletonCard, Err, NutriBadge, ImgGallery, MultiImgUploader, HERO_IMG, GYM_IMG2, DISPLAY_FONT, CONDENSED_FONT, SectionHead, ThemeSwitcher, SUPABASE_URL, SUPABASE_KEY, calcDifficulty, printPDF, printMealPDF, shrinkForPdf, generateTrainingJpg, generateMealJpg } from "./shared";
 import { LoginScreen, AuthProvider, UsersTab, useAuth, getSession, clearSession } from "./auth";
 import { FoodsTab, MealPlanBuilder, MealSharePage } from "./MealPlan";
 
@@ -574,6 +574,8 @@ function SharePage({token,type}:{token:string,type:string}){
   const [loading,setLoading]=useState(true);
   const [notFound,setNotFound]=useState(false);
   const [dlBusy,setDlBusy]=useState(false);
+  const [printBusy,setPrintBusy]=useState(false);
+  const [jpgBusy,setJpgBusy]=useState(false);
 
   useEffect(()=>{
     sb.get("clients",`?share_token=eq.${token}&limit=1`)
@@ -606,6 +608,41 @@ function SharePage({token,type}:{token:string,type:string}){
     }catch{
       alert("Nepavyko sukurti PDF. Bandykite dar kartą.");
     }finally{setDlBusy(false);}
+  };
+
+  const printAsIs=async()=>{
+    if(printBusy)return;
+    setPrintBusy(true);
+    try{
+      // Shrink every visible photo to the exact size it's shown at before
+      // printing — otherwise the browser embeds full original-resolution
+      // photos in the saved PDF, even ones displayed as tiny thumbnails.
+      const imgEls=Array.from(document.querySelectorAll("img")) as HTMLImageElement[];
+      await Promise.all(imgEls.map(async(im)=>{
+        if(!im.src||im.src.startsWith("data:"))return;
+        const rect=im.getBoundingClientRect();
+        const w=Math.max(80,Math.round((rect.width||160)*2));
+        const h=Math.max(80,Math.round((rect.height||160)*2));
+        try{
+          const small=await shrinkForPdf(im.src,w,h,0.72);
+          im.src=small;
+        }catch{}
+      }));
+    }finally{
+      setPrintBusy(false);
+      window.print();
+    }
+  };
+
+  const downloadJpg=async()=>{
+    if(jpgBusy)return;
+    setJpgBusy(true);
+    try{
+      if(isTraining) await generateTrainingJpg(client);
+      else await generateMealJpg(client);
+    }catch{
+      alert("Nepavyko sukurti JPG. Bandykite dar kartą.");
+    }finally{setJpgBusy(false);}
   };
 
   return(
@@ -644,8 +681,11 @@ function SharePage({token,type}:{token:string,type:string}){
         <button onClick={downloadPdf} disabled={dlBusy} style={{marginTop:16,display:"inline-flex",alignItems:"center",gap:8,background:"rgba(0,0,0,0.45)",backdropFilter:"blur(6px)",border:"1px solid rgba(255,255,255,0.25)",borderRadius:10,padding:"9px 18px",color:"#FFFFFF",fontSize:12,fontWeight:700,cursor:dlBusy?"not-allowed":"pointer",opacity:dlBusy?0.6:1}} className="fu2 no-print">
           {dlBusy?"⏳ Ruošiama...":"📊 Detali PDF ataskaita"}
         </button>
-        <button onClick={()=>window.print()} style={{marginTop:16,marginLeft:8,display:"inline-flex",alignItems:"center",gap:8,background:C.gold,border:"none",borderRadius:10,padding:"9px 18px",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}} className="fu2 no-print">
-          🖨️ Atsisiųsti PDF (kaip čia)
+        <button onClick={printAsIs} disabled={printBusy} style={{marginTop:16,marginLeft:8,display:"inline-flex",alignItems:"center",gap:8,background:C.gold,border:"none",borderRadius:10,padding:"9px 18px",color:"#fff",fontSize:12,fontWeight:700,cursor:printBusy?"not-allowed":"pointer",opacity:printBusy?0.6:1}} className="fu2 no-print">
+          {printBusy?"⏳ Ruošiama...":"🖨️ Atsisiųsti PDF (kaip čia)"}
+        </button>
+        <button onClick={downloadJpg} disabled={jpgBusy} style={{marginTop:16,marginLeft:8,display:"inline-flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.14)",backdropFilter:"blur(6px)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:10,padding:"9px 18px",color:"#FFFFFF",fontSize:12,fontWeight:700,cursor:jpgBusy?"not-allowed":"pointer",opacity:jpgBusy?0.6:1}} className="fu2 no-print">
+          {jpgBusy?"⏳ Ruošiama...":"🖼️ Atsisiųsti JPG"}
         </button>
       </div>
 
