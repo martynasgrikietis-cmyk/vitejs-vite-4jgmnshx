@@ -907,6 +907,17 @@ function roundRectPath(ctx:CanvasRenderingContext2D,x:number,y:number,w:number,h
   ctx.closePath();
 }
 
+// Same quality, smaller file: WebP typically beats JPEG by ~25-35% at the
+// same visual quality. Modern phones (iPhone 2020+, all current Android)
+// support it — but we quietly fall back to JPEG on anything that doesn't,
+// so the download never breaks.
+async function encodeCanvasSmall(canvas:HTMLCanvasElement,quality=0.85):Promise<{blob:Blob,ext:string}>{
+  const webp:Blob|null=await new Promise((res)=>canvas.toBlob(b=>res(b),"image/webp",quality));
+  if(webp&&webp.type==="image/webp"&&webp.size>0)return{blob:webp,ext:"webp"};
+  const jpg:Blob=await new Promise((res)=>canvas.toBlob(b=>res(b as Blob),"image/jpeg",quality));
+  return{blob:jpg,ext:"jpg"};
+}
+
 export async function generateTrainingJpg(c:any):Promise<void>{
   const W=880,PAD=24,SCALE=2;
   const prog=c.program||{};
@@ -1052,10 +1063,10 @@ export async function generateTrainingJpg(c:any):Promise<void>{
   const ftext="DNA Trainer · Coach Platform";
   ctx.fillText(ftext,(W-ctx.measureText(ftext).width)/2,y+29);
 
-  const blob:Blob=await new Promise((res)=>canvas.toBlob(b=>res(b as Blob),"image/jpeg",0.85));
+  const {blob,ext}=await encodeCanvasSmall(canvas,0.85);
   const link=document.createElement("a");
   link.href=URL.createObjectURL(blob);
-  link.download=`${(c.program_name||"programa").replace(/[^\w\s-]/g,"")}-${(c.name||"").replace(/[^\w\s-]/g,"")}.jpg`;
+  link.download=`${(c.program_name||"programa").replace(/[^\w\s-]/g,"")}-${(c.name||"").replace(/[^\w\s-]/g,"")}.${ext}`;
   link.click();
   setTimeout(()=>URL.revokeObjectURL(link.href),4000);
 }
@@ -1168,10 +1179,10 @@ export async function generateMealJpg(c:any):Promise<void>{
   const ftext="© DNA Trainer · Mitybos planas";
   ctx.fillText(ftext,(W-ctx.measureText(ftext).width)/2,y+29);
 
-  const blob:Blob=await new Promise((res)=>canvas.toBlob(b=>res(b as Blob),"image/jpeg",0.85));
+  const {blob,ext}=await encodeCanvasSmall(canvas,0.85);
   const link=document.createElement("a");
   link.href=URL.createObjectURL(blob);
-  link.download=`${(c.meal_plan_name||"mityba").replace(/[^\w\s-]/g,"")}-${(c.name||"").replace(/[^\w\s-]/g,"")}.jpg`;
+  link.download=`${(c.meal_plan_name||"mityba").replace(/[^\w\s-]/g,"")}-${(c.name||"").replace(/[^\w\s-]/g,"")}.${ext}`;
   link.click();
   setTimeout(()=>URL.revokeObjectURL(link.href),4000);
 }
