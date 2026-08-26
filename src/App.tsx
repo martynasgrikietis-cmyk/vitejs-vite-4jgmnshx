@@ -2934,6 +2934,13 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
   const [activeTab,setActiveTab]=useState<"calc"|"log">("calc");
   // Food log
   const [log,setLog]=useState<any[]>([]);
+  // AI meal plan generator
+  const [aiProfile,setAiProfile]=useState<any>(null);
+  const [aiLoading,setAiLoading]=useState(false);
+  const [aiError,setAiError]=useState("");
+  const [aiVariants,setAiVariants]=useState<any[]>([]);
+  const [aiTab,setAiTab]=useState(0);
+  const [aiApplying,setAiApplying]=useState(false);
 
   const handleClientSelect=(id:string)=>{
     setClientId(id);
@@ -3073,6 +3080,83 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
   const filteredDiary = dSearch
     ? diary.filter(f=>f.name.toLowerCase().includes(dSearch.toLowerCase()))
     : diary;
+
+  // ── AI 3-DAY MEAL PLAN GENERATOR (AI invents its own simple foods) ──
+  const MEAL_TIMES_LOCAL=["🌅 Pusryčiai","☀️ Priešpiečiai","🍽️ Pietūs","🌤️ Užkandis","🌙 Vakarienė"];
+
+  const computeItem=(it:any)=>{
+    const grams=it.grams||100;
+    const r=grams/100;
+    return{name:it.name,category:it.category||"",grams,portion:100,calories:it.kcal100||0,protein:it.p100||0,carbs:it.c100||0,fat:it.f100||0,kcalActual:Math.round((it.kcal100||0)*r),protActual:+(((it.p100||0)*r).toFixed(1)),carbsActual:+(((it.c100||0)*r).toFixed(1)),fatActual:+(((it.f100||0)*r).toFixed(1))};
+  };
+
+  const openAiGenerator=async(profile:any)=>{
+    setAiProfile(profile);setAiVariants([]);setAiError("");setAiTab(0);
+    setAiLoading(true);
+    try{
+      const system=`Tu esi profesionalus mitybos planų sudarymo asistentas sporto trenerio programoje. Sudaryk 3 SKIRTINGUS, paprastus 3 dienų valgiaraščius, kurie kuo tiksliau atitiktų nurodytus dienos makro tikslus (kcal, baltymai, angliavandeniai, riebalai).
+TAISYKLĖS:
+- Pats sugalvok paprastus, įprastus, lengvai paruošiamus maisto produktus/patiekalus (pvz. vištienos krūtinėlė, avižiniai dribsniai, varškė, ryžiai, bananas) — NENAUDOK sudėtingų ar egzotiškų receptų.
+- Kiekvienam produktui nurodyk realistišką maistinę vertę 100g/100ml ("kcal100","p100","c100","f100" — baltymai/angliavandeniai/riebalai gramais 100g produkto) IR kiekį gramais ("grams"), kuris reikalingas tikslui pasiekti. Skaičiai turi būti realūs (pvz. vištienos krūtinėlė ~165 kcal100, ~31 p100).
+- Kiekviena diena turi 3-4 valgymus iš: "🌅 Pusryčiai","☀️ Priešpiečiai","🍽️ Pietūs","🌤️ Užkandis","🌙 Vakarienė" (naudok tik dalį, kad būtų paprasta).
+- Kiekviename valgyme 1-3 produktai, protingi gramų kiekiai (pvz. 50-300g, ne 7g ar 2000g).
+- 3 variantai turi būti aiškiai skirtingi (skirtingi produktai/deriniai/skoniai), bet visi siekia tų pačių makro tikslų.
+- Atsakyk GRIEŽTAI TIK JSON, be jokio kito teksto, tiksliai šio formato (masyvai su LYGIAI 3 elementais):
+{"variants":[{"label":"Trumpas variantas pavadinimas","days":[{"day":1,"meals":[{"mealTime":"🌅 Pusryčiai","items":[{"name":"Avižiniai dribsniai","kcal100":389,"p100":13,"c100":67,"f100":7,"grams":80}]}]}]}]}`;
+      const userMsg=`Dienos makro tikslai: ${profile.kcal} kcal, baltymai ${profile.prot}g, angliavandeniai ${profile.carbs}g, riebalai ${profile.fat}g.`;
+
+      const resp=await fetch(`${SUPABASE_URL}/functions/v1/ai-proxy`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json",Authorization:`Bearer ${SUPABASE_KEY}`},
+        body:JSON.stringify({system,max_tokens:4000,messages:[{role:"user",content:userMsg}]}),
+      });
+      const data=await resp.json();
+      const raw=data.content?.find((b:any)=>b.type==="text")?.text||"";
+      const clean=raw.replace(/```json|```/g,"").trim();
+      const parsed=JSON.parse(clean);
+      const variants=(parsed.variants||[]).slice(0,3);
+      if(!variants.length)throw new Error("empty");
+      setAiVariants(variants);
+    }catch(e:any){
+      setAiError("Nepavyko sugeneruoti valgiaraščio. Patikrinkite interneto ryšį ir bandykite dar kartą.");
+    }finally{setAiLoading(false);}
+  };
+
+  const variantDayTotals=(variant:any,dayIdx:number)=>{
+    const day=variant.days?.[dayIdx];
+    if(!day)return{kcal:0,prot:0,carbs:0,fat:0};
+    let kcal=0,prot=0,carbs=0,fat=0;
+    (day.meals||[]).forEach((m:any)=>(m.items||[]).forEach((it:any)=>{
+      const c=computeItem(it);
+      kcal+=c.kcalActual;prot+=c.protActual;carbs+=c.carbsActual;fat+=c.fatActual;
+    }));
+    return{kcal:Math.round(kcal),prot:Math.round(prot),carbs:Math.round(carbs),fat:Math.round(fat)};
+  };
+
+  const applyAiVariant=async()=>{
+    if(!clientId||!aiVariants[aiTab])return;
+    const client=clients.find(c=>c.id===clientId);
+    if(!client){alert("Klientas nerastas.");return;}
+    const trainingDays=(client.training_days&&client.training_days.length?client.training_days:DAYS);
+    const variant=aiVariants[aiTab];
+    const newMealPlan:any={};
+    trainingDays.forEach((day:string,i:number)=>{
+      const srcDay=variant.days[i%variant.days.length];
+      const dayObj:any={};
+      (srcDay.meals||[]).forEach((m:any)=>{
+        dayObj[m.mealTime]=(m.items||[]).map((it:any)=>computeItem(it));
+      });
+      newMealPlan[day]=dayObj;
+    });
+    setAiApplying(true);
+    try{
+      await sb.update("clients",clientId,{meal_plan:newMealPlan,meal_plan_name:`AI valgiaraštis — ${aiProfile.name}`});
+      alert("Valgiaraštis pritaikytas klientui! Galite jį peržiūrėti/redaguoti skiltyje „🥗 Mityba“ → kliento profilis.");
+      setAiProfile(null);
+    }catch(e:any){
+      alert("Klaida išsaugant: "+e.message);
+    }finally{setAiApplying(false);}
+  };
 
 
 
@@ -3279,6 +3363,13 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
                           ))}
                         </div>
                       </div>
+
+                      {/* AI meal plan generator */}
+                      {clientId&&(
+                        <button onClick={()=>openAiGenerator(p)} style={{marginTop:12,width:"100%",padding:"9px 12px",background:`linear-gradient(145deg,${p.color},${p.shadow})`,color:"#fff",border:"none",fontFamily:CONDENSED_FONT,fontWeight:800,fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase" as const,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                          🤖 AI sugeneruoti valgiaraštį
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -3506,6 +3597,85 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
                 }
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI meal plan generator modal */}
+      {aiProfile&&(
+        <div style={css.overlay} onClick={()=>!aiApplying&&setAiProfile(null)}>
+          <div style={{...css.modal(760),maxHeight:"90vh"}} onClick={e=>e.stopPropagation()}>
+            <div style={{padding:"14px 18px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontSize:18}}>🤖</span>
+              <div>
+                <div style={{fontWeight:800,fontSize:14,color:C.text}}>AI valgiaraštis — {aiProfile.name}</div>
+                <div style={{fontSize:11,color:C.muted}}>{aiProfile.kcal} kcal · B:{aiProfile.prot}g · A:{aiProfile.carbs}g · R:{aiProfile.fat}g / dieną</div>
+              </div>
+              <button onClick={()=>!aiApplying&&setAiProfile(null)} style={{marginLeft:"auto",width:28,height:28,background:C.faint,border:`1px solid ${C.border}`,borderRadius:6,color:C.muted,cursor:"pointer",fontSize:15}}>×</button>
+            </div>
+
+            <div style={{padding:18,overflowY:"auto" as const,flex:1}}>
+              {aiLoading&&(
+                <div style={{textAlign:"center" as const,padding:"40px 0"}}>
+                  <div style={{width:28,height:28,border:`2px solid ${C.border}`,borderTopColor:aiProfile.color,borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto 14px"}}/>
+                  <div style={{fontSize:12,color:C.muted}}>AI sudaro 3 skirtingus valgiaraščius pagal jūsų maisto biblioteką...</div>
+                </div>
+              )}
+              <Err msg={aiError}/>
+
+              {!aiLoading&&aiVariants.length>0&&(
+                <>
+                  <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap" as const}}>
+                    {aiVariants.map((v,i)=>(
+                      <button key={i} onClick={()=>setAiTab(i)} style={{...(aiTab===i?css.btnG:css.btnGhost),fontSize:11,padding:"7px 14px"}}>{v.label||`Variantas ${i+1}`}</button>
+                    ))}
+                  </div>
+
+                  {aiVariants[aiTab]?.days?.map((day:any,di:number)=>{
+                    const tot=variantDayTotals(aiVariants[aiTab],di);
+                    return(
+                      <div key={di} style={{marginBottom:16,border:`1px solid ${C.border}`,borderRadius:10,overflow:"hidden"}}>
+                        <div style={{background:C.faint,padding:"9px 14px",display:"flex",alignItems:"center",gap:8}}>
+                          <span style={{fontWeight:800,fontSize:11,color:C.text,textTransform:"uppercase" as const}}>{di+1} diena</span>
+                          <span style={{marginLeft:"auto",fontSize:10,color:C.gold,fontWeight:700}}>{tot.kcal} kcal</span>
+                          <NutriBadge p={tot.prot} c={tot.carbs} f={tot.fat}/>
+                        </div>
+                        <div style={{padding:"10px 14px"}}>
+                          {(day.meals||[]).map((m:any,mi:number)=>(
+                            <div key={mi} style={{marginBottom:8}}>
+                              <div style={{fontSize:11,fontWeight:700,color:C.green,marginBottom:4}}>{m.mealTime}</div>
+                              {(m.items||[]).map((it:any,ii:number)=>{
+                                const c=computeItem(it);
+                                return(
+                                  <div key={ii} style={{display:"flex",alignItems:"center",gap:8,fontSize:11,padding:"3px 0",color:C.muted}}>
+                                    <span style={{color:C.text,fontWeight:600}}>{c.name}</span>
+                                    <span>{it.grams}g</span>
+                                    <span style={{marginLeft:"auto",color:C.gold}}>{c.kcalActual} kcal</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+
+            {!aiLoading&&aiVariants.length>0&&(
+              <div style={{padding:"14px 18px",borderTop:`1px solid ${C.border}`,display:"flex",gap:10}}>
+                <button onClick={()=>setAiProfile(null)} disabled={aiApplying} style={{...css.btnGhost,flex:1}}>Atšaukti</button>
+                {clientId?(
+                  <button onClick={applyAiVariant} disabled={aiApplying} style={{...css.btnGreen,flex:2}}>
+                    {aiApplying?"⏳ Taikoma...":`✅ Taikyti „${aiVariants[aiTab]?.label||"šį variantą"}" klientui`}
+                  </button>
+                ):(
+                  <div style={{flex:2,fontSize:11,color:C.muted,display:"flex",alignItems:"center",justifyContent:"center"}}>Pasirinkite klientą, kad galėtumėte pritaikyti</div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
