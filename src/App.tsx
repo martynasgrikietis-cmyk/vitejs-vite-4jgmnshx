@@ -2383,7 +2383,7 @@ Atsakyk GRIEŽTAI TIK JSON, be jokio papildomo teksto, tiksliai šio formato:
         headers:{"Content-Type":"application/json",Authorization:`Bearer ${SUPABASE_KEY}`},
         body:JSON.stringify({
           system,
-          max_tokens:700,
+          max_tokens:1200,
           messages:[{role:"user",content:[
             {type:"image",source:{type:"base64",media_type:file.type||"image/jpeg",data:base64}},
             {type:"text",text:"Įvertink šią nuotrauką pagal instrukcijas."},
@@ -3108,7 +3108,7 @@ TAISYKLĖS:
       const resp=await fetch(`${SUPABASE_URL}/functions/v1/ai-proxy`,{
         method:"POST",
         headers:{"Content-Type":"application/json",Authorization:`Bearer ${SUPABASE_KEY}`},
-        body:JSON.stringify({system,max_tokens:4000,messages:[{role:"user",content:userMsg}]}),
+        body:JSON.stringify({system,max_tokens:8000,messages:[{role:"user",content:userMsg}]}),
       });
       const data=await resp.json();
       const raw=data.content?.find((b:any)=>b.type==="text")?.text||"";
