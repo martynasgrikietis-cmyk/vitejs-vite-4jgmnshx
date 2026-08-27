@@ -3087,34 +3087,35 @@ function MacroCalculatorTab({clients,foods}:{clients:any[],foods:any[]}){
   const computeItem=(it:any)=>{
     const grams=it.grams||100;
     const r=grams/100;
-    return{name:it.name,category:it.category||"",grams,portion:100,calories:it.kcal100||0,protein:it.p100||0,carbs:it.c100||0,fat:it.f100||0,kcalActual:Math.round((it.kcal100||0)*r),protActual:+(((it.p100||0)*r).toFixed(1)),carbsActual:+(((it.c100||0)*r).toFixed(1)),fatActual:+(((it.f100||0)*r).toFixed(1))};
+    return{name:it.name,category:it.category||"",grams,portion:100,calories:it.kcal100||0,protein:it.p100||0,carbs:it.c100||0,fat:it.f100||0,description:it.prep||"",kcalActual:Math.round((it.kcal100||0)*r),protActual:+(((it.p100||0)*r).toFixed(1)),carbsActual:+(((it.c100||0)*r).toFixed(1)),fatActual:+(((it.f100||0)*r).toFixed(1))};
   };
 
   const openAiGenerator=async(profile:any)=>{
     setAiProfile(profile);setAiVariants([]);setAiError("");setAiTab(0);
     setAiLoading(true);
     try{
-      const system=`Tu esi profesionalus mitybos planų sudarymo asistentas sporto trenerio programoje. Sudaryk 3 SKIRTINGUS, paprastus 3 dienų valgiaraščius, kurie kuo tiksliau atitiktų nurodytus dienos makro tikslus (kcal, baltymai, angliavandeniai, riebalai).
+      const system=`Tu esi profesionalus mitybos planų sudarymo asistentas sporto trenerio programoje. Sudaryk VIENĄ paprastą, bet detalų 3 dienų valgiaraštį, kuris kuo tiksliau atitiktų nurodytus dienos makro tikslus (kcal, baltymai, angliavandeniai, riebalai).
 TAISYKLĖS:
 - Pats sugalvok paprastus, įprastus, lengvai paruošiamus maisto produktus/patiekalus (pvz. vištienos krūtinėlė, avižiniai dribsniai, varškė, ryžiai, bananas) — NENAUDOK sudėtingų ar egzotiškų receptų.
-- Kiekvienam produktui nurodyk realistišką maistinę vertę 100g/100ml ("kcal100","p100","c100","f100" — baltymai/angliavandeniai/riebalai gramais 100g produkto) IR kiekį gramais ("grams"), kuris reikalingas tikslui pasiekti. Skaičiai turi būti realūs (pvz. vištienos krūtinėlė ~165 kcal100, ~31 p100).
+- Kiekvienam produktui nurodyk realistišką maistinę vertę 100g/100ml ("kcal100","p100","c100","f100") IR kiekį gramais ("grams"), kuris reikalingas tikslui pasiekti. Skaičiai turi būti realūs (pvz. vištienos krūtinėlė ~165 kcal100, ~31 p100).
+- Kiekvienam produktui pridėk TRUMPĄ (iki 12 žodžių) paruošimo nurodymą lauke "prep" (pvz. "Kepti keptuvėje su alyvuogių aliejumi 8 min., pagardinti druska").
 - Kiekviena diena turi 3-4 valgymus iš: "🌅 Pusryčiai","☀️ Priešpiečiai","🍽️ Pietūs","🌤️ Užkandis","🌙 Vakarienė" (naudok tik dalį, kad būtų paprasta).
 - Kiekviename valgyme 1-3 produktai, protingi gramų kiekiai (pvz. 50-300g, ne 7g ar 2000g).
-- 3 variantai turi būti aiškiai skirtingi (skirtingi produktai/deriniai/skoniai), bet visi siekia tų pačių makro tikslų.
-- Atsakyk GRIEŽTAI TIK JSON, be jokio kito teksto, tiksliai šio formato (masyvai su LYGIAI 3 elementais):
-{"variants":[{"label":"Trumpas variantas pavadinimas","days":[{"day":1,"meals":[{"mealTime":"🌅 Pusryčiai","items":[{"name":"Avižiniai dribsniai","kcal100":389,"p100":13,"c100":67,"f100":7,"grams":80}]}]}]}]}`;
+- 3 dienos gali šiek tiek skirtis įvairove, bet visos siekia tų pačių makro tikslų.
+- Atsakyk GRIEŽTAI TIK JSON, be jokio kito teksto, tiksliai šio formato (days masyvas su LYGIAI 3 elementais):
+{"variants":[{"label":"Trumpas pavadinimas","days":[{"day":1,"meals":[{"mealTime":"🌅 Pusryčiai","items":[{"name":"Avižiniai dribsniai","kcal100":389,"p100":13,"c100":67,"f100":7,"grams":80,"prep":"Virti su vandeniu ar pienu 3-5 min."}]}]}]}]}`;
       const userMsg=`Dienos makro tikslai: ${profile.kcal} kcal, baltymai ${profile.prot}g, angliavandeniai ${profile.carbs}g, riebalai ${profile.fat}g.`;
 
       const resp=await fetch(`${SUPABASE_URL}/functions/v1/ai-proxy`,{
         method:"POST",
         headers:{"Content-Type":"application/json",Authorization:`Bearer ${SUPABASE_KEY}`},
-        body:JSON.stringify({system,max_tokens:8000,messages:[{role:"user",content:userMsg}]}),
+        body:JSON.stringify({system,max_tokens:3000,messages:[{role:"user",content:userMsg}]}),
       });
       const data=await resp.json();
       const raw=data.content?.find((b:any)=>b.type==="text")?.text||"";
       const clean=raw.replace(/```json|```/g,"").trim();
       const parsed=JSON.parse(clean);
-      const variants=(parsed.variants||[]).slice(0,3);
+      const variants=(parsed.variants||[]).slice(0,1);
       if(!variants.length)throw new Error("empty");
       setAiVariants(variants);
     }catch(e:any){
@@ -3618,17 +3619,16 @@ TAISYKLĖS:
               {aiLoading&&(
                 <div style={{textAlign:"center" as const,padding:"40px 0"}}>
                   <div style={{width:28,height:28,border:`2px solid ${C.border}`,borderTopColor:aiProfile.color,borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto 14px"}}/>
-                  <div style={{fontSize:12,color:C.muted}}>AI sudaro 3 skirtingus valgiaraščius pagal jūsų maisto biblioteką...</div>
+                  <div style={{fontSize:12,color:C.muted}}>AI sudaro valgiaraštį pagal jūsų makro tikslus...</div>
                 </div>
               )}
               <Err msg={aiError}/>
 
               {!aiLoading&&aiVariants.length>0&&(
                 <>
-                  <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap" as const}}>
-                    {aiVariants.map((v,i)=>(
-                      <button key={i} onClick={()=>setAiTab(i)} style={{...(aiTab===i?css.btnG:css.btnGhost),fontSize:11,padding:"7px 14px"}}>{v.label||`Variantas ${i+1}`}</button>
-                    ))}
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+                    <span style={{fontWeight:800,fontSize:13,color:C.text}}>{aiVariants[0].label||"Jūsų valgiaraštis"}</span>
+                    <button onClick={()=>openAiGenerator(aiProfile)} style={{...css.btnGhost,marginLeft:"auto",fontSize:10,padding:"6px 12px"}}>🔄 Generuoti iš naujo</button>
                   </div>
 
                   {aiVariants[aiTab]?.days?.map((day:any,di:number)=>{
@@ -3642,15 +3642,18 @@ TAISYKLĖS:
                         </div>
                         <div style={{padding:"10px 14px"}}>
                           {(day.meals||[]).map((m:any,mi:number)=>(
-                            <div key={mi} style={{marginBottom:8}}>
+                            <div key={mi} style={{marginBottom:10}}>
                               <div style={{fontSize:11,fontWeight:700,color:C.green,marginBottom:4}}>{m.mealTime}</div>
                               {(m.items||[]).map((it:any,ii:number)=>{
                                 const c=computeItem(it);
                                 return(
-                                  <div key={ii} style={{display:"flex",alignItems:"center",gap:8,fontSize:11,padding:"3px 0",color:C.muted}}>
-                                    <span style={{color:C.text,fontWeight:600}}>{c.name}</span>
-                                    <span>{it.grams}g</span>
-                                    <span style={{marginLeft:"auto",color:C.gold}}>{c.kcalActual} kcal</span>
+                                  <div key={ii} style={{padding:"4px 0"}}>
+                                    <div style={{display:"flex",alignItems:"center",gap:8,fontSize:11,color:C.muted}}>
+                                      <span style={{color:C.text,fontWeight:600}}>{c.name}</span>
+                                      <span>{it.grams}g</span>
+                                      <span style={{marginLeft:"auto",color:C.gold}}>{c.kcalActual} kcal</span>
+                                    </div>
+                                    {it.prep&&<div style={{fontSize:10,color:C.muted,fontStyle:"italic" as const,marginTop:1}}>{it.prep}</div>}
                                   </div>
                                 );
                               })}
