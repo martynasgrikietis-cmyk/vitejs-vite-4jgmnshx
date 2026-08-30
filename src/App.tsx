@@ -39,6 +39,72 @@ function getYouTubeEmbed(url:string):string|null{
   return null; // non-YouTube video link — open directly
 }
 
+// Groups a day's exercise array into render-ready blocks: standalone exercises
+// and superset groups (consecutive items sharing the same supersetGroup).
+// Shared by the coach's program editor and the client-facing share page.
+function groupDayExercises(dayExs:any[]){
+  const blocks:{type:"single"|"group",items:{ex:any,idx:number}[]}[]=[];
+  let i=0;
+  while(i<dayExs.length){
+    const ex=dayExs[i];
+    if(ex.supersetGroup){
+      const group=[{ex,idx:i}];
+      let j=i+1;
+      while(j<dayExs.length&&dayExs[j].supersetGroup===ex.supersetGroup){group.push({ex:dayExs[j],idx:j});j++;}
+      blocks.push({type:"group",items:group});
+      i=j;
+    }else{
+      blocks.push({type:"single",items:[{ex,idx:i}]});
+      i++;
+    }
+  }
+  return blocks;
+}
+
+function ExerciseCard({ex,badge,hideRest}:{ex:any,badge:string,hideRest?:boolean}){
+  const imgs=((ex.imgs&&ex.imgs.length?ex.imgs:ex.cover_img?[ex.cover_img]:[])).filter(Boolean);
+  return(
+    <div style={{background:C.surface,borderRadius:14,border:`1px solid ${C.border}`,overflow:"hidden"}}>
+      {imgs[0]&&(
+        <div style={{position:"relative",height:220,overflow:"hidden"}}>
+          <div style={{display:"flex",width:"100%",height:"100%"}}> <img src={imgs[0]} alt={ex.name} style={{width:imgs[1]?"50%":"100%",height:"100%",objectFit:"cover"}}/> {imgs[1]&&<img src={imgs[1]} alt={ex.name} style={{width:"50%",height:"100%",objectFit:"cover"}}/>} </div>
+          <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,#0a0d14cc 0%,transparent 50%)"}}/>
+          <div style={{position:"absolute",top:10,left:10,minWidth:24,height:24,padding:"0 6px",borderRadius:12,background:"rgba(0,0,0,0.55)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800}}>{badge}</div>
+          <div style={{position:"absolute",bottom:14,left:16,right:16}}>
+            <div style={{fontSize:16,fontWeight:800,color:"#fff",marginBottom:4}}>{ex.name}</div>
+            <div style={{fontSize:12,color:"rgba(255,255,255,0.65)"}}>{ex.muscle}{ex.equipment&&` · ${ex.equipment}`}</div>
+          </div>
+          {imgs.length>1&&<div style={{position:"absolute",top:10,right:10,background:"#000a",borderRadius:10,padding:"2px 8px",fontSize:10,color:"white",fontWeight:600}}>{imgs.length} 📷</div>}
+        </div>
+      )}
+      <div style={{padding:"14px 16px"}}>
+        {!imgs[0]&&<><div style={{fontWeight:700,fontSize:15,color:C.text,marginBottom:4}}>{badge}. {ex.name}</div><div style={{fontSize:12,color:C.teal,marginBottom:10}}>{ex.muscle}{ex.equipment&&` · ${ex.equipment}`}</div></>}
+        <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:ex.description?10:0}}>
+          {ex.customSets&&<div style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:9,padding:"8px 14px",textAlign:"center",minWidth:64}}><div style={{fontSize:9,color:C.muted,textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:2}}>Serijos</div><div style={{fontSize:18,fontWeight:900,color:C.gold}}>{ex.customSets}</div></div>}
+          {ex.customReps&&<div style={{background:C.faint,border:`1px solid ${C.border}`,borderRadius:9,padding:"8px 14px",textAlign:"center",minWidth:64}}><div style={{fontSize:9,color:C.muted,textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:2}}>Kartojimai</div><div style={{fontSize:18,fontWeight:900,color:C.text}}>{ex.customReps}</div></div>}
+          {ex.customWeight&&<div style={{background:C.tealSoft,border:`1px solid ${C.tealBorder}`,borderRadius:9,padding:"8px 14px",textAlign:"center",minWidth:64}}><div style={{fontSize:9,color:C.muted,textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:2}}>Svoris</div><div style={{fontSize:18,fontWeight:900,color:C.teal}}>{ex.customWeight}</div></div>}
+          {!hideRest&&ex.customRest&&<div style={{background:"#a78bfa18",border:`1px solid #a78bfa40`,borderRadius:9,padding:"8px 14px",textAlign:"center",minWidth:64}}><div style={{fontSize:9,color:C.muted,textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:2}}>Poilsis</div><div style={{fontSize:18,fontWeight:900,color:C.purple}}>{ex.customRest}</div></div>}
+        </div>
+        {ex.description&&<div style={{fontSize:12,color:C.muted,fontStyle:"italic",lineHeight:1.5}}>{ex.description}</div>}
+        {ex.customComment&&<div style={{marginTop:ex.description?8:0,display:"flex",alignItems:"flex-start",gap:8,background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:10,padding:"10px 12px"}}><span style={{fontSize:14,flexShrink:0}}>💬</span><span style={{fontSize:12,color:C.text,lineHeight:1.5}}>{ex.customComment}</span></div>}
+        {ex.video_url&&(()=>{
+          const embedUrl=getYouTubeEmbed(ex.video_url);
+          return embedUrl?(
+            <div style={{marginTop:10,borderRadius:10,overflow:"hidden",position:"relative",paddingBottom:"56.25%",height:0}}>
+              <iframe src={embedUrl} title={ex.name} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",border:"none"}} allowFullScreen/>
+            </div>
+          ):(
+            <a href={ex.video_url} target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",gap:8,marginTop:10,background:"#ef444418",border:"1px solid #ef444440",borderRadius:10,padding:"10px 14px",textDecoration:"none"}}>
+              <span style={{fontSize:20}}>▶</span>
+              <span style={{fontSize:13,fontWeight:700,color:"#f87171"}}>Žiūrėti pratimo video</span>
+            </a>
+          );
+        })()}
+      </div>
+    </div>
+  );
+}
+
 const emptyExForm  = {name:"",muscle:"Krūtinė",equipment:"",sets:"3",reps:"10-12",description:"",video_url:"",imgs:[] as string[]};
 
 const MUSCLE_COLORS:Record<string,string> = {
@@ -704,49 +770,27 @@ function SharePage({token,type}:{token:string,type:string}){
                 {exs.length===0?(
                   <div style={{background:C.surface,borderRadius:12,padding:"16px",textAlign:"center",color:C.muted,fontSize:13,border:`1px solid ${C.border}`}}>Poilsio diena 😴</div>
                 ):(
-                  <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                    {exs.map((ex:any,i:number)=>{
-                      const imgs=((ex.imgs&&ex.imgs.length?ex.imgs:ex.cover_img?[ex.cover_img]:[])).filter(Boolean);
+                  <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                    {(()=>{let num=0;const letters="ABCDEFGH";return groupDayExercises(exs).map((block,bi)=>{
+                      num++;
+                      if(block.type==="single"){
+                        return <ExerciseCard key={bi} ex={block.items[0].ex} badge={String(num)}/>;
+                      }
+                      const lastEx=block.items[block.items.length-1].ex;
                       return(
-                        <div key={i} style={{background:C.surface,borderRadius:14,border:`1px solid ${C.border}`,overflow:"hidden"}}>
-                          {imgs[0]&&(
-                            <div style={{position:"relative",height:220,overflow:"hidden"}}>
-                              <div style={{display:"flex",width:"100%",height:"100%"}}> <img src={imgs[0]} alt={ex.name} style={{width:imgs[1]?"50%":"100%",height:"100%",objectFit:"cover"}}/> {imgs[1]&&<img src={imgs[1]} alt={ex.name} style={{width:"50%",height:"100%",objectFit:"cover"}}/>} </div>
-                              <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,#0a0d14cc 0%,transparent 50%)"}}/>
-                              <div style={{position:"absolute",bottom:14,left:16,right:16}}>
-                                <div style={{fontSize:16,fontWeight:800,color:"#fff",marginBottom:4}}>{ex.name}</div>
-                                <div style={{fontSize:12,color:"rgba(255,255,255,0.65)"}}>{ex.muscle}{ex.equipment&&` · ${ex.equipment}`}</div>
-                              </div>
-                              {imgs.length>1&&<div style={{position:"absolute",top:10,right:10,background:"#000a",borderRadius:10,padding:"2px 8px",fontSize:10,color:"white",fontWeight:600}}>{imgs.length} 📷</div>}
-                            </div>
-                          )}
-                          <div style={{padding:"14px 16px"}}>
-                            {!imgs[0]&&<><div style={{fontWeight:700,fontSize:15,color:C.text,marginBottom:4}}>{i+1}. {ex.name}</div><div style={{fontSize:12,color:C.teal,marginBottom:10}}>{ex.muscle}{ex.equipment&&` · ${ex.equipment}`}</div></>}
-                            <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:ex.description?10:0}}>
-                              {ex.customSets&&<div style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:9,padding:"8px 14px",textAlign:"center",minWidth:64}}><div style={{fontSize:9,color:C.muted,textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:2}}>Serijos</div><div style={{fontSize:18,fontWeight:900,color:C.gold}}>{ex.customSets}</div></div>}
-                              {ex.customReps&&<div style={{background:C.faint,border:`1px solid ${C.border}`,borderRadius:9,padding:"8px 14px",textAlign:"center",minWidth:64}}><div style={{fontSize:9,color:C.muted,textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:2}}>Kartojimai</div><div style={{fontSize:18,fontWeight:900,color:C.text}}>{ex.customReps}</div></div>}
-                              {ex.customWeight&&<div style={{background:C.tealSoft,border:`1px solid ${C.tealBorder}`,borderRadius:9,padding:"8px 14px",textAlign:"center",minWidth:64}}><div style={{fontSize:9,color:C.muted,textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:2}}>Svoris</div><div style={{fontSize:18,fontWeight:900,color:C.teal}}>{ex.customWeight}</div></div>}
-                              {ex.customRest&&<div style={{background:"#a78bfa18",border:`1px solid #a78bfa40`,borderRadius:9,padding:"8px 14px",textAlign:"center",minWidth:64}}><div style={{fontSize:9,color:C.muted,textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:2}}>Poilsis</div><div style={{fontSize:18,fontWeight:900,color:C.purple}}>{ex.customRest}</div></div>}
-                            </div>
-                            {ex.description&&<div style={{fontSize:12,color:C.muted,fontStyle:"italic",lineHeight:1.5}}>{ex.description}</div>}
-                            {ex.customComment&&<div style={{marginTop:ex.description?8:0,display:"flex",alignItems:"flex-start",gap:8,background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:10,padding:"10px 12px"}}><span style={{fontSize:14,flexShrink:0}}>💬</span><span style={{fontSize:12,color:C.text,lineHeight:1.5}}>{ex.customComment}</span></div>}
-                            {ex.video_url&&(()=>{
-                              const embedUrl=getYouTubeEmbed(ex.video_url);
-                              return embedUrl?(
-                                <div style={{marginTop:10,borderRadius:10,overflow:"hidden",position:"relative",paddingBottom:"56.25%",height:0}}>
-                                  <iframe src={embedUrl} title={ex.name} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",border:"none"}} allowFullScreen/>
-                                </div>
-                              ):(
-                                <a href={ex.video_url} target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",gap:8,marginTop:10,background:"#ef444418",border:"1px solid #ef444440",borderRadius:10,padding:"10px 14px",textDecoration:"none"}}>
-                                  <span style={{fontSize:20}}>▶</span>
-                                  <span style={{fontSize:13,fontWeight:700,color:"#f87171"}}>Žiūrėti pratimo video</span>
-                                </a>
-                              );
-                            })()}
+                        <div key={bi} style={{border:`2px solid ${C.purpleBorder}`,borderRadius:16,padding:10}}>
+                          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10,fontSize:11,fontWeight:800,color:C.purple,letterSpacing:"0.04em"}}>
+                            🔗 SUPERSETAS — atlikite iš eilės, be poilsio tarp pratimų
                           </div>
+                          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                            {block.items.map(({ex},gi)=>(
+                              <ExerciseCard key={gi} ex={ex} badge={`${num}${letters[gi]}`} hideRest/>
+                            ))}
+                          </div>
+                          {lastEx.customRest&&<div style={{marginTop:10,textAlign:"center" as const,fontSize:12,color:C.purple,fontWeight:700}}>Poilsis po viso superseto: {lastEx.customRest}</div>}
                         </div>
                       );
-                    })}
+                    });})()}
                   </div>
                 )}
               </div>
@@ -873,6 +917,8 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
   const [pickWeight,setPickWeight]=useState("");
   const [pickRest,setPickRest]=useState("");
   const [pickComment,setPickComment]=useState("");
+  const [groupingDay,setGroupingDay]=useState<string|null>(null);
+  const [groupingSel,setGroupingSel]=useState<number[]>([]);
   const [saving,setSaving]=useState(false);
   const [confirmDel,setConfirmDel]=useState<any>(null);
   const [shareModal,setShareModal]=useState<any>(null);
@@ -924,7 +970,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
   const toggleDay=(d:string)=>setClientForm(p=>({...p,training_days:p.training_days.includes(d)?p.training_days.filter((x:string)=>x!==d):[...p.training_days,d]}));
   const openPick=(day:string)=>{setPickDay(day);setPickedEx(null);setPickSets("");setPickReps("");setPickWeight("");setPickRest("");setPickComment("");};
   const pickList=exercises.filter(e=>(pickMuscle==="Visos"||e.muscle===pickMuscle)&&(e.name.toLowerCase().includes(pickSearch.toLowerCase())||e.muscle.toLowerCase().includes(pickSearch.toLowerCase())));
-  const addToDay=()=>{if(!pickedEx)return;const isSuperset=pickSets==="SS";const exData={id:pickedEx.id,name:pickedEx.name,muscle:pickedEx.muscle,equipment:pickedEx.equipment,sets:pickedEx.sets,reps:pickedEx.reps,description:pickedEx.description,imgs:pickedEx.imgs&&pickedEx.imgs.length?pickedEx.imgs:pickedEx.cover_img?[pickedEx.cover_img]:[],cover_img:pickedEx.cover_img||"",customSets:isSuperset?"3":pickSets||pickedEx.sets,customReps:pickReps||pickedEx.reps,customWeight:pickWeight||"",customRest:pickRest||"",customComment:pickComment||"",superset:isSuperset};setProgram((p:any)=>({...p,[pickDay]:[...(p[pickDay]||[]),exData]}));setPickDay(null);};
+  const addToDay=()=>{if(!pickedEx)return;const exData={id:pickedEx.id,name:pickedEx.name,muscle:pickedEx.muscle,equipment:pickedEx.equipment,sets:pickedEx.sets,reps:pickedEx.reps,description:pickedEx.description,imgs:pickedEx.imgs&&pickedEx.imgs.length?pickedEx.imgs:pickedEx.cover_img?[pickedEx.cover_img]:[],cover_img:pickedEx.cover_img||"",customSets:pickSets||pickedEx.sets,customReps:pickReps||pickedEx.reps,customWeight:pickWeight||"",customRest:pickRest||"",customComment:pickComment||"",supersetGroup:null};setProgram((p:any)=>({...p,[pickDay]:[...(p[pickDay]||[]),exData]}));setPickDay(null);};
   const removeFromDay=(day:string,idx:number)=>setProgram((p:any)=>({...p,[day]:p[day].filter((_:any,i:number)=>i!==idx)}));
   const [editEx,setEditEx]=useState<{day:string,idx:number}|null>(null);
   const [editSets,setEditSets]=useState("");
@@ -946,6 +992,31 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
     });
     setEditEx(null);
   };
+
+  // ── SUPERSET GROUPING ──────────────────────────────────
+  const startGrouping=(day:string)=>{setGroupingDay(day);setGroupingSel([]);};
+  const cancelGrouping=()=>{setGroupingDay(null);setGroupingSel([]);};
+  const toggleGroupingSel=(idx:number)=>setGroupingSel(s=>s.includes(idx)?s.filter(i=>i!==idx):[...s,idx].sort((a,b)=>a-b));
+  const confirmGrouping=()=>{
+    if(!groupingDay||groupingSel.length<2)return;
+    const groupId=`ss_${Date.now()}`;
+    setProgram((p:any)=>{
+      const arr=[...(p[groupingDay]||[])];
+      const selected=groupingSel.map(i=>arr[i]);
+      const rest=arr.filter((_:any,i:number)=>!groupingSel.includes(i));
+      const grouped=selected.map((ex:any)=>({...ex,supersetGroup:groupId}));
+      const firstIdx=Math.min(...groupingSel);
+      let restInsertAt=0;
+      for(let i=0;i<firstIdx;i++){if(!groupingSel.includes(i))restInsertAt++;}
+      const newArr=[...rest.slice(0,restInsertAt),...grouped,...rest.slice(restInsertAt)];
+      return{...p,[groupingDay]:newArr};
+    });
+    cancelGrouping();
+  };
+  const ungroupSet=(day:string,groupId:string)=>{
+    setProgram((p:any)=>({...p,[day]:(p[day]||[]).map((ex:any)=>ex.supersetGroup===groupId?{...ex,supersetGroup:null}:ex)}));
+  };
+
   const openShareModal=async(c:any)=>{
     let token=c.share_token;
     if(!token){token=genToken();await sb.update("clients",c.id,{share_token:token});await load();}
@@ -1433,41 +1504,112 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
               <div style={{flex:1}}><span style={css.label}>Programos pavadinimas</span><input value={programName} onChange={e=>setProgramName(e.target.value)} placeholder="pvz. Tomo 3 dienų programa" style={{...css.input,maxWidth:380}}/></div>
               <ProgramTemplateButton exercises={exercises} onApply={(prog,name)=>{setProgram(prog);setProgramName(name);}}/>
             </div>
-            {trainingDays.length===0?<div style={{...css.card,textAlign:"center",color:C.muted,padding:36}}>Grįžkite į 1 žingsnį ir pasirinkite treniruočių dienas.</div>:trainingDays.map(day=>(<div key={day} style={{...css.card,marginBottom:12}}>
-              <div style={{display:"flex",alignItems:"center",marginBottom:10,gap:8}}>
+            {trainingDays.length===0?<div style={{...css.card,textAlign:"center",color:C.muted,padding:36}}>Grįžkite į 1 žingsnį ir pasirinkite treniruočių dienas.</div>:trainingDays.map(day=>{
+              const dayExs=program[day]||[];
+              const isGroupingThisDay=groupingDay===day;
+              const blocks=groupDayExercises(dayExs);
+              return(<div key={day} style={{...css.card,marginBottom:12}}>
+              <div style={{display:"flex",alignItems:"center",marginBottom:10,gap:8,flexWrap:"wrap" as const}}>
                 <div style={{width:4,height:4,borderRadius:"50%",background:C.gold}}/>
                 <span style={{fontWeight:700,letterSpacing:"0.08em",fontSize:11,textTransform:"uppercase" as const}}>{day}</span>
-                <span style={{color:C.muted,fontSize:11}}>— {(program[day]||[]).length} prat.</span>
-                <button onClick={()=>openPick(day)} style={{...css.btnTeal,marginLeft:"auto",fontSize:11}}>+ Pridėti</button>
+                <span style={{color:C.muted,fontSize:11}}>— {dayExs.length} prat.</span>
+                {isGroupingThisDay?(
+                  <div style={{marginLeft:"auto",display:"flex",gap:6,alignItems:"center"}}>
+                    <span style={{fontSize:10,color:C.purple}}>Pažymėkite 2+ pratimus</span>
+                    <button onClick={confirmGrouping} disabled={groupingSel.length<2} style={{...css.btnG,fontSize:11,opacity:groupingSel.length<2?0.5:1}}>🔗 Sujungti ({groupingSel.length})</button>
+                    <button onClick={cancelGrouping} style={{...css.btnGhost,fontSize:11}}>Atšaukti</button>
+                  </div>
+                ):(
+                  <div style={{marginLeft:"auto",display:"flex",gap:6}}>
+                    {dayExs.length>=2&&<button onClick={()=>startGrouping(day)} style={{...css.btnGhost,fontSize:11,color:C.purple,borderColor:C.purpleBorder}}>🔗 Grupuoti</button>}
+                    <button onClick={()=>openPick(day)} style={{...css.btnTeal,fontSize:11}}>+ Pridėti</button>
+                  </div>
+                )}
               </div>
-              {(program[day]||[]).length===0?<div style={{color:C.muted,fontSize:12,textAlign:"center",padding:"8px 0"}}>Pratimų nėra</div>:(
+              {dayExs.length===0?<div style={{color:C.muted,fontSize:12,textAlign:"center",padding:"8px 0"}}>Pratimų nėra</div>:isGroupingThisDay?(
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                  {(program[day]||[]).map((ex:any,idx:number)=>{
-                    const isEditing=editEx?.day===day&&editEx?.idx===idx;
-                    return(
-                    <div key={idx} style={{background:C.faint,borderRadius:8,padding:"7px 10px"}}>
-                      <div style={{display:"flex",alignItems:"center",gap:8}}>
-                        <div style={{width:34,height:34,borderRadius:6,overflow:"hidden",background:C.border,flexShrink:0}}>{(ex.imgs||[]).filter(Boolean)[0]?<img src={(ex.imgs||[])[0]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>📷</div>}</div>
-                        <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,color:C.text}}>{ex.name}</div><div style={{fontSize:10,color:C.teal}}>{ex.muscle} · {ex.customSets}s · {ex.customReps}r</div>{ex.customComment&&<div style={{fontSize:10,color:C.muted,fontStyle:"italic" as const,marginTop:2}}>💬 {ex.customComment}</div>}</div>
-                        <button onClick={()=>isEditing?setEditEx(null):openEditEx(day,idx)} style={{...css.btnTeal,padding:"6px 10px",fontSize:12}}>{isEditing?"✕":"✏️"}</button>
-                        <button onClick={()=>removeFromDay(day,idx)} style={css.btnRed}>🗑️</button>
-                      </div>
-                      {isEditing&&(
-                        <div style={{display:"flex",gap:8,flexWrap:"wrap" as const,alignItems:"flex-end",marginTop:10,paddingTop:10,borderTop:`1px solid ${C.border}`}}>
-                          <div><span style={css.label}>Serijos</span><input value={editSets} onChange={e=>setEditSets(e.target.value)} style={{...css.input,width:60,textAlign:"center",padding:"6px 5px"}}/></div>
-                          <div><span style={css.label}>Kartojimai</span><input value={editReps} onChange={e=>setEditReps(e.target.value)} style={{...css.input,width:75,textAlign:"center",padding:"6px 5px"}}/></div>
-                          <div><span style={css.label}>Svoris (kg)</span><input value={editWeight} onChange={e=>setEditWeight(e.target.value)} style={{...css.input,width:75,textAlign:"center",padding:"6px 5px",color:C.teal}}/></div>
-                          <div><span style={css.label}>Poilsis</span><select value={editRest} onChange={e=>setEditRest(e.target.value)} style={{...css.select,width:90,padding:"6px 5px",color:C.purple}}><option value="">—</option>{REST_OPTIONS.map(r=><option key={r}>{r}</option>)}</select></div>
-                          <div style={{flexBasis:"100%",minWidth:180,flexGrow:1}}><span style={css.label}>Komentaras klientui</span><input value={editComment} onChange={e=>setEditComment(e.target.value)} placeholder="pvz. dėmesį į techniką" style={{...css.input,width:"100%",padding:"6px 8px"}}/></div>
-                          <button onClick={saveEditEx} style={{...css.btnG,fontSize:11,padding:"7px 16px"}}>✅ Išsaugoti</button>
-                          <button onClick={()=>setEditEx(null)} style={{...css.btnGhost,fontSize:11,padding:"7px 16px"}}>Atšaukti</button>
+                  {dayExs.map((ex:any,idx:number)=>(
+                    <label key={idx} style={{display:"flex",alignItems:"center",gap:10,background:groupingSel.includes(idx)?C.purpleSoft:C.faint,border:`1px solid ${groupingSel.includes(idx)?C.purpleBorder:"transparent"}`,borderRadius:8,padding:"7px 10px",cursor:"pointer"}}>
+                      <input type="checkbox" checked={groupingSel.includes(idx)} onChange={()=>toggleGroupingSel(idx)} style={{width:16,height:16,accentColor:C.purple}}/>
+                      <div style={{width:30,height:30,borderRadius:6,overflow:"hidden",background:C.border,flexShrink:0}}>{(ex.imgs||[]).filter(Boolean)[0]?<img src={(ex.imgs||[])[0]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:null}</div>
+                      <div style={{fontSize:12,fontWeight:600,color:C.text}}>{ex.name}</div>
+                    </label>
+                  ))}
+                </div>
+              ):(
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {(()=>{let num=0;return blocks.map((block,bi)=>{
+                    num++;
+                    if(block.type==="single"){
+                      const {ex,idx}=block.items[0];
+                      const isEditing=editEx?.day===day&&editEx?.idx===idx;
+                      return(
+                        <div key={bi} style={{background:C.faint,borderRadius:8,padding:"7px 10px"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:8}}>
+                            <div style={{width:22,height:22,borderRadius:"50%",background:C.border,color:C.muted,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,flexShrink:0}}>{num}</div>
+                            <div style={{width:34,height:34,borderRadius:6,overflow:"hidden",background:C.border,flexShrink:0}}>{(ex.imgs||[]).filter(Boolean)[0]?<img src={(ex.imgs||[])[0]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>📷</div>}</div>
+                            <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,color:C.text}}>{ex.name}</div><div style={{fontSize:10,color:C.teal}}>{ex.muscle} · {ex.customSets}s · {ex.customReps}r</div>{ex.customComment&&<div style={{fontSize:10,color:C.muted,fontStyle:"italic" as const,marginTop:2}}>💬 {ex.customComment}</div>}</div>
+                            <button onClick={()=>isEditing?setEditEx(null):openEditEx(day,idx)} style={{...css.btnTeal,padding:"6px 10px",fontSize:12}}>{isEditing?"✕":"✏️"}</button>
+                            <button onClick={()=>removeFromDay(day,idx)} style={css.btnRed}>🗑️</button>
+                          </div>
+                          {isEditing&&(
+                            <div style={{display:"flex",gap:8,flexWrap:"wrap" as const,alignItems:"flex-end",marginTop:10,paddingTop:10,borderTop:`1px solid ${C.border}`}}>
+                              <div><span style={css.label}>Serijos</span><input value={editSets} onChange={e=>setEditSets(e.target.value)} style={{...css.input,width:60,textAlign:"center",padding:"6px 5px"}}/></div>
+                              <div><span style={css.label}>Kartojimai</span><input value={editReps} onChange={e=>setEditReps(e.target.value)} style={{...css.input,width:75,textAlign:"center",padding:"6px 5px"}}/></div>
+                              <div><span style={css.label}>Svoris (kg)</span><input value={editWeight} onChange={e=>setEditWeight(e.target.value)} style={{...css.input,width:75,textAlign:"center",padding:"6px 5px",color:C.teal}}/></div>
+                              <div><span style={css.label}>Poilsis</span><select value={editRest} onChange={e=>setEditRest(e.target.value)} style={{...css.select,width:90,padding:"6px 5px",color:C.purple}}><option value="">—</option>{REST_OPTIONS.map(r=><option key={r}>{r}</option>)}</select></div>
+                              <div style={{flexBasis:"100%",minWidth:180,flexGrow:1}}><span style={css.label}>Komentaras klientui</span><input value={editComment} onChange={e=>setEditComment(e.target.value)} placeholder="pvz. dėmesį į techniką" style={{...css.input,width:"100%",padding:"6px 8px"}}/></div>
+                              <button onClick={saveEditEx} style={{...css.btnG,fontSize:11,padding:"7px 16px"}}>✅ Išsaugoti</button>
+                              <button onClick={()=>setEditEx(null)} style={{...css.btnGhost,fontSize:11,padding:"7px 16px"}}>Atšaukti</button>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  );})}
+                      );
+                    }
+                    // superset group block
+                    const letters="ABCDEFGH";
+                    const groupId=block.items[0].ex.supersetGroup;
+                    const lastEx=block.items[block.items.length-1].ex;
+                    return(
+                      <div key={bi} style={{border:`2px solid ${C.purpleBorder}`,borderRadius:10,padding:8}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8,fontSize:10,fontWeight:800,color:C.purple,letterSpacing:"0.06em",textTransform:"uppercase" as const}}>
+                          🔗 Supersetas {num}
+                          <button onClick={()=>ungroupSet(day,groupId)} style={{marginLeft:"auto",background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:10,textDecoration:"underline"}}>Išskirti</button>
+                        </div>
+                        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                          {block.items.map(({ex,idx},gi)=>{
+                            const isEditing=editEx?.day===day&&editEx?.idx===idx;
+                            return(
+                              <div key={idx} style={{background:C.purpleSoft,borderRadius:8,padding:"7px 10px"}}>
+                                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                                  <div style={{width:22,height:22,borderRadius:"50%",background:C.purple,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,flexShrink:0}}>{num}{letters[gi]}</div>
+                                  <div style={{width:34,height:34,borderRadius:6,overflow:"hidden",background:C.border,flexShrink:0}}>{(ex.imgs||[]).filter(Boolean)[0]?<img src={(ex.imgs||[])[0]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>📷</div>}</div>
+                                  <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,color:C.text}}>{ex.name}</div><div style={{fontSize:10,color:C.teal}}>{ex.muscle} · {ex.customSets}s · {ex.customReps}r</div>{ex.customComment&&<div style={{fontSize:10,color:C.muted,fontStyle:"italic" as const,marginTop:2}}>💬 {ex.customComment}</div>}</div>
+                                  <button onClick={()=>isEditing?setEditEx(null):openEditEx(day,idx)} style={{...css.btnTeal,padding:"6px 10px",fontSize:12}}>{isEditing?"✕":"✏️"}</button>
+                                  <button onClick={()=>removeFromDay(day,idx)} style={css.btnRed}>🗑️</button>
+                                </div>
+                                {isEditing&&(
+                                  <div style={{display:"flex",gap:8,flexWrap:"wrap" as const,alignItems:"flex-end",marginTop:10,paddingTop:10,borderTop:`1px solid ${C.border}`}}>
+                                    <div><span style={css.label}>Serijos</span><input value={editSets} onChange={e=>setEditSets(e.target.value)} style={{...css.input,width:60,textAlign:"center",padding:"6px 5px"}}/></div>
+                                    <div><span style={css.label}>Kartojimai</span><input value={editReps} onChange={e=>setEditReps(e.target.value)} style={{...css.input,width:75,textAlign:"center",padding:"6px 5px"}}/></div>
+                                    <div><span style={css.label}>Svoris (kg)</span><input value={editWeight} onChange={e=>setEditWeight(e.target.value)} style={{...css.input,width:75,textAlign:"center",padding:"6px 5px",color:C.teal}}/></div>
+                                    <div><span style={css.label}>Poilsis</span><select value={editRest} onChange={e=>setEditRest(e.target.value)} style={{...css.select,width:90,padding:"6px 5px",color:C.purple}}><option value="">—</option>{REST_OPTIONS.map(r=><option key={r}>{r}</option>)}</select></div>
+                                    <div style={{flexBasis:"100%",minWidth:180,flexGrow:1}}><span style={css.label}>Komentaras klientui</span><input value={editComment} onChange={e=>setEditComment(e.target.value)} placeholder="pvz. dėmesį į techniką" style={{...css.input,width:"100%",padding:"6px 8px"}}/></div>
+                                    <button onClick={saveEditEx} style={{...css.btnG,fontSize:11,padding:"7px 16px"}}>✅ Išsaugoti</button>
+                                    <button onClick={()=>setEditEx(null)} style={{...css.btnGhost,fontSize:11,padding:"7px 16px"}}>Atšaukti</button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {lastEx.customRest&&<div style={{fontSize:10,color:C.purple,marginTop:6,paddingLeft:2}}>Poilsis po abiejų: {lastEx.customRest}</div>}
+                      </div>
+                    );
+                  });})()}
                 </div>
               )}
-            </div>))}
+            </div>);})}
           </div>)}
 
           {/* Step 3 — Meal plan for "both" only */}
@@ -1548,7 +1690,6 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
           <div><span style={css.label}>Kartojimai</span><input value={pickReps} onChange={e=>setPickReps(e.target.value)} placeholder={pickedEx.reps} style={{...css.input,width:80,textAlign:"center",padding:"6px 5px"}}/></div>
           <div><span style={css.label}>Svoris (kg)</span><input value={pickWeight} onChange={e=>setPickWeight(e.target.value)} placeholder="60" style={{...css.input,width:80,textAlign:"center",padding:"6px 5px",color:C.teal}}/></div>
           <div><span style={css.label}>Poilsis</span><select value={pickRest} onChange={e=>setPickRest(e.target.value)} style={{...css.select,width:95,padding:"6px 5px",color:C.purple}}><option value="">—</option>{REST_OPTIONS.map(r=><option key={r}>{r}</option>)}</select></div>
-          <div><span style={css.label}>Superset</span><button onClick={()=>setPickSets(ps=>ps==="SS"?"":((ps||"")+""))} style={{...css.btnGhost,padding:"6px 10px",fontSize:11,color:pickSets==="SS"?C.purple:C.muted,borderColor:pickSets==="SS"?C.purpleBorder:C.border,background:pickSets==="SS"?C.purpleSoft:"transparent"}}>SS {pickSets==="SS"?"✓":""}</button></div>
           <div style={{flexBasis:"100%",minWidth:180,flexGrow:1}}><span style={css.label}>Komentaras klientui (nebūtina)</span><input value={pickComment} onChange={e=>setPickComment(e.target.value)} placeholder="pvz. dėmesį į techniką, neskubėti" style={{...css.input,width:"100%",padding:"6px 8px"}}/></div>
           <button onClick={addToDay} style={{...css.btnG,alignSelf:"flex-end"}}>Pridėti +</button>
         </div>)}
