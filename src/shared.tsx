@@ -781,9 +781,10 @@ export async function printPDF(c:any,pl:any[]){
     else{
       const renderEx=(ex:any,badge:string)=>{
         const fullEx=exMap[ex.id]||ex;const imgs=(fullEx.imgs&&fullEx.imgs.length?fullEx.imgs:fullEx.cover_img?[fullEx.cover_img]:[]).filter(Boolean);
+        const typeColor=ex.customType==="Cardio"?"#3b82f6":ex.customType==="Apšilimas"?"#f59e0b":null;
         h+=`<div class="er"><div class="en">${badge}</div>`;
         h+=imgs[0]?`<img src="${shrunk[imgs[0]]||imgs[0]}" class="ei" onerror="this.style.display='none'"/>`:`<div class="ep">📷</div>`; h+=imgs[1]?`<img src="${shrunk[imgs[1]]||imgs[1]}" class="ei" onerror="this.style.display='none'"/>`:``;
-        h+=`<div style="flex:1"><div class="en2">${ex.name}</div><div class="em">${ex.muscle||""}${ex.equipment?` · ${ex.equipment}`:""}</div><div class="chips">`;
+        h+=`<div style="flex:1"><div class="en2">${ex.name}${typeColor?` <span style="background:${typeColor};color:#fff;border-radius:5px;padding:2px 7px;font-size:8px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;vertical-align:middle;">${ex.customType}</span>`:""}</div><div class="em">${ex.muscle||""}${ex.equipment?` · ${ex.equipment}`:""}</div><div class="chips">`;
         if(ex.customSets)h+=`<span class="chip cg">Ser: ${ex.customSets}</span>`;
         if(ex.customReps)h+=`<span class="chip cb">Kart: ${ex.customReps}</span>`;
         if(ex.customWeight)h+=`<span class="chip cn">Svoris: ${ex.customWeight}kg</span>`;
@@ -1067,6 +1068,17 @@ export async function generateTrainingJpg(c:any):Promise<void>{
     ctx.beginPath();ctx.roundRect?ctx.roundRect(contentX+8,imgTop+8,badgeW,22,11):ctx.rect(contentX+8,imgTop+8,badgeW,22);ctx.fill();
     ctx.fillStyle="#FFFFFF";ctx.font="700 11px Arial";
     ctx.fillText(badge,contentX+8+badgeW/2-(badge.length*3.5),imgTop+23);
+    // type badge (Apšilimas / Cardio) — top-right corner
+    if(ex.customType==="Cardio"||ex.customType==="Apšilimas"){
+      const typeColor=ex.customType==="Cardio"?"#3b82f6":"#f59e0b";
+      ctx.font="700 10px Arial";
+      const tw=ctx.measureText(ex.customType).width;
+      const tBadgeW=tw+18;
+      ctx.fillStyle=typeColor;
+      ctx.beginPath();ctx.roundRect?ctx.roundRect(contentX+contentW-tBadgeW-8,imgTop+8,tBadgeW,22,6):ctx.rect(contentX+contentW-tBadgeW-8,imgTop+8,tBadgeW,22);ctx.fill();
+      ctx.fillStyle="#FFFFFF";
+      ctx.fillText(ex.customType.toUpperCase(),contentX+contentW-tBadgeW-8+9,imgTop+23);
+    }
     // dark bottom gradient + name overlay (matches on-screen card style)
     const grad=ctx.createLinearGradient(0,imgTop+IMG_ROW_H-90,0,imgTop+IMG_ROW_H);
     grad.addColorStop(0,"rgba(0,0,0,0)");grad.addColorStop(1,"rgba(0,0,0,0.72)");
