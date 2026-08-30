@@ -926,6 +926,26 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
   const pickList=exercises.filter(e=>(pickMuscle==="Visos"||e.muscle===pickMuscle)&&(e.name.toLowerCase().includes(pickSearch.toLowerCase())||e.muscle.toLowerCase().includes(pickSearch.toLowerCase())));
   const addToDay=()=>{if(!pickedEx)return;const isSuperset=pickSets==="SS";const exData={id:pickedEx.id,name:pickedEx.name,muscle:pickedEx.muscle,equipment:pickedEx.equipment,sets:pickedEx.sets,reps:pickedEx.reps,description:pickedEx.description,imgs:pickedEx.imgs&&pickedEx.imgs.length?pickedEx.imgs:pickedEx.cover_img?[pickedEx.cover_img]:[],cover_img:pickedEx.cover_img||"",customSets:isSuperset?"3":pickSets||pickedEx.sets,customReps:pickReps||pickedEx.reps,customWeight:pickWeight||"",customRest:pickRest||"",customComment:pickComment||"",superset:isSuperset};setProgram((p:any)=>({...p,[pickDay]:[...(p[pickDay]||[]),exData]}));setPickDay(null);};
   const removeFromDay=(day:string,idx:number)=>setProgram((p:any)=>({...p,[day]:p[day].filter((_:any,i:number)=>i!==idx)}));
+  const [editEx,setEditEx]=useState<{day:string,idx:number}|null>(null);
+  const [editSets,setEditSets]=useState("");
+  const [editReps,setEditReps]=useState("");
+  const [editWeight,setEditWeight]=useState("");
+  const [editRest,setEditRest]=useState("");
+  const [editComment,setEditComment]=useState("");
+  const openEditEx=(day:string,idx:number)=>{
+    const ex=program[day]?.[idx];if(!ex)return;
+    setEditEx({day,idx});
+    setEditSets(ex.customSets||"");setEditReps(ex.customReps||"");setEditWeight(ex.customWeight||"");setEditRest(ex.customRest||"");setEditComment(ex.customComment||"");
+  };
+  const saveEditEx=()=>{
+    if(!editEx)return;
+    setProgram((p:any)=>{
+      const dayArr=[...(p[editEx.day]||[])];
+      dayArr[editEx.idx]={...dayArr[editEx.idx],customSets:editSets,customReps:editReps,customWeight:editWeight,customRest:editRest,customComment:editComment};
+      return{...p,[editEx.day]:dayArr};
+    });
+    setEditEx(null);
+  };
   const openShareModal=async(c:any)=>{
     let token=c.share_token;
     if(!token){token=genToken();await sb.update("clients",c.id,{share_token:token});await load();}
@@ -1422,11 +1442,29 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
               </div>
               {(program[day]||[]).length===0?<div style={{color:C.muted,fontSize:12,textAlign:"center",padding:"8px 0"}}>Pratimų nėra</div>:(
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                  {(program[day]||[]).map((ex:any,idx:number)=>(<div key={idx} style={{display:"flex",alignItems:"center",gap:8,background:C.faint,borderRadius:8,padding:"7px 10px"}}>
-                    <div style={{width:34,height:34,borderRadius:6,overflow:"hidden",background:C.border,flexShrink:0}}>{(ex.imgs||[]).filter(Boolean)[0]?<img src={(ex.imgs||[])[0]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>📷</div>}</div>
-                    <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,color:C.text}}>{ex.name}</div><div style={{fontSize:10,color:C.teal}}>{ex.muscle} · {ex.customSets}s · {ex.customReps}r</div>{ex.customComment&&<div style={{fontSize:10,color:C.muted,fontStyle:"italic" as const,marginTop:2}}>💬 {ex.customComment}</div>}</div>
-                    <button onClick={()=>removeFromDay(day,idx)} style={css.btnRed}>🗑️</button>
-                  </div>))}
+                  {(program[day]||[]).map((ex:any,idx:number)=>{
+                    const isEditing=editEx?.day===day&&editEx?.idx===idx;
+                    return(
+                    <div key={idx} style={{background:C.faint,borderRadius:8,padding:"7px 10px"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <div style={{width:34,height:34,borderRadius:6,overflow:"hidden",background:C.border,flexShrink:0}}>{(ex.imgs||[]).filter(Boolean)[0]?<img src={(ex.imgs||[])[0]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>📷</div>}</div>
+                        <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,color:C.text}}>{ex.name}</div><div style={{fontSize:10,color:C.teal}}>{ex.muscle} · {ex.customSets}s · {ex.customReps}r</div>{ex.customComment&&<div style={{fontSize:10,color:C.muted,fontStyle:"italic" as const,marginTop:2}}>💬 {ex.customComment}</div>}</div>
+                        <button onClick={()=>isEditing?setEditEx(null):openEditEx(day,idx)} style={{...css.btnTeal,padding:"6px 10px",fontSize:12}}>{isEditing?"✕":"✏️"}</button>
+                        <button onClick={()=>removeFromDay(day,idx)} style={css.btnRed}>🗑️</button>
+                      </div>
+                      {isEditing&&(
+                        <div style={{display:"flex",gap:8,flexWrap:"wrap" as const,alignItems:"flex-end",marginTop:10,paddingTop:10,borderTop:`1px solid ${C.border}`}}>
+                          <div><span style={css.label}>Serijos</span><input value={editSets} onChange={e=>setEditSets(e.target.value)} style={{...css.input,width:60,textAlign:"center",padding:"6px 5px"}}/></div>
+                          <div><span style={css.label}>Kartojimai</span><input value={editReps} onChange={e=>setEditReps(e.target.value)} style={{...css.input,width:75,textAlign:"center",padding:"6px 5px"}}/></div>
+                          <div><span style={css.label}>Svoris (kg)</span><input value={editWeight} onChange={e=>setEditWeight(e.target.value)} style={{...css.input,width:75,textAlign:"center",padding:"6px 5px",color:C.teal}}/></div>
+                          <div><span style={css.label}>Poilsis</span><select value={editRest} onChange={e=>setEditRest(e.target.value)} style={{...css.select,width:90,padding:"6px 5px",color:C.purple}}><option value="">—</option>{REST_OPTIONS.map(r=><option key={r}>{r}</option>)}</select></div>
+                          <div style={{flexBasis:"100%",minWidth:180,flexGrow:1}}><span style={css.label}>Komentaras klientui</span><input value={editComment} onChange={e=>setEditComment(e.target.value)} placeholder="pvz. dėmesį į techniką" style={{...css.input,width:"100%",padding:"6px 8px"}}/></div>
+                          <button onClick={saveEditEx} style={{...css.btnG,fontSize:11,padding:"7px 16px"}}>✅ Išsaugoti</button>
+                          <button onClick={()=>setEditEx(null)} style={{...css.btnGhost,fontSize:11,padding:"7px 16px"}}>Atšaukti</button>
+                        </div>
+                      )}
+                    </div>
+                  );})}
                 </div>
               )}
             </div>))}
