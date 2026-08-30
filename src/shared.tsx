@@ -787,7 +787,7 @@ export async function printPDF(c:any,pl:any[]){
       if(ex.customReps)h+=`<span class="chip cb">Kart: ${ex.customReps}</span>`;
       if(ex.customWeight)h+=`<span class="chip cn">Svoris: ${ex.customWeight}kg</span>`;
       if(ex.customRest)h+=`<span class="chip cv">Poilsis: ${ex.customRest}</span>`;
-      h+=`</div>${ex.description?`<div class="ed">${ex.description}</div>`:""}</div></div>`;
+      h+=`</div>${ex.description?`<div class="ed">${ex.description}</div>`:""}${ex.customComment?`<div class="ed" style="color:#8B6520;font-style:normal;font-weight:600;">💬 ${ex.customComment}</div>`:""}</div></div>`;
     });
     h+=`</div>`;
   });
@@ -919,7 +919,7 @@ async function encodeCanvasSmall(canvas:HTMLCanvasElement,quality=0.85):Promise<
 }
 
 export async function generateTrainingJpg(c:any):Promise<void>{
-  const W=880,PAD=24,SCALE=2;
+  const W=880,PAD=24,SCALE=3;
   const prog=c.program||{};
   const days2=DAYS.filter(d=>(c.training_days||[]).includes(d));
   const today2=new Date().toLocaleDateString("lt-LT");
@@ -935,7 +935,7 @@ export async function generateTrainingJpg(c:any):Promise<void>{
   const meas=document.createElement("canvas");
   const mctx=meas.getContext("2d")!;
 
-  type Row={kind:"dayhead",day?:string,count?:number,height:number}|{kind:"ex",day:string,ex:any,imgs:string[],descLines:string[],height:number};
+  type Row={kind:"dayhead",day?:string,count?:number,height:number}|{kind:"ex",day:string,ex:any,imgs:string[],descLines:string[],commentLines:string[],height:number};
   const rows:Row[]=[];
   days2.forEach(day=>{
     const exs=(prog[day]||[]) as any[];
@@ -945,8 +945,9 @@ export async function generateTrainingJpg(c:any):Promise<void>{
       const imgs=(fullEx.imgs&&fullEx.imgs.length?fullEx.imgs:fullEx.cover_img?[fullEx.cover_img]:[]).filter(Boolean).slice(0,4);
       mctx.font="13px Arial";
       const descLines=ex.description?wrapCanvasText(mctx,ex.description,W-PAD*2).slice(0,3):[];
-      const descH=descLines.length?descLines.length*17+10:0;
-      rows.push({kind:"ex",day,ex,imgs,descLines,height:IMG_ROW_H+STATS_H+descH+GAP});
+      const commentLines=ex.customComment?wrapCanvasText(mctx,"💬 "+ex.customComment,W-PAD*2).slice(0,2):[];
+      const descH=(descLines.length?descLines.length*17+10:0)+(commentLines.length?commentLines.length*17+10:0);
+      rows.push({kind:"ex",day,ex,imgs,descLines,commentLines,height:IMG_ROW_H+STATS_H+descH+GAP});
     });
   });
 
@@ -986,7 +987,7 @@ export async function generateTrainingJpg(c:any):Promise<void>{
       continue;
     }
 
-    const {ex,imgs,descLines}=r;
+    const {ex,imgs,descLines,commentLines}=r;
     const rowTop=y;
 
     // ── image row: all photos side by side, equal width ──
@@ -1046,6 +1047,11 @@ export async function generateTrainingJpg(c:any):Promise<void>{
     if(descLines.length){
       ctx.fillStyle="#8A93A0";ctx.font="italic 12px Arial";
       descLines.forEach((line:string,i:number)=>ctx.fillText(line,PAD,dy+i*17));
+      dy+=descLines.length*17+10;
+    }
+    if(commentLines.length){
+      ctx.fillStyle="#9C5B27";ctx.font="700 12px Arial";
+      commentLines.forEach((line:string,i:number)=>ctx.fillText(line,PAD,dy+i*17));
     }
 
     ctx.strokeStyle="#EEEBE4";ctx.beginPath();ctx.moveTo(0,rowTop+r.height);ctx.lineTo(W,rowTop+r.height);ctx.stroke();
@@ -1072,7 +1078,7 @@ export async function generateTrainingJpg(c:any):Promise<void>{
 }
 
 export async function generateMealJpg(c:any):Promise<void>{
-  const W=880,PAD=32,SCALE=2;
+  const W=880,PAD=32,SCALE=3;
   const mp=c.meal_plan||{};
   const days2=DAYS.filter(d=>(c.training_days||[]).includes(d));
   const today2=new Date().toLocaleDateString("lt-LT");
