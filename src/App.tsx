@@ -63,8 +63,10 @@ function groupDayExercises(dayExs:any[]){
 
 function ExerciseCard({ex,badge,hideRest}:{ex:any,badge:string,hideRest?:boolean}){
   const imgs=((ex.imgs&&ex.imgs.length?ex.imgs:ex.cover_img?[ex.cover_img]:[])).filter(Boolean);
+  const typeColor=ex.customType==="Cardio"?"#3b82f6":ex.customType==="Apšilimas"?"#f59e0b":null;
   return(
-    <div style={{background:C.surface,borderRadius:14,border:`1px solid ${C.border}`,overflow:"hidden"}}>
+    <div style={{background:C.surface,borderRadius:14,border:`1px solid ${C.border}`,overflow:"hidden",position:"relative"}}>
+      {typeColor&&imgs[0]&&<div style={{position:"absolute",top:10,right:10,zIndex:2,background:typeColor,color:"#fff",borderRadius:8,padding:"3px 10px",fontSize:10,fontWeight:800,letterSpacing:"0.04em",textTransform:"uppercase" as const,boxShadow:"0 2px 6px rgba(0,0,0,0.25)"}}>{ex.customType}</div>}
       {imgs[0]&&(
         <div style={{position:"relative",height:220,overflow:"hidden"}}>
           <div style={{display:"flex",width:"100%",height:"100%"}}> <img src={imgs[0]} alt={ex.name} style={{width:imgs[1]?"50%":"100%",height:"100%",objectFit:"cover"}}/> {imgs[1]&&<img src={imgs[1]} alt={ex.name} style={{width:"50%",height:"100%",objectFit:"cover"}}/>} </div>
@@ -74,11 +76,11 @@ function ExerciseCard({ex,badge,hideRest}:{ex:any,badge:string,hideRest?:boolean
             <div style={{fontSize:16,fontWeight:800,color:"#fff",marginBottom:4}}>{ex.name}</div>
             <div style={{fontSize:12,color:"rgba(255,255,255,0.65)"}}>{ex.muscle}{ex.equipment&&` · ${ex.equipment}`}</div>
           </div>
-          {imgs.length>1&&<div style={{position:"absolute",top:10,right:10,background:"#000a",borderRadius:10,padding:"2px 8px",fontSize:10,color:"white",fontWeight:600}}>{imgs.length} 📷</div>}
+          {imgs.length>1&&<div style={{position:"absolute",top:typeColor?42:10,right:10,background:"#000a",borderRadius:10,padding:"2px 8px",fontSize:10,color:"white",fontWeight:600}}>{imgs.length} 📷</div>}
         </div>
       )}
       <div style={{padding:"14px 16px"}}>
-        {!imgs[0]&&<><div style={{fontWeight:700,fontSize:15,color:C.text,marginBottom:4}}>{badge}. {ex.name}</div><div style={{fontSize:12,color:C.teal,marginBottom:10}}>{ex.muscle}{ex.equipment&&` · ${ex.equipment}`}</div></>}
+        {!imgs[0]&&<><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><div style={{fontWeight:700,fontSize:15,color:C.text}}>{badge}. {ex.name}</div>{typeColor&&<span style={{background:typeColor,color:"#fff",borderRadius:6,padding:"2px 8px",fontSize:9,fontWeight:800,letterSpacing:"0.04em",textTransform:"uppercase" as const}}>{ex.customType}</span>}</div><div style={{fontSize:12,color:C.teal,marginBottom:10}}>{ex.muscle}{ex.equipment&&` · ${ex.equipment}`}</div></>}
         <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:ex.description?10:0}}>
           {ex.customSets&&<div style={{background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:9,padding:"8px 14px",textAlign:"center",minWidth:64}}><div style={{fontSize:9,color:C.muted,textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:2}}>Serijos</div><div style={{fontSize:18,fontWeight:900,color:C.gold}}>{ex.customSets}</div></div>}
           {ex.customReps&&<div style={{background:C.faint,border:`1px solid ${C.border}`,borderRadius:9,padding:"8px 14px",textAlign:"center",minWidth:64}}><div style={{fontSize:9,color:C.muted,textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:2}}>Kartojimai</div><div style={{fontSize:18,fontWeight:900,color:C.text}}>{ex.customReps}</div></div>}
@@ -917,6 +919,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
   const [pickWeight,setPickWeight]=useState("");
   const [pickRest,setPickRest]=useState("");
   const [pickComment,setPickComment]=useState("");
+  const [pickType,setPickType]=useState("");
   const [groupingDay,setGroupingDay]=useState<string|null>(null);
   const [groupingSel,setGroupingSel]=useState<number[]>([]);
   const [saving,setSaving]=useState(false);
@@ -968,9 +971,9 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
   };
   const delProgress=async(id:any)=>{try{await sb.delete("progress",id);await loadProgress(view.id);}catch(e:any){alert("Klaida: "+e.message);}};
   const toggleDay=(d:string)=>setClientForm(p=>({...p,training_days:p.training_days.includes(d)?p.training_days.filter((x:string)=>x!==d):[...p.training_days,d]}));
-  const openPick=(day:string)=>{setPickDay(day);setPickedEx(null);setPickSets("");setPickReps("");setPickWeight("");setPickRest("");setPickComment("");};
+  const openPick=(day:string)=>{setPickDay(day);setPickedEx(null);setPickSets("");setPickReps("");setPickWeight("");setPickRest("");setPickComment("");setPickType("");};
   const pickList=exercises.filter(e=>(pickMuscle==="Visos"||e.muscle===pickMuscle)&&(e.name.toLowerCase().includes(pickSearch.toLowerCase())||e.muscle.toLowerCase().includes(pickSearch.toLowerCase())));
-  const addToDay=()=>{if(!pickedEx)return;const exData={id:pickedEx.id,name:pickedEx.name,muscle:pickedEx.muscle,equipment:pickedEx.equipment,sets:pickedEx.sets,reps:pickedEx.reps,description:pickedEx.description,imgs:pickedEx.imgs&&pickedEx.imgs.length?pickedEx.imgs:pickedEx.cover_img?[pickedEx.cover_img]:[],cover_img:pickedEx.cover_img||"",customSets:pickSets||pickedEx.sets,customReps:pickReps||pickedEx.reps,customWeight:pickWeight||"",customRest:pickRest||"",customComment:pickComment||"",supersetGroup:null};setProgram((p:any)=>({...p,[pickDay]:[...(p[pickDay]||[]),exData]}));setPickDay(null);};
+  const addToDay=()=>{if(!pickedEx)return;const exData={id:pickedEx.id,name:pickedEx.name,muscle:pickedEx.muscle,equipment:pickedEx.equipment,sets:pickedEx.sets,reps:pickedEx.reps,description:pickedEx.description,imgs:pickedEx.imgs&&pickedEx.imgs.length?pickedEx.imgs:pickedEx.cover_img?[pickedEx.cover_img]:[],cover_img:pickedEx.cover_img||"",customSets:pickSets||pickedEx.sets,customReps:pickReps||pickedEx.reps,customWeight:pickWeight||"",customRest:pickRest||"",customComment:pickComment||"",customType:pickType||"",supersetGroup:null};setProgram((p:any)=>({...p,[pickDay]:[...(p[pickDay]||[]),exData]}));setPickDay(null);};
   const removeFromDay=(day:string,idx:number)=>setProgram((p:any)=>({...p,[day]:p[day].filter((_:any,i:number)=>i!==idx)}));
   const [editEx,setEditEx]=useState<{day:string,idx:number}|null>(null);
   const [editSets,setEditSets]=useState("");
@@ -978,16 +981,17 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
   const [editWeight,setEditWeight]=useState("");
   const [editRest,setEditRest]=useState("");
   const [editComment,setEditComment]=useState("");
+  const [editType,setEditType]=useState("");
   const openEditEx=(day:string,idx:number)=>{
     const ex=program[day]?.[idx];if(!ex)return;
     setEditEx({day,idx});
-    setEditSets(ex.customSets||"");setEditReps(ex.customReps||"");setEditWeight(ex.customWeight||"");setEditRest(ex.customRest||"");setEditComment(ex.customComment||"");
+    setEditSets(ex.customSets||"");setEditReps(ex.customReps||"");setEditWeight(ex.customWeight||"");setEditRest(ex.customRest||"");setEditComment(ex.customComment||"");setEditType(ex.customType||"");
   };
   const saveEditEx=()=>{
     if(!editEx)return;
     setProgram((p:any)=>{
       const dayArr=[...(p[editEx.day]||[])];
-      dayArr[editEx.idx]={...dayArr[editEx.idx],customSets:editSets,customReps:editReps,customWeight:editWeight,customRest:editRest,customComment:editComment};
+      dayArr[editEx.idx]={...dayArr[editEx.idx],customSets:editSets,customReps:editReps,customWeight:editWeight,customRest:editRest,customComment:editComment,customType:editType};
       return{...p,[editEx.day]:dayArr};
     });
     setEditEx(null);
@@ -1548,7 +1552,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
                           <div style={{display:"flex",alignItems:"center",gap:8}}>
                             <div style={{width:22,height:22,borderRadius:"50%",background:C.border,color:C.muted,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,flexShrink:0}}>{num}</div>
                             <div style={{width:34,height:34,borderRadius:6,overflow:"hidden",background:C.border,flexShrink:0}}>{(ex.imgs||[]).filter(Boolean)[0]?<img src={(ex.imgs||[])[0]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>📷</div>}</div>
-                            <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,color:C.text}}>{ex.name}</div><div style={{fontSize:10,color:C.teal}}>{ex.muscle} · {ex.customSets}s · {ex.customReps}r</div>{ex.customComment&&<div style={{fontSize:10,color:C.muted,fontStyle:"italic" as const,marginTop:2}}>💬 {ex.customComment}</div>}</div>
+                            <div style={{flex:1}}><div style={{display:"flex",alignItems:"center",gap:6}}><div style={{fontSize:12,fontWeight:600,color:C.text}}>{ex.name}</div>{ex.customType&&<span style={{fontSize:8,fontWeight:800,padding:"1px 6px",borderRadius:4,background:ex.customType==="Cardio"?"#3b82f6":"#f59e0b",color:"#fff",textTransform:"uppercase" as const,letterSpacing:"0.04em"}}>{ex.customType}</span>}</div><div style={{fontSize:10,color:C.teal}}>{ex.muscle} · {ex.customSets}s · {ex.customReps}r</div>{ex.customComment&&<div style={{fontSize:10,color:C.muted,fontStyle:"italic" as const,marginTop:2}}>💬 {ex.customComment}</div>}</div>
                             <button onClick={()=>isEditing?setEditEx(null):openEditEx(day,idx)} style={{...css.btnTeal,padding:"6px 10px",fontSize:12}}>{isEditing?"✕":"✏️"}</button>
                             <button onClick={()=>removeFromDay(day,idx)} style={css.btnRed}>🗑️</button>
                           </div>
@@ -1558,6 +1562,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
                               <div><span style={css.label}>Kartojimai</span><input value={editReps} onChange={e=>setEditReps(e.target.value)} style={{...css.input,width:75,textAlign:"center",padding:"6px 5px"}}/></div>
                               <div><span style={css.label}>Svoris (kg)</span><input value={editWeight} onChange={e=>setEditWeight(e.target.value)} style={{...css.input,width:75,textAlign:"center",padding:"6px 5px",color:C.teal}}/></div>
                               <div><span style={css.label}>Poilsis</span><select value={editRest} onChange={e=>setEditRest(e.target.value)} style={{...css.select,width:90,padding:"6px 5px",color:C.purple}}><option value="">—</option>{REST_OPTIONS.map(r=><option key={r}>{r}</option>)}</select></div>
+                              <div><span style={css.label}>Tipas</span><div style={{display:"flex",gap:4}}>{["","Apšilimas","Cardio"].map(t=>(<button key={t} onClick={()=>setEditType(t)} style={{padding:"6px 9px",fontSize:10,fontWeight:700,borderRadius:6,border:`1px solid ${editType===t?(t==="Cardio"?"#3b82f6":t==="Apšilimas"?"#f59e0b":C.border):C.border}`,background:editType===t?(t==="Cardio"?"#3b82f618":t==="Apšilimas"?"#f59e0b18":C.faint):C.faint,color:editType===t?(t==="Cardio"?"#2563eb":t==="Apšilimas"?"#b45309":C.muted):C.muted,cursor:"pointer"}}>{t||"Normalus"}</button>))}</div></div>
                               <div style={{flexBasis:"100%",minWidth:180,flexGrow:1}}><span style={css.label}>Komentaras klientui</span><input value={editComment} onChange={e=>setEditComment(e.target.value)} placeholder="pvz. dėmesį į techniką" style={{...css.input,width:"100%",padding:"6px 8px"}}/></div>
                               <button onClick={saveEditEx} style={{...css.btnG,fontSize:11,padding:"7px 16px"}}>✅ Išsaugoti</button>
                               <button onClick={()=>setEditEx(null)} style={{...css.btnGhost,fontSize:11,padding:"7px 16px"}}>Atšaukti</button>
@@ -1571,20 +1576,20 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
                     const groupId=block.items[0].ex.supersetGroup;
                     const lastEx=block.items[block.items.length-1].ex;
                     return(
-                      <div key={bi} style={{border:`2px solid ${C.purpleBorder}`,borderRadius:10,padding:8}}>
-                        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8,fontSize:10,fontWeight:800,color:C.purple,letterSpacing:"0.06em",textTransform:"uppercase" as const}}>
-                          🔗 Supersetas {num}
-                          <button onClick={()=>ungroupSet(day,groupId)} style={{marginLeft:"auto",background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:10,textDecoration:"underline"}}>Išskirti</button>
+                      <div key={bi} style={{border:`3px solid ${C.purple}`,borderRadius:12,padding:10,background:C.purpleSoft,boxShadow:`0 0 0 4px ${C.purpleSoft}`}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                          <span style={{display:"flex",alignItems:"center",gap:5,background:C.purple,color:"#fff",borderRadius:20,padding:"4px 12px",fontSize:11,fontWeight:800,letterSpacing:"0.04em"}}>🔗 SUPERSETAS {num}</span>
+                          <button onClick={()=>ungroupSet(day,groupId)} style={{marginLeft:"auto",background:"none",border:"none",color:C.purple,cursor:"pointer",fontSize:11,textDecoration:"underline",fontWeight:600}}>Išskirti</button>
                         </div>
                         <div style={{display:"flex",flexDirection:"column",gap:6}}>
                           {block.items.map(({ex,idx},gi)=>{
                             const isEditing=editEx?.day===day&&editEx?.idx===idx;
                             return(
-                              <div key={idx} style={{background:C.purpleSoft,borderRadius:8,padding:"7px 10px"}}>
+                              <div key={idx} style={{background:C.surface,border:`1px solid ${C.purpleBorder}`,borderRadius:8,padding:"7px 10px"}}>
                                 <div style={{display:"flex",alignItems:"center",gap:8}}>
                                   <div style={{width:22,height:22,borderRadius:"50%",background:C.purple,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,flexShrink:0}}>{num}{letters[gi]}</div>
                                   <div style={{width:34,height:34,borderRadius:6,overflow:"hidden",background:C.border,flexShrink:0}}>{(ex.imgs||[]).filter(Boolean)[0]?<img src={(ex.imgs||[])[0]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>📷</div>}</div>
-                                  <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,color:C.text}}>{ex.name}</div><div style={{fontSize:10,color:C.teal}}>{ex.muscle} · {ex.customSets}s · {ex.customReps}r</div>{ex.customComment&&<div style={{fontSize:10,color:C.muted,fontStyle:"italic" as const,marginTop:2}}>💬 {ex.customComment}</div>}</div>
+                                  <div style={{flex:1}}><div style={{display:"flex",alignItems:"center",gap:6}}><div style={{fontSize:12,fontWeight:600,color:C.text}}>{ex.name}</div>{ex.customType&&<span style={{fontSize:8,fontWeight:800,padding:"1px 6px",borderRadius:4,background:ex.customType==="Cardio"?"#3b82f6":"#f59e0b",color:"#fff",textTransform:"uppercase" as const,letterSpacing:"0.04em"}}>{ex.customType}</span>}</div><div style={{fontSize:10,color:C.teal}}>{ex.muscle} · {ex.customSets}s · {ex.customReps}r</div>{ex.customComment&&<div style={{fontSize:10,color:C.muted,fontStyle:"italic" as const,marginTop:2}}>💬 {ex.customComment}</div>}</div>
                                   <button onClick={()=>isEditing?setEditEx(null):openEditEx(day,idx)} style={{...css.btnTeal,padding:"6px 10px",fontSize:12}}>{isEditing?"✕":"✏️"}</button>
                                   <button onClick={()=>removeFromDay(day,idx)} style={css.btnRed}>🗑️</button>
                                 </div>
@@ -1594,6 +1599,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
                                     <div><span style={css.label}>Kartojimai</span><input value={editReps} onChange={e=>setEditReps(e.target.value)} style={{...css.input,width:75,textAlign:"center",padding:"6px 5px"}}/></div>
                                     <div><span style={css.label}>Svoris (kg)</span><input value={editWeight} onChange={e=>setEditWeight(e.target.value)} style={{...css.input,width:75,textAlign:"center",padding:"6px 5px",color:C.teal}}/></div>
                                     <div><span style={css.label}>Poilsis</span><select value={editRest} onChange={e=>setEditRest(e.target.value)} style={{...css.select,width:90,padding:"6px 5px",color:C.purple}}><option value="">—</option>{REST_OPTIONS.map(r=><option key={r}>{r}</option>)}</select></div>
+                                    <div><span style={css.label}>Tipas</span><div style={{display:"flex",gap:4}}>{["","Apšilimas","Cardio"].map(t=>(<button key={t} onClick={()=>setEditType(t)} style={{padding:"6px 9px",fontSize:10,fontWeight:700,borderRadius:6,border:`1px solid ${editType===t?(t==="Cardio"?"#3b82f6":t==="Apšilimas"?"#f59e0b":C.border):C.border}`,background:editType===t?(t==="Cardio"?"#3b82f618":t==="Apšilimas"?"#f59e0b18":C.faint):C.faint,color:editType===t?(t==="Cardio"?"#2563eb":t==="Apšilimas"?"#b45309":C.muted):C.muted,cursor:"pointer"}}>{t||"Normalus"}</button>))}</div></div>
                                     <div style={{flexBasis:"100%",minWidth:180,flexGrow:1}}><span style={css.label}>Komentaras klientui</span><input value={editComment} onChange={e=>setEditComment(e.target.value)} placeholder="pvz. dėmesį į techniką" style={{...css.input,width:"100%",padding:"6px 8px"}}/></div>
                                     <button onClick={saveEditEx} style={{...css.btnG,fontSize:11,padding:"7px 16px"}}>✅ Išsaugoti</button>
                                     <button onClick={()=>setEditEx(null)} style={{...css.btnGhost,fontSize:11,padding:"7px 16px"}}>Atšaukti</button>
@@ -1690,6 +1696,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
           <div><span style={css.label}>Kartojimai</span><input value={pickReps} onChange={e=>setPickReps(e.target.value)} placeholder={pickedEx.reps} style={{...css.input,width:80,textAlign:"center",padding:"6px 5px"}}/></div>
           <div><span style={css.label}>Svoris (kg)</span><input value={pickWeight} onChange={e=>setPickWeight(e.target.value)} placeholder="60" style={{...css.input,width:80,textAlign:"center",padding:"6px 5px",color:C.teal}}/></div>
           <div><span style={css.label}>Poilsis</span><select value={pickRest} onChange={e=>setPickRest(e.target.value)} style={{...css.select,width:95,padding:"6px 5px",color:C.purple}}><option value="">—</option>{REST_OPTIONS.map(r=><option key={r}>{r}</option>)}</select></div>
+          <div><span style={css.label}>Tipas</span><div style={{display:"flex",gap:4}}>{["","Apšilimas","Cardio"].map(t=>(<button key={t} onClick={()=>setPickType(t)} style={{padding:"6px 9px",fontSize:10,fontWeight:700,borderRadius:6,border:`1px solid ${pickType===t?(t==="Cardio"?"#3b82f6":t==="Apšilimas"?"#f59e0b":C.border):C.border}`,background:pickType===t?(t==="Cardio"?"#3b82f618":t==="Apšilimas"?"#f59e0b18":C.faint):C.faint,color:pickType===t?(t==="Cardio"?"#2563eb":t==="Apšilimas"?"#b45309":C.muted):C.muted,cursor:"pointer"}}>{t||"Normalus"}</button>))}</div></div>
           <div style={{flexBasis:"100%",minWidth:180,flexGrow:1}}><span style={css.label}>Komentaras klientui (nebūtina)</span><input value={pickComment} onChange={e=>setPickComment(e.target.value)} placeholder="pvz. dėmesį į techniką, neskubėti" style={{...css.input,width:"100%",padding:"6px 8px"}}/></div>
           <button onClick={addToDay} style={{...css.btnG,alignSelf:"flex-end"}}>Pridėti +</button>
         </div>)}
