@@ -667,7 +667,7 @@ export function calcDifficulty(program:any){
     const weight=parseFloat(ex.customWeight||"0");
     const volume=sets*repsMax;
     const weightBonus=weight>0?Math.min(weight/20,3):0;
-    const ssBonus=ex.superset?0.5:0;
+    const ssBonus=ex.supersetGroup?0.5:0;
     score+=volume*0.1+weightBonus+ssBonus;
   });
   const perDay=score/(Object.keys(program||{}).filter(d=>(program[d]||[]).length>0).length||1);
@@ -778,17 +778,39 @@ export async function printPDF(c:any,pl:any[]){
     const exs=prog[day2]||[];
     h+=`<div class="sec"><div class="sh"><span class="sn">${String(dn++).padStart(2,"0")}</span><div class="sl"></div><span class="st">${day2}</span></div><div class="dh"><div class="dn">${day2.toUpperCase()}</div><div class="dc">${exs.length} pratimas(-ai)</div></div>`;
     if(!exs.length)h+=`<div style="padding:12px 16px;color:#C8C4BC;font-size:10px;font-style:italic;">Pratimų nėra</div>`;
-    else exs.forEach((ex:any,i:number)=>{
-      const fullEx=exMap[ex.id]||ex;const imgs=(fullEx.imgs&&fullEx.imgs.length?fullEx.imgs:fullEx.cover_img?[fullEx.cover_img]:[]).filter(Boolean);
-      h+=`<div class="er"><div class="en">${i+1}</div>`;
-      h+=imgs[0]?`<img src="${shrunk[imgs[0]]||imgs[0]}" class="ei" onerror="this.style.display='none'"/>`:`<div class="ep">📷</div>`; h+=imgs[1]?`<img src="${shrunk[imgs[1]]||imgs[1]}" class="ei" onerror="this.style.display='none'"/>`:``;
-      h+=`<div style="flex:1"><div class="en2">${ex.superset?`<span class="chip css2">SS</span> `:""}${ex.name}</div><div class="em">${ex.muscle||""}${ex.equipment?` · ${ex.equipment}`:""}</div><div class="chips">`;
-      if(ex.customSets)h+=`<span class="chip cg">Ser: ${ex.customSets}</span>`;
-      if(ex.customReps)h+=`<span class="chip cb">Kart: ${ex.customReps}</span>`;
-      if(ex.customWeight)h+=`<span class="chip cn">Svoris: ${ex.customWeight}kg</span>`;
-      if(ex.customRest)h+=`<span class="chip cv">Poilsis: ${ex.customRest}</span>`;
-      h+=`</div>${ex.description?`<div class="ed">${ex.description}</div>`:""}${ex.customComment?`<div class="ed" style="color:#8B6520;font-style:normal;font-weight:600;">💬 ${ex.customComment}</div>`:""}</div></div>`;
-    });
+    else{
+      const renderEx=(ex:any,badge:string)=>{
+        const fullEx=exMap[ex.id]||ex;const imgs=(fullEx.imgs&&fullEx.imgs.length?fullEx.imgs:fullEx.cover_img?[fullEx.cover_img]:[]).filter(Boolean);
+        h+=`<div class="er"><div class="en">${badge}</div>`;
+        h+=imgs[0]?`<img src="${shrunk[imgs[0]]||imgs[0]}" class="ei" onerror="this.style.display='none'"/>`:`<div class="ep">📷</div>`; h+=imgs[1]?`<img src="${shrunk[imgs[1]]||imgs[1]}" class="ei" onerror="this.style.display='none'"/>`:``;
+        h+=`<div style="flex:1"><div class="en2">${ex.name}</div><div class="em">${ex.muscle||""}${ex.equipment?` · ${ex.equipment}`:""}</div><div class="chips">`;
+        if(ex.customSets)h+=`<span class="chip cg">Ser: ${ex.customSets}</span>`;
+        if(ex.customReps)h+=`<span class="chip cb">Kart: ${ex.customReps}</span>`;
+        if(ex.customWeight)h+=`<span class="chip cn">Svoris: ${ex.customWeight}kg</span>`;
+        if(ex.customRest)h+=`<span class="chip cv">Poilsis: ${ex.customRest}</span>`;
+        h+=`</div>${ex.description?`<div class="ed">${ex.description}</div>`:""}${ex.customComment?`<div class="ed" style="color:#8B6520;font-style:normal;font-weight:600;">💬 ${ex.customComment}</div>`:""}</div></div>`;
+      };
+      let num=0,idx=0;
+      const letters="ABCDEFGH";
+      while(idx<exs.length){
+        num++;
+        const ex=exs[idx];
+        if(ex.supersetGroup){
+          const group=[ex];let j=idx+1;
+          while(j<exs.length&&exs[j].supersetGroup===ex.supersetGroup){group.push(exs[j]);j++;}
+          h+=`<div style="margin:8px 14px;border:2px solid #7B6DB060;border-radius:10px;padding:6px 0;">`;
+          h+=`<div style="padding:4px 14px;font-size:9px;font-weight:800;color:#5A4A90;letter-spacing:0.08em;">🔗 SUPERSETAS — atlikite iš eilės, be poilsio tarp pratimų</div>`;
+          group.forEach((gex:any,gi:number)=>renderEx(gex,`${num}${letters[gi]}`));
+          const lastRest=group[group.length-1].customRest;
+          if(lastRest)h+=`<div style="padding:4px 14px;font-size:9px;color:#5A4A90;font-weight:700;">Poilsis po viso superseto: ${lastRest}</div>`;
+          h+=`</div>`;
+          idx=j;
+        }else{
+          renderEx(ex,String(num));
+          idx++;
+        }
+      }
+    }
     h+=`</div>`;
   });
   if(pl&&pl.length>0){
@@ -935,20 +957,32 @@ export async function generateTrainingJpg(c:any):Promise<void>{
   const meas=document.createElement("canvas");
   const mctx=meas.getContext("2d")!;
 
-  type Row={kind:"dayhead",day?:string,count?:number,height:number}|{kind:"ex",day:string,ex:any,imgs:string[],descLines:string[],commentLines:string[],height:number};
+  type Row={kind:"dayhead",day?:string,count?:number,height:number}|{kind:"ex",day:string,ex:any,imgs:string[],descLines:string[],commentLines:string[],badge:string,groupFirst:boolean,groupLast:boolean,height:number};
   const rows:Row[]=[];
   days2.forEach(day=>{
     const exs=(prog[day]||[]) as any[];
     rows.push({kind:"dayhead",day,count:exs.length,height:44});
-    exs.forEach((ex:any)=>{
-      const fullEx=exMap[ex.id]||ex;
-      const imgs=(fullEx.imgs&&fullEx.imgs.length?fullEx.imgs:fullEx.cover_img?[fullEx.cover_img]:[]).filter(Boolean).slice(0,4);
-      mctx.font="13px Arial";
-      const descLines=ex.description?wrapCanvasText(mctx,ex.description,W-PAD*2).slice(0,3):[];
-      const commentLines=ex.customComment?wrapCanvasText(mctx,"💬 "+ex.customComment,W-PAD*2).slice(0,2):[];
-      const descH=(descLines.length?descLines.length*17+10:0)+(commentLines.length?commentLines.length*17+10:0);
-      rows.push({kind:"ex",day,ex,imgs,descLines,commentLines,height:IMG_ROW_H+STATS_H+descH+GAP});
-    });
+    const letters="ABCDEFGH";
+    let num=0,idx=0;
+    while(idx<exs.length){
+      num++;
+      const ex=exs[idx];
+      const inGroup=!!ex.supersetGroup;
+      const group=inGroup?[ex]:[ex];
+      let j=idx+1;
+      if(inGroup){while(j<exs.length&&exs[j].supersetGroup===ex.supersetGroup){group.push(exs[j]);j++;}}else{j=idx+1;}
+      group.forEach((gex:any,gi:number)=>{
+        const fullEx=exMap[gex.id]||gex;
+        const imgs=(fullEx.imgs&&fullEx.imgs.length?fullEx.imgs:fullEx.cover_img?[fullEx.cover_img]:[]).filter(Boolean).slice(0,4);
+        mctx.font="13px Arial";
+        const descLines=gex.description?wrapCanvasText(mctx,gex.description,W-PAD*2-(inGroup?20:0)).slice(0,3):[];
+        const commentLines=gex.customComment?wrapCanvasText(mctx,"💬 "+gex.customComment,W-PAD*2-(inGroup?20:0)).slice(0,2):[];
+        const descH=(descLines.length?descLines.length*17+10:0)+(commentLines.length?commentLines.length*17+10:0);
+        const extraH=(inGroup&&gi===0?34:0)+(inGroup&&gi===group.length-1&&gex.customRest?26:0);
+        rows.push({kind:"ex",day,ex:gex,imgs,descLines,commentLines,badge:inGroup?`${num}${letters[gi]}`:String(num),groupFirst:inGroup&&gi===0,groupLast:inGroup&&gi===group.length-1,height:IMG_ROW_H+STATS_H+descH+GAP+extraH});
+      });
+      idx=j;
+    }
   });
 
   const headerH=150,footerH=50;
@@ -987,56 +1021,73 @@ export async function generateTrainingJpg(c:any):Promise<void>{
       continue;
     }
 
-    const {ex,imgs,descLines,commentLines}=r;
+    const {ex,imgs,descLines,commentLines,badge,groupFirst,groupLast}=r;
+    const inGroup=!!ex.supersetGroup;
     const rowTop=y;
+    const contentX=inGroup?10:0;
+    const contentW=W-(inGroup?10:0);
+
+    if(groupFirst){
+      ctx.fillStyle="#F5F2EC";ctx.fillRect(0,rowTop,W,26);
+      ctx.fillStyle="#5A4A90";ctx.font="700 11px Arial";
+      ctx.fillText("🔗 SUPERSETAS — atlikite iš eilės, be poilsio tarp pratimų",PAD,rowTop+18);
+    }
+    const groupBarTop=rowTop+(groupFirst?26:0);
 
     // ── image row: all photos side by side, equal width ──
     const n=Math.max(1,imgs.length);
-    const cellW=W/n;
+    const cellW=contentW/n;
+    const imgTop=groupBarTop;
     if(imgs.length===0){
-      ctx.fillStyle="#F0EDE6";ctx.fillRect(0,rowTop,W,IMG_ROW_H);
+      ctx.fillStyle="#F0EDE6";ctx.fillRect(contentX,imgTop,contentW,IMG_ROW_H);
       ctx.fillStyle="#B8B2A6";ctx.font="34px Arial";
-      ctx.fillText("📷",W/2-17,rowTop+IMG_ROW_H/2+12);
+      ctx.fillText("📷",contentX+contentW/2-17,imgTop+IMG_ROW_H/2+12);
     }else{
       for(let i=0;i<imgs.length;i++){
         const img=await loadImageViaProxy(imgs[i]);
-        const cx=i*cellW;
+        const cx=contentX+i*cellW;
         if(img){
           ctx.save();
-          ctx.beginPath();ctx.rect(cx,rowTop,cellW,IMG_ROW_H);ctx.clip();
+          ctx.beginPath();ctx.rect(cx,imgTop,cellW,IMG_ROW_H);ctx.clip();
           const scale=Math.max(cellW/img.width,IMG_ROW_H/img.height);
           const dw=img.width*scale,dh=img.height*scale;
-          ctx.drawImage(img,cx+(cellW-dw)/2,rowTop+(IMG_ROW_H-dh)/2,dw,dh);
+          ctx.drawImage(img,cx+(cellW-dw)/2,imgTop+(IMG_ROW_H-dh)/2,dw,dh);
           ctx.restore();
         }else{
-          ctx.fillStyle="#F0EDE6";ctx.fillRect(cx,rowTop,cellW,IMG_ROW_H);
+          ctx.fillStyle="#F0EDE6";ctx.fillRect(cx,imgTop,cellW,IMG_ROW_H);
           ctx.fillStyle="#B8B2A6";ctx.font="26px Arial";
-          ctx.fillText("📷",cx+cellW/2-13,rowTop+IMG_ROW_H/2+9);
+          ctx.fillText("📷",cx+cellW/2-13,imgTop+IMG_ROW_H/2+9);
         }
-        if(i>0){ctx.fillStyle="#FFFFFF";ctx.fillRect(cx-1,rowTop,2,IMG_ROW_H);}
+        if(i>0){ctx.fillStyle="#FFFFFF";ctx.fillRect(cx-1,imgTop,2,IMG_ROW_H);}
       }
     }
+    // badge (number or "1A"/"1B")
+    ctx.fillStyle=inGroup?"#7B6DB0":"rgba(0,0,0,0.55)";
+    const badgeW=Math.max(24,10+badge.length*9);
+    ctx.beginPath();ctx.roundRect?ctx.roundRect(contentX+8,imgTop+8,badgeW,22,11):ctx.rect(contentX+8,imgTop+8,badgeW,22);ctx.fill();
+    ctx.fillStyle="#FFFFFF";ctx.font="700 11px Arial";
+    ctx.fillText(badge,contentX+8+badgeW/2-(badge.length*3.5),imgTop+23);
     // dark bottom gradient + name overlay (matches on-screen card style)
-    const grad=ctx.createLinearGradient(0,rowTop+IMG_ROW_H-90,0,rowTop+IMG_ROW_H);
+    const grad=ctx.createLinearGradient(0,imgTop+IMG_ROW_H-90,0,imgTop+IMG_ROW_H);
     grad.addColorStop(0,"rgba(0,0,0,0)");grad.addColorStop(1,"rgba(0,0,0,0.72)");
-    ctx.fillStyle=grad;ctx.fillRect(0,rowTop+IMG_ROW_H-90,W,90);
+    ctx.fillStyle=grad;ctx.fillRect(contentX,imgTop+IMG_ROW_H-90,contentW,90);
     ctx.fillStyle="#FFFFFF";ctx.font="700 19px Arial";
-    ctx.fillText(ex.name||"",PAD,rowTop+IMG_ROW_H-32);
+    ctx.fillText(ex.name||"",PAD+contentX,imgTop+IMG_ROW_H-32);
     ctx.fillStyle="rgba(255,255,255,0.8)";ctx.font="12px Arial";
-    ctx.fillText(ex.muscle||"",PAD,rowTop+IMG_ROW_H-14);
+    ctx.fillText(ex.muscle||"",PAD+contentX,imgTop+IMG_ROW_H-14);
 
     // ── stats row (Serijos / Kartojimai / Svoris / Poilsis) ──
-    const statsTop=rowTop+IMG_ROW_H;
-    ctx.fillStyle="#FFFFFF";ctx.fillRect(0,statsTop,W,STATS_H);
+    const statsTop=imgTop+IMG_ROW_H;
+    ctx.fillStyle="#FFFFFF";ctx.fillRect(contentX,statsTop,contentW,STATS_H);
     const stats=[
       {label:"SERIJOS",val:ex.customSets},
       {label:"KARTOJIMAI",val:ex.customReps},
       {label:"SVORIS",val:ex.customWeight?ex.customWeight+" kg":""},
-      {label:"POILSIS",val:ex.customRest},
+      {label:"POILSIS",val:inGroup?"":ex.customRest},
     ].filter(s=>s.val);
-    const colW=W/Math.max(1,stats.length);
+    const colW=contentW/Math.max(1,stats.length);
     stats.forEach((s,i)=>{
-      const cx=i*colW+PAD;
+      const cx=contentX+i*colW+PAD;
       ctx.fillStyle="#8A93A0";ctx.font="700 10px Arial";
       ctx.fillText(s.label,cx,statsTop+24);
       ctx.fillStyle="#0B0D12";ctx.font="700 22px Arial";
@@ -1046,12 +1097,20 @@ export async function generateTrainingJpg(c:any):Promise<void>{
     let dy=statsTop+STATS_H+16;
     if(descLines.length){
       ctx.fillStyle="#8A93A0";ctx.font="italic 12px Arial";
-      descLines.forEach((line:string,i:number)=>ctx.fillText(line,PAD,dy+i*17));
+      descLines.forEach((line:string,i:number)=>ctx.fillText(line,PAD+contentX,dy+i*17));
       dy+=descLines.length*17+10;
     }
     if(commentLines.length){
       ctx.fillStyle="#9C5B27";ctx.font="700 12px Arial";
-      commentLines.forEach((line:string,i:number)=>ctx.fillText(line,PAD,dy+i*17));
+      commentLines.forEach((line:string,i:number)=>ctx.fillText(line,PAD+contentX,dy+i*17));
+      dy+=commentLines.length*17+10;
+    }
+    if(groupLast&&ex.customRest){
+      ctx.fillStyle="#5A4A90";ctx.font="700 12px Arial";
+      ctx.fillText(`Poilsis po viso superseto: ${ex.customRest}`,PAD+contentX,dy);
+    }
+    if(inGroup){
+      ctx.fillStyle="#7B6DB0";ctx.fillRect(0,groupBarTop,6,rowTop+r.height-groupBarTop);
     }
 
     ctx.strokeStyle="#EEEBE4";ctx.beginPath();ctx.moveTo(0,rowTop+r.height);ctx.lineTo(W,rowTop+r.height);ctx.stroke();
