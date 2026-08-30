@@ -729,6 +729,7 @@ function SharePage({token,type}:{token:string,type:string}){
                               {ex.customRest&&<div style={{background:"#a78bfa18",border:`1px solid #a78bfa40`,borderRadius:9,padding:"8px 14px",textAlign:"center",minWidth:64}}><div style={{fontSize:9,color:C.muted,textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:2}}>Poilsis</div><div style={{fontSize:18,fontWeight:900,color:C.purple}}>{ex.customRest}</div></div>}
                             </div>
                             {ex.description&&<div style={{fontSize:12,color:C.muted,fontStyle:"italic",lineHeight:1.5}}>{ex.description}</div>}
+                            {ex.customComment&&<div style={{marginTop:ex.description?8:0,display:"flex",alignItems:"flex-start",gap:8,background:C.goldSoft,border:`1px solid ${C.goldBorder}`,borderRadius:10,padding:"10px 12px"}}><span style={{fontSize:14,flexShrink:0}}>💬</span><span style={{fontSize:12,color:C.text,lineHeight:1.5}}>{ex.customComment}</span></div>}
                             {ex.video_url&&(()=>{
                               const embedUrl=getYouTubeEmbed(ex.video_url);
                               return embedUrl?(
@@ -871,6 +872,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
   const [pickReps,setPickReps]=useState("");
   const [pickWeight,setPickWeight]=useState("");
   const [pickRest,setPickRest]=useState("");
+  const [pickComment,setPickComment]=useState("");
   const [saving,setSaving]=useState(false);
   const [confirmDel,setConfirmDel]=useState<any>(null);
   const [shareModal,setShareModal]=useState<any>(null);
@@ -920,9 +922,9 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
   };
   const delProgress=async(id:any)=>{try{await sb.delete("progress",id);await loadProgress(view.id);}catch(e:any){alert("Klaida: "+e.message);}};
   const toggleDay=(d:string)=>setClientForm(p=>({...p,training_days:p.training_days.includes(d)?p.training_days.filter((x:string)=>x!==d):[...p.training_days,d]}));
-  const openPick=(day:string)=>{setPickDay(day);setPickedEx(null);setPickSets("");setPickReps("");setPickWeight("");setPickRest("");};
+  const openPick=(day:string)=>{setPickDay(day);setPickedEx(null);setPickSets("");setPickReps("");setPickWeight("");setPickRest("");setPickComment("");};
   const pickList=exercises.filter(e=>(pickMuscle==="Visos"||e.muscle===pickMuscle)&&(e.name.toLowerCase().includes(pickSearch.toLowerCase())||e.muscle.toLowerCase().includes(pickSearch.toLowerCase())));
-  const addToDay=()=>{if(!pickedEx)return;const isSuperset=pickSets==="SS";const exData={id:pickedEx.id,name:pickedEx.name,muscle:pickedEx.muscle,equipment:pickedEx.equipment,sets:pickedEx.sets,reps:pickedEx.reps,description:pickedEx.description,imgs:pickedEx.imgs&&pickedEx.imgs.length?pickedEx.imgs:pickedEx.cover_img?[pickedEx.cover_img]:[],cover_img:pickedEx.cover_img||"",customSets:isSuperset?"3":pickSets||pickedEx.sets,customReps:pickReps||pickedEx.reps,customWeight:pickWeight||"",customRest:pickRest||"",superset:isSuperset};setProgram((p:any)=>({...p,[pickDay]:[...(p[pickDay]||[]),exData]}));setPickDay(null);};
+  const addToDay=()=>{if(!pickedEx)return;const isSuperset=pickSets==="SS";const exData={id:pickedEx.id,name:pickedEx.name,muscle:pickedEx.muscle,equipment:pickedEx.equipment,sets:pickedEx.sets,reps:pickedEx.reps,description:pickedEx.description,imgs:pickedEx.imgs&&pickedEx.imgs.length?pickedEx.imgs:pickedEx.cover_img?[pickedEx.cover_img]:[],cover_img:pickedEx.cover_img||"",customSets:isSuperset?"3":pickSets||pickedEx.sets,customReps:pickReps||pickedEx.reps,customWeight:pickWeight||"",customRest:pickRest||"",customComment:pickComment||"",superset:isSuperset};setProgram((p:any)=>({...p,[pickDay]:[...(p[pickDay]||[]),exData]}));setPickDay(null);};
   const removeFromDay=(day:string,idx:number)=>setProgram((p:any)=>({...p,[day]:p[day].filter((_:any,i:number)=>i!==idx)}));
   const openShareModal=async(c:any)=>{
     let token=c.share_token;
@@ -1422,7 +1424,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
                   {(program[day]||[]).map((ex:any,idx:number)=>(<div key={idx} style={{display:"flex",alignItems:"center",gap:8,background:C.faint,borderRadius:8,padding:"7px 10px"}}>
                     <div style={{width:34,height:34,borderRadius:6,overflow:"hidden",background:C.border,flexShrink:0}}>{(ex.imgs||[]).filter(Boolean)[0]?<img src={(ex.imgs||[])[0]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>📷</div>}</div>
-                    <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,color:C.text}}>{ex.name}</div><div style={{fontSize:10,color:C.teal}}>{ex.muscle} · {ex.customSets}s · {ex.customReps}r</div></div>
+                    <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,color:C.text}}>{ex.name}</div><div style={{fontSize:10,color:C.teal}}>{ex.muscle} · {ex.customSets}s · {ex.customReps}r</div>{ex.customComment&&<div style={{fontSize:10,color:C.muted,fontStyle:"italic" as const,marginTop:2}}>💬 {ex.customComment}</div>}</div>
                     <button onClick={()=>removeFromDay(day,idx)} style={css.btnRed}>🗑️</button>
                   </div>))}
                 </div>
@@ -1509,6 +1511,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
           <div><span style={css.label}>Svoris (kg)</span><input value={pickWeight} onChange={e=>setPickWeight(e.target.value)} placeholder="60" style={{...css.input,width:80,textAlign:"center",padding:"6px 5px",color:C.teal}}/></div>
           <div><span style={css.label}>Poilsis</span><select value={pickRest} onChange={e=>setPickRest(e.target.value)} style={{...css.select,width:95,padding:"6px 5px",color:C.purple}}><option value="">—</option>{REST_OPTIONS.map(r=><option key={r}>{r}</option>)}</select></div>
           <div><span style={css.label}>Superset</span><button onClick={()=>setPickSets(ps=>ps==="SS"?"":((ps||"")+""))} style={{...css.btnGhost,padding:"6px 10px",fontSize:11,color:pickSets==="SS"?C.purple:C.muted,borderColor:pickSets==="SS"?C.purpleBorder:C.border,background:pickSets==="SS"?C.purpleSoft:"transparent"}}>SS {pickSets==="SS"?"✓":""}</button></div>
+          <div style={{flexBasis:"100%",minWidth:180,flexGrow:1}}><span style={css.label}>Komentaras klientui (nebūtina)</span><input value={pickComment} onChange={e=>setPickComment(e.target.value)} placeholder="pvz. dėmesį į techniką, neskubėti" style={{...css.input,width:"100%",padding:"6px 8px"}}/></div>
           <button onClick={addToDay} style={{...css.btnG,alignSelf:"flex-end"}}>Pridėti +</button>
         </div>)}
       </div></div>)}
