@@ -3931,54 +3931,18 @@ function MainApp(){
           <div style={{fontFamily:CONDENSED_FONT,fontSize:13,fontWeight:700,color:C.text,letterSpacing:"0.22em",textTransform:"uppercase" as const}}>DNA TRAINER</div>
           <div style={{fontFamily:CONDENSED_FONT,fontSize:8,color:"#607080",letterSpacing:"0.2em",textTransform:"uppercase" as const,marginTop:1}} className="hsubtitle">Coach Platform</div>
         </div>
-        {/* Bell */}
-        <NotificationBell upcomingBookings={allBookings} clients={allClients}/>
-        {/* Theme switcher */}
-        <ThemeSwitcher/>
-        {/* Search */}
-        <button onClick={()=>setGlobalSearch(true)} style={{display:"flex",alignItems:"center",gap:6,background:"transparent",border:`1px solid ${C.border}`,padding:"5px 12px",color:C.muted,fontSize:10,cursor:"pointer",fontFamily:CONDENSED_FONT,letterSpacing:"0.12em",textTransform:"uppercase" as const}} className="search-btn">
-          <span>🔍</span>
-          <span className="logout-label">Ieškoti</span>
-          <span className="logout-label" style={{fontSize:9,background:C.border,padding:"1px 5px",marginLeft:2}}>⌘K</span>
-        </button>
-        <div style={{marginLeft:"auto",display:"flex",gap:2,alignItems:"center"}} className="header-nav-items">
-          {NAV.map(n=>{
-            const a=tab===n.id;
-            return(
-              <button key={n.id} onClick={()=>navigate(n.id)} style={{
-                display:"flex",alignItems:"center",gap:a?8:0,
-                padding:"9px 16px",
-                background:a?`linear-gradient(135deg,rgba(var(--gold-rgb),0.16) 0%,rgba(var(--gold-rgb),0.05) 100%)`:"transparent",
-                border:"none",cursor:"pointer",
-                borderRadius:10,
-                position:"relative" as const,
-                transition:"all .2s ease",
-                boxShadow:a?`inset 0 0 0 1px rgba(var(--gold-rgb),0.25)`:"none",
-              }}>
-                {/* Bottom active indicator bar */}
-                {a&&<div style={{position:"absolute" as const,bottom:-1,left:10,right:10,height:2,borderRadius:2,background:"var(--gold)"}}/>}
-                {/* Icon */}
-                <span style={{
-                  fontSize:18,lineHeight:1,
-                  filter:a?"none":"none",
-                  transition:"all .2s",
-                  position:"relative" as const,zIndex:2,
-                  opacity:a?1:0.5,
-                }}>{n.icon}</span>
-                {/* Label — only shows when active */}
-                <span style={{
-                  fontFamily:CONDENSED_FONT,fontSize:10,fontWeight:800,
-                  color:a?"var(--gold-dark)":"transparent",
-                  letterSpacing:"0.14em",textTransform:"uppercase" as const,
-                  maxWidth:a?90:0,overflow:"hidden",
-                  transition:"all .2s ease",
-                  whiteSpace:"nowrap" as const,
-                  position:"relative" as const,zIndex:2,
-                }}>{n.label}</span>
-              </button>
-            );
-          })}
-          <div style={{width:1,height:32,background:C.border,margin:"0 6px"}}/>
+        <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
+          {/* Bell */}
+          <NotificationBell upcomingBookings={allBookings} clients={allClients}/>
+          {/* Theme switcher */}
+          <ThemeSwitcher/>
+          {/* Search */}
+          <button onClick={()=>setGlobalSearch(true)} style={{display:"flex",alignItems:"center",gap:6,background:"transparent",border:`1px solid ${C.border}`,padding:"5px 12px",color:C.muted,fontSize:10,cursor:"pointer",fontFamily:CONDENSED_FONT,letterSpacing:"0.12em",textTransform:"uppercase" as const}} className="search-btn">
+            <span>🔍</span>
+            <span className="logout-label">Ieškoti</span>
+            <span className="logout-label" style={{fontSize:9,background:C.border,padding:"1px 5px",marginLeft:2}}>⌘K</span>
+          </button>
+          <div style={{width:1,height:32,background:C.border,margin:"0 2px"}} className="logout-label"/>
           {/* User info */}
           <div style={{
             display:"flex",alignItems:"center",gap:6,padding:"6px 12px",
@@ -3999,7 +3963,21 @@ function MainApp(){
           </button>
         </div>
       </div>
-      <div className="content-pad" style={{maxWidth:1200,margin:"0 auto",padding:"82px 32px 24px"}}>
+
+      {/* Vertical sidebar nav — tablet & desktop. Phones use the bottom nav instead. */}
+      <nav className="sidebar-nav">
+        {NAV.map(n=>{
+          const a=tab===n.id;
+          return(
+            <button key={n.id} onClick={()=>navigate(n.id)} className={`sidebar-nav-item${a?" active":""}`}>
+              <span className="sidebar-nav-icon">{n.icon}</span>
+              <span className="sidebar-nav-label">{n.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="content-pad" style={{maxWidth:1200,margin:"0 auto",padding:"82px 32px 24px 116px"}}>
         {tab==="dashboard"  && <DashboardTab onNav={navigate} allClients={allClients} allBookings={allBookings}/>}
         {tab==="exercises"  && <ExercisesTab key={tab+autoOpen} autoOpen={autoOpen}/>}
         {tab==="foods"      && <FoodsTab key={tab+autoOpen} autoOpen={autoOpen} onFoodsLoaded={setFoods}/>}
