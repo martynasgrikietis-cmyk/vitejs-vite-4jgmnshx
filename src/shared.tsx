@@ -990,10 +990,20 @@ export async function generateTrainingJpg(c:any):Promise<void>{
   let totalH=headerH+footerH+rows.reduce((a,r)=>a+r.height,0);
   if(rows.length===0)totalH+=60;
 
+  // Mobile browsers silently downscale (or fail to render) canvases above
+  // roughly 16 million pixels — long programs with many exercises would
+  // otherwise hit that ceiling and come out blurrier than intended, with
+  // no warning. Scale down just enough to stay safely under it.
+  const MAX_CANVAS_PIXELS=8_000_000;
+  let SCALE_EFF=SCALE;
+  if(W*totalH*SCALE*SCALE>MAX_CANVAS_PIXELS){
+    SCALE_EFF=Math.max(1.5,Math.sqrt(MAX_CANVAS_PIXELS/(W*totalH)));
+  }
+
   const canvas=document.createElement("canvas");
-  canvas.width=W*SCALE;canvas.height=totalH*SCALE;
+  canvas.width=Math.round(W*SCALE_EFF);canvas.height=Math.round(totalH*SCALE_EFF);
   const ctx=canvas.getContext("2d")!;
-  ctx.scale(SCALE,SCALE);
+  ctx.scale(SCALE_EFF,SCALE_EFF);
   ctx.fillStyle="#FFFFFF";ctx.fillRect(0,0,W,totalH);
 
   // header
@@ -1177,10 +1187,16 @@ export async function generateMealJpg(c:any):Promise<void>{
   let totalH=headerH+footerH+rows.reduce((a,r)=>a+r.height,0);
   if(rows.length===0)totalH+=60;
 
+  const MAX_CANVAS_PIXELS=8_000_000;
+  let SCALE_EFF=SCALE;
+  if(W*totalH*SCALE*SCALE>MAX_CANVAS_PIXELS){
+    SCALE_EFF=Math.max(1.5,Math.sqrt(MAX_CANVAS_PIXELS/(W*totalH)));
+  }
+
   const canvas=document.createElement("canvas");
-  canvas.width=W*SCALE;canvas.height=totalH*SCALE;
+  canvas.width=Math.round(W*SCALE_EFF);canvas.height=Math.round(totalH*SCALE_EFF);
   const ctx=canvas.getContext("2d")!;
-  ctx.scale(SCALE,SCALE);
+  ctx.scale(SCALE_EFF,SCALE_EFF);
   ctx.fillStyle="#FFFFFF";ctx.fillRect(0,0,W,totalH);
 
   ctx.fillStyle="#1A1A1A";ctx.fillRect(0,0,W,headerH);
