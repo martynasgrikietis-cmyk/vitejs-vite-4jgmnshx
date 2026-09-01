@@ -284,7 +284,7 @@ export const RESPONSIVE_CSS = `
     .modal-inner{max-height:100vh !important;border-radius:0 !important;margin:0 !important;width:100% !important;}
     .logout-label{display:none;}
     .hsubtitle{display:none;}
-    .header-nav-items{display:none !important;}
+    .sidebar-nav{display:none !important;}
     .sec-heading{font-size:28px !important;}
     .bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:200;padding:6px 0 calc(6px + env(safe-area-inset-bottom));justify-content:space-around;align-items:center;box-shadow:0 -4px 20px rgba(var(--shadow-rgb),0.08);}
     .bottom-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;cursor:pointer;min-width:44px;transition:background .15s;flex:1;border-radius:10px;}
@@ -296,14 +296,30 @@ export const RESPONSIVE_CSS = `
     input,select,textarea{font-size:16px !important;min-height:44px;}
     *{-webkit-tap-highlight-color:transparent;}
   }
-  /* ── HEADER NAV — never overflow off-screen; scroll internally instead ── */
-  .header-nav-items{min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;}
-  .header-nav-items::-webkit-scrollbar{display:none;}
-  /* ── TABLET — compact the header chrome so the full nav fits ── */
+  /* ── VERTICAL SIDEBAR NAV — tablet & desktop. Phones use the bottom nav. ── */
+  .sidebar-nav{display:none;}
+  @media(min-width:641px){
+    .sidebar-nav{
+      display:flex;flex-direction:column;align-items:center;gap:4px;
+      position:fixed;top:62px;left:0;bottom:0;width:84px;
+      background:var(--surface);border-right:1px solid var(--border);
+      padding:16px 0;overflow-y:auto;z-index:90;
+    }
+    .sidebar-nav-item{
+      display:flex;flex-direction:column;align-items:center;gap:3px;
+      width:64px;padding:10px 4px;border:none;background:transparent;
+      border-radius:12px;cursor:pointer;transition:background .15s;flex-shrink:0;
+    }
+    .sidebar-nav-item:hover{background:rgba(var(--gold-rgb),0.07);}
+    .sidebar-nav-item.active{background:linear-gradient(135deg,rgba(var(--gold-rgb),0.16) 0%,rgba(var(--gold-rgb),0.05) 100%);box-shadow:inset 0 0 0 1px rgba(var(--gold-rgb),0.25);}
+    .sidebar-nav-icon{font-size:22px;line-height:1;opacity:0.55;transition:opacity .15s;}
+    .sidebar-nav-item.active .sidebar-nav-icon{opacity:1;}
+    .sidebar-nav-label{font-size:9px;color:var(--muted);letter-spacing:0.05em;font-weight:700;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;white-space:nowrap;text-align:center;}
+    .sidebar-nav-item.active .sidebar-nav-label{color:var(--gold-dark);}
+  }
+  /* ── TABLET — compact the top bar chrome (search/theme/user) ── */
   @media(min-width:641px) and (max-width:1024px){
     .header-pad{padding-left:16px !important;padding-right:16px !important;gap:8px !important;}
-    .header-nav-items{gap:0 !important;}
-    .header-nav-items button{padding:8px 8px !important;}
     .logout-label,.logout-label-text{display:none !important;}
     .hsubtitle{display:none !important;}
     .search-btn{padding:6px 8px !important;}
