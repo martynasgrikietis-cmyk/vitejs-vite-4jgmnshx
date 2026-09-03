@@ -65,7 +65,7 @@ async function compressImage(file: File, maxDim = 1200, quality = 0.82): Promise
 }
 
 export const APP_PASSWORD = "coach2024";
-export const ALL_MUSCLES  = ["Krūtinė","Nugara","Kojos","Pečiai","Bicepsas","Tricepsas","Pilvas"];
+export const ALL_MUSCLES  = ["Krūtinė","Nugara","Kojos","Pečiai","Bicepsas","Tricepsas","Pilvas","Apšilimas","Cardio"];
 export const GOALS        = ["Raumenų auginimas","Riebalų deginimas","Jėgos ugdymas","Ištvermė","Reabilitacija","Sveikata"];
 export const LEVELS       = ["Pradedantysis","Vidutinis","Pažengęs"];
 export const DAYS         = ["Pirmadienis","Antradienis","Trečiadienis","Ketvirtadienis","Penktadienis","Šeštadienis","Sekmadienis"];
