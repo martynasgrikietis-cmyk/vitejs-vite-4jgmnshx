@@ -111,7 +111,7 @@ const emptyExForm  = {name:"",muscle:"Krūtinė",equipment:"",sets:"3",reps:"10-
 
 const MUSCLE_COLORS:Record<string,string> = {
   "Krūtinė":"#5B8DB8","Nugara":"#4E9068","Kojos":C.gold,
-  "Pečiai":"#9B7DD4","Bicepsas":"#E07B5A","Tricepsas":"#5BA8A0","Kardio":"#C05050","Apšilimas":"#5B8DB8",
+  "Pečiai":"#9B7DD4","Bicepsas":"#E07B5A","Tricepsas":"#5BA8A0","Cardio":"#3b82f6","Apšilimas":"#f59e0b",
   "Pilvas":"#7DA84E","Visi":"#6B7280",
 };
 const muscleColor=(m:string)=>MUSCLE_COLORS[m]||C.teal;
