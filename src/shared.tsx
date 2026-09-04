@@ -1074,9 +1074,10 @@ export async function generateTrainingJpg(c:any):Promise<void>{
         const img=await loadImageViaProxy(imgs[i]);
         const cx=contentX+i*cellW;
         if(img){
+          ctx.fillStyle="#12141A";ctx.fillRect(cx,imgTop,cellW,IMG_ROW_H);
           ctx.save();
           ctx.beginPath();ctx.rect(cx,imgTop,cellW,IMG_ROW_H);ctx.clip();
-          const scale=Math.max(cellW/img.width,IMG_ROW_H/img.height);
+          const scale=Math.min(cellW/img.width,IMG_ROW_H/img.height);
           const dw=img.width*scale,dh=img.height*scale;
           ctx.drawImage(img,cx+(cellW-dw)/2,imgTop+(IMG_ROW_H-dh)/2,dw,dh);
           ctx.restore();
