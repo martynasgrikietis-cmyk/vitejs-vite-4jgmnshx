@@ -68,8 +68,8 @@ function ExerciseCard({ex,badge,hideRest}:{ex:any,badge:string,hideRest?:boolean
     <div style={{background:C.surface,borderRadius:14,border:`1px solid ${C.border}`,overflow:"hidden",position:"relative"}}>
       {typeColor&&imgs[0]&&<div style={{position:"absolute",top:10,right:10,zIndex:2,background:typeColor,color:"#fff",borderRadius:8,padding:"3px 10px",fontSize:10,fontWeight:800,letterSpacing:"0.04em",textTransform:"uppercase" as const,boxShadow:"0 2px 6px rgba(0,0,0,0.25)"}}>{ex.customType}</div>}
       {imgs[0]&&(
-        <div style={{position:"relative",height:220,overflow:"hidden"}}>
-          <div style={{display:"flex",width:"100%",height:"100%"}}> <img src={imgs[0]} alt={ex.name} style={{width:imgs[1]?"50%":"100%",height:"100%",objectFit:"cover"}}/> {imgs[1]&&<img src={imgs[1]} alt={ex.name} style={{width:"50%",height:"100%",objectFit:"cover"}}/>} </div>
+        <div style={{position:"relative",height:220,overflow:"hidden",background:"#12141a"}}>
+          <div style={{display:"flex",width:"100%",height:"100%"}}> <img src={imgs[0]} alt={ex.name} style={{width:imgs[1]?"50%":"100%",height:"100%",objectFit:"contain"}}/> {imgs[1]&&<img src={imgs[1]} alt={ex.name} style={{width:"50%",height:"100%",objectFit:"contain"}}/>} </div>
           <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,#0a0d14cc 0%,transparent 50%)"}}/>
           <div style={{position:"absolute",top:10,left:10,minWidth:24,height:24,padding:"0 6px",borderRadius:12,background:"rgba(0,0,0,0.55)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800}}>{badge}</div>
           <div style={{position:"absolute",bottom:14,left:16,right:16}}>
