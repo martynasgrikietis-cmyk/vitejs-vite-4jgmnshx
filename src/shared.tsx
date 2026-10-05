@@ -950,9 +950,11 @@ function roundRectPath(ctx:CanvasRenderingContext2D,x:number,y:number,w:number,h
 // same visual quality. Modern phones (iPhone 2020+, all current Android)
 // support it — but we quietly fall back to JPEG on anything that doesn't,
 // so the download never breaks.
-async function encodeCanvasSmall(canvas:HTMLCanvasElement,quality=0.85):Promise<{blob:Blob,ext:string}>{
-  const webp:Blob|null=await new Promise((res)=>canvas.toBlob(b=>res(b),"image/webp",quality));
-  if(webp&&webp.type==="image/webp"&&webp.size>0)return{blob:webp,ext:"webp"};
+async function encodeCanvasSmall(canvas:HTMLCanvasElement,quality=0.85,forceJpeg=false):Promise<{blob:Blob,ext:string}>{
+  if(!forceJpeg){
+    const webp:Blob|null=await new Promise((res)=>canvas.toBlob(b=>res(b),"image/webp",quality));
+    if(webp&&webp.type==="image/webp"&&webp.size>0)return{blob:webp,ext:"webp"};
+  }
   const jpg:Blob=await new Promise((res)=>canvas.toBlob(b=>res(b as Blob),"image/jpeg",quality));
   return{blob:jpg,ext:"jpg"};
 }
@@ -1006,10 +1008,12 @@ export async function generateTrainingJpg(c:any):Promise<void>{
 
   // ── Size limits ─────────────────────────────────────────
   // WebP can't be taller than 16383px (anything beyond is silently cut off),
-  // and iPhone Safari refuses canvases above ~16.7M pixels. Long programs are
-  // therefore split into several images by day instead of one giant image
-  // that gets truncated (or comes out blurry after messengers shrink it).
-  const MIN_SCALE=1.5,MAX_SIDE=16000,MAX_PIXELS=16_000_000;
+  // so tall images are saved as JPEG instead (limit 65535px). iPhone Safari
+  // refuses canvases above ~16.7M pixels, so long programs get a lower
+  // resolution to stay ONE file. Only very long programs (≈6+ full days),
+  // where the resolution would get too low to read, are split into parts.
+  const MIN_SCALE=1.2,MAX_SIDE=60000,MAX_PIXELS=16_000_000;
+  const WEBP_MAX_SIDE=16383;
   const maxPartH=Math.floor(Math.min(MAX_SIDE/MIN_SCALE,MAX_PIXELS/(W*MIN_SCALE*MIN_SCALE)));
   const bodyMax=maxPartH-headerH-footerH;
 
@@ -1219,7 +1223,7 @@ export async function generateTrainingJpg(c:any):Promise<void>{
     const ftext=pn>1?`DNA Trainer · Coach Platform · ${pi+1}/${pn}`:"DNA Trainer · Coach Platform";
     ctx.fillText(ftext,(W-ctx.measureText(ftext).width)/2,y+29);
 
-    const out=await encodeCanvasSmall(canvas,0.85);
+    const out=await encodeCanvasSmall(canvas,0.85,canvas.height>WEBP_MAX_SIDE||canvas.width>WEBP_MAX_SIDE);
     // free the canvas memory right away (matters on phones with several parts)
     canvas.width=0;canvas.height=0;
     return out;
