@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { sb, C, FONT, RESPONSIVE_CSS, css, ALL_MUSCLES, GOALS, LEVELS, DAYS, REST_OPTIONS, ACTIVITY_LEVELS, calcBMI, bmiCat, calcNut, genToken, getCoachId, getIsAdmin, Tag, Badge, Spinner, Skeleton, SkeletonCard, Err, NutriBadge, ImgGallery, MultiImgUploader, HERO_IMG, GYM_IMG2, DISPLAY_FONT, CONDENSED_FONT, SectionHead, ThemeSwitcher, SUPABASE_URL, SUPABASE_KEY, calcDifficulty, printPDF, printMealPDF, shrinkForPdf, generateTrainingJpg, generateMealJpg } from "./shared";
+import { sb, C, FONT, RESPONSIVE_CSS, css, ALL_MUSCLES, GOALS, LEVELS, DAYS, REST_OPTIONS, ACTIVITY_LEVELS, calcBMI, bmiCat, calcNut, genToken, getCoachId, getIsAdmin, Tag, Badge, Spinner, Skeleton, SkeletonCard, Err, NutriBadge, ImgGallery, MultiImgUploader, HERO_IMG, GYM_IMG2, DISPLAY_FONT, CONDENSED_FONT, SectionHead, ThemeSwitcher, SUPABASE_URL, SUPABASE_KEY, calcDifficulty, printPDF, printMealPDF, shrinkForPdf, generateTrainingJpg, generateTrainingPhoneJpg, generateMealJpg } from "./shared";
 import { LoginScreen, AuthProvider, UsersTab, useAuth, getSession, clearSession } from "./auth";
 import { FoodsTab, MealPlanBuilder, MealSharePage } from "./MealPlan";
 
@@ -644,6 +644,7 @@ function SharePage({token,type}:{token:string,type:string}){
   const [dlBusy,setDlBusy]=useState(false);
   const [printBusy,setPrintBusy]=useState(false);
   const [jpgBusy,setJpgBusy]=useState(false);
+  const [phoneBusy,setPhoneBusy]=useState(false);
 
   useEffect(()=>{
     sb.get("clients",`?share_token=eq.${token}&limit=1`)
@@ -713,6 +714,14 @@ function SharePage({token,type}:{token:string,type:string}){
     }finally{setJpgBusy(false);}
   };
 
+  const downloadPhoneJpg=async()=>{
+    if(phoneBusy)return;
+    setPhoneBusy(true);
+    try{ await generateTrainingPhoneJpg(client); }
+    catch{ alert("Nepavyko sukurti paveikslėlio. Bandykite dar kartą."); }
+    finally{ setPhoneBusy(false); }
+  };
+
   return(
     <div style={{minHeight:"100vh",background:C.bg,color:C.text,fontFamily:FONT}}>
       <style>{`
@@ -755,6 +764,11 @@ function SharePage({token,type}:{token:string,type:string}){
         <button onClick={downloadJpg} disabled={jpgBusy} style={{marginTop:16,marginLeft:8,display:"inline-flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.14)",backdropFilter:"blur(6px)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:10,padding:"9px 18px",color:"#FFFFFF",fontSize:12,fontWeight:700,cursor:jpgBusy?"not-allowed":"pointer",opacity:jpgBusy?0.6:1}} className="fu2 no-print">
           {jpgBusy?"⏳ Ruošiama...":"🖼️ Atsisiųsti JPG"}
         </button>
+        {isTraining&&(
+          <button onClick={downloadPhoneJpg} disabled={phoneBusy} style={{marginTop:16,marginLeft:8,display:"inline-flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.14)",backdropFilter:"blur(6px)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:10,padding:"9px 18px",color:"#FFFFFF",fontSize:12,fontWeight:700,cursor:phoneBusy?"not-allowed":"pointer",opacity:phoneBusy?0.6:1}} className="fu2 no-print">
+            {phoneBusy?"⏳ Ruošiama...":"📱 Telefonui"}
+          </button>
+        )}
       </div>
 
       {/* Training view */}
