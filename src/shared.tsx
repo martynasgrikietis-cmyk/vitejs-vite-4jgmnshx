@@ -1241,6 +1241,225 @@ export async function generateTrainingJpg(c:any):Promise<void>{
   }
 }
 
+// ── PHONE-FRIENDLY TRAINING IMAGE ──────────────────────────
+// Separate from generateTrainingJpg (which stays unchanged). Narrow layout
+// (600 logical px) with large text and compact exercise rows: photos on the
+// left, name + "3 × 15 · 40 kg" on the right. Readable on a phone without
+// zooming, and short enough to stay one file. Always JPEG for compatibility.
+function ltPratimai(n:number){
+  const m10=n%10,m100=n%100;
+  if(m10===1&&m100!==11)return `${n} pratimas`;
+  if(m10>=2&&m10<=9&&(m100<12||m100>19))return `${n} pratimai`;
+  return `${n} pratimų`;
+}
+
+export async function generateTrainingPhoneJpg(c:any):Promise<void>{
+  const W=600,PAD=20;
+  const PW=128,PH=136,PGAP=6,PHOTO_W=PW*2+PGAP;
+  const HEADER_H=160,DAY_H=62,SS_H=40,FOOTER_H=52,ROW_PAD=18;
+  const prog=c.program||{};
+  const days2=DAYS.filter(d=>(c.training_days||[]).includes(d));
+  const today2=new Date().toLocaleDateString("lt-LT");
+
+  const allExIds=[...new Set(Object.values(prog).flat().map((e:any)=>e.id).filter(Boolean))];
+  const exMap:any={};
+  if(allExIds.length){const full=await sb.get("exercises",`?id=in.(${allExIds.join(",")})&select=id,imgs,cover_img`);full.forEach((e:any)=>{exMap[e.id]=e;});}
+
+  const FN=(sz:number,bold=false,italic=false)=>`${italic?"italic ":""}${bold?"700 ":""}${sz}px Arial`;
+  const meas=document.createElement("canvas").getContext("2d")!;
+  const textW=(t:string,font:string)=>{meas.font=font;return meas.measureText(t).width;};
+  const wrap=(t:string,font:string,w:number)=>{meas.font=font;return wrapCanvasText(meas,t,w);};
+
+  type Line={text:string,font:string,color:string,h:number,parts?:{text:string,font:string,color:string}[]};
+  type Item=
+    |{kind:"day",day:string,count:number,height:number}
+    |{kind:"ss",height:number}
+    |{kind:"ex",ex:any,imgs:string[],badge:string,inGroup:boolean,typeBadge:string|null,lines:Line[],textH:number,height:number};
+  const items:Item[]=[];
+  const fmtWeight=(w:any)=>{const s=String(w).trim();return /[a-ząčęėįšųūž]/i.test(s)?s:`${s} kg`;};
+
+  days2.forEach(day=>{
+    const exs=(prog[day]||[]) as any[];
+    items.push({kind:"day",day,count:exs.length,height:DAY_H});
+    const letters="ABCDEFGH";
+    let num=0,idx=0;
+    while(idx<exs.length){
+      num++;
+      const first=exs[idx];
+      const group=[first];
+      let j=idx+1;
+      if(first.supersetGroup){while(j<exs.length&&exs[j].supersetGroup===first.supersetGroup){group.push(exs[j]);j++;}}
+      const inGroup=!!first.supersetGroup&&group.length>1;
+      if(inGroup)items.push({kind:"ss",height:SS_H});
+      group.forEach((ex:any,gi:number)=>{
+        const fullEx=exMap[ex.id]||ex;
+        const imgs=(fullEx.imgs&&fullEx.imgs.length?fullEx.imgs:fullEx.cover_img?[fullEx.cover_img]:[]).filter(Boolean).slice(0,2);
+        const TW=W-PAD-(PAD+PHOTO_W+18)-(inGroup?6:0);
+        const lines:Line[]=[];
+        const typeBadge=(ex.customType==="Cardio"||ex.customType==="Apšilimas")?ex.customType.toUpperCase():null;
+        wrap(ex.name||"",FN(26,true),TW).forEach(t=>lines.push({text:t,font:FN(26,true),color:"#0B0D12",h:31}));
+        const sub=[ex.muscle,!inGroup&&ex.customRest?`poilsis ${ex.customRest}`:""].filter(Boolean).join(" · ");
+        if(sub)wrap(sub,FN(18),TW).forEach(t=>lines.push({text:t,font:FN(18),color:"#8A93A0",h:24}));
+        // big stats: "3 × 15 · 40 kg"
+        const sr=[ex.customSets,ex.customReps].filter(Boolean).join(" × ");
+        const wt=ex.customWeight?fmtWeight(ex.customWeight):"";
+        if(sr||wt){
+          const big=FN(32,true),sep="  ·  ";
+          const fullW=textW(sr,big)+(sr&&wt?textW(sep,FN(24)):0)+textW(wt,big);
+          if(sr&&wt&&fullW<=TW){
+            lines.push({text:"",font:big,color:"#0B0D12",h:44,parts:[{text:sr,font:big,color:"#0B0D12"},{text:sep,font:FN(24),color:"#B8B2A6"},{text:wt,font:big,color:"#0B0D12"}]});
+          }else{
+            if(sr)lines.push({text:sr,font:big,color:"#0B0D12",h:44});
+            if(wt)lines.push({text:wt,font:big,color:"#0B0D12",h:42});
+          }
+        }
+        if(ex.customComment)wrap(ex.customComment,FN(19,true),TW).slice(0,4).forEach(t=>lines.push({text:t,font:FN(19,true),color:"#9C5B27",h:27}));
+        if(ex.description)wrap(ex.description,FN(16,false,true),TW).slice(0,3).forEach(t=>lines.push({text:t,font:FN(16,false,true),color:"#8A93A0",h:22}));
+        if(inGroup&&gi===group.length-1&&ex.customRest)lines.push({text:`Poilsis po superseto: ${ex.customRest}`,font:FN(17,true),color:"#5A4A90",h:28});
+        const textH=(typeBadge?28:0)+lines.reduce((a,l)=>a+l.h,0);
+        items.push({kind:"ex",ex,imgs,badge:inGroup?`${num}${letters[gi]||""}`:String(num),inGroup,typeBadge,lines,textH,height:Math.max(PH,textH)+ROW_PAD*2});
+      });
+      idx=j;
+    }
+  });
+
+  const totalH=HEADER_H+FOOTER_H+items.reduce((a,i)=>a+i.height,0)+(items.length?0:60);
+  // ~1200px wide (sharp on any phone); lowered only for huge programs so the
+  // canvas stays under iPhone Safari's ~16.7M pixel limit.
+  const MAX_PIXELS=16_000_000;
+  const SCALE=Math.min(2,Math.sqrt(MAX_PIXELS/(W*totalH)),60000/totalH);
+
+  // load all photos in parallel
+  const urls=[...new Set(items.flatMap(i=>i.kind==="ex"?i.imgs:[]))];
+  const loaded=await Promise.all(urls.map(u=>loadImageViaProxy(u)));
+  const imgMap=new Map<string,HTMLImageElement|null>();
+  urls.forEach((u,i)=>imgMap.set(u,loaded[i]));
+
+  const canvas=document.createElement("canvas");
+  canvas.width=Math.round(W*SCALE);canvas.height=Math.round(totalH*SCALE);
+  const ctx=canvas.getContext("2d")!;
+  ctx.scale(SCALE,SCALE);
+  ctx.textBaseline="alphabetic";
+  ctx.fillStyle="#FFFFFF";ctx.fillRect(0,0,W,totalH);
+
+  const drawCover=(img:HTMLImageElement,x:number,y:number,w:number,h:number)=>{
+    const sc=Math.max(w/img.width,h/img.height);
+    const sw=w/sc,sh=h/sc;
+    const sx=(img.width-sw)/2,sy=Math.max(0,(img.height-sh)*0.35);
+    ctx.save();roundRectPath(ctx,x,y,w,h,10);ctx.clip();
+    ctx.drawImage(img,sx,sy,sw,sh,x,y,w,h);
+    ctx.restore();
+  };
+  // portrait photo in a wide slot: show it whole on a dark background
+  const drawContain=(img:HTMLImageElement,x:number,y:number,w:number,h:number)=>{
+    ctx.save();roundRectPath(ctx,x,y,w,h,10);ctx.clip();
+    ctx.fillStyle="#12141A";ctx.fillRect(x,y,w,h);
+    const sc=Math.min(w/img.width,h/img.height);
+    const dw=img.width*sc,dh=img.height*sc;
+    ctx.drawImage(img,x+(w-dw)/2,y+(h-dh)/2,dw,dh);
+    ctx.restore();
+  };
+  const drawPlaceholder=(x:number,y:number,w:number,h:number)=>{
+    ctx.save();roundRectPath(ctx,x,y,w,h,10);ctx.fillStyle="#F0EDE6";ctx.fill();ctx.restore();
+    ctx.fillStyle="#B8B2A6";ctx.font=FN(30);
+    ctx.fillText("📷",x+w/2-15,y+h/2+10);
+  };
+
+  // header
+  ctx.fillStyle="#0B0D12";ctx.fillRect(0,0,W,HEADER_H);
+  ctx.fillStyle="#D4A853";ctx.font=FN(15,true);ctx.fillText("DNA TRAINER",PAD,40);
+  ctx.fillStyle="#606878";ctx.font=FN(14);ctx.fillText(today2,W-PAD-ctx.measureText(today2).width,40);
+  const title=c.program_name||"Treniruočių programa";
+  let tsz=34;while(tsz>20&&textW(title,FN(tsz,true))>W-PAD*2)tsz-=2;
+  ctx.fillStyle="#FFFFFF";ctx.font=FN(tsz,true);ctx.fillText(title,PAD,92);
+  ctx.fillStyle="#D4A853";ctx.font=FN(20);ctx.fillText(c.name||"",PAD,122);
+  const metaBits=[c.goal,c.level].filter(Boolean).join("  ·  ");
+  if(metaBits){ctx.fillStyle="#8A93A0";ctx.font=FN(15);ctx.fillText(metaBits,PAD,146);}
+
+  let y=HEADER_H;
+  for(const it of items){
+    if(it.kind==="day"){
+      ctx.fillStyle="#D4A853";ctx.fillRect(0,y,W,it.height);
+      ctx.fillStyle="#2A2008";ctx.font=FN(28,true);ctx.fillText(it.day.toUpperCase(),PAD,y+42);
+      const ct=ltPratimai(it.count);
+      ctx.font=FN(19);ctx.fillText(ct,W-PAD-ctx.measureText(ct).width,y+40);
+      y+=it.height;continue;
+    }
+    if(it.kind==="ss"){
+      ctx.fillStyle="#F1EFF9";ctx.fillRect(0,y,W,it.height);
+      ctx.fillStyle="#7B6DB0";ctx.fillRect(0,y,8,it.height);
+      ctx.fillStyle="#5A4A90";ctx.font=FN(18,true);ctx.fillText("SUPERSETAS · iš eilės, be poilsio",PAD+4,y+27);
+      y+=it.height;continue;
+    }
+    const {ex,imgs,badge,inGroup,typeBadge,lines,textH}=it;
+    const x0=PAD+(inGroup?6:0);
+    const py=y+(it.height-PH)/2;
+    // photos: two side by side, or one stretched across both slots
+    if(imgs.length>=2){
+      for(let i=0;i<2;i++){
+        const im=imgMap.get(imgs[i]);
+        const px=x0+i*(PW+PGAP);
+        if(im)drawCover(im,px,py,PW,PH);else drawPlaceholder(px,py,PW,PH);
+      }
+    }else{
+      const im=imgs[0]?imgMap.get(imgs[0]):null;
+      if(!im)drawPlaceholder(x0,py,PHOTO_W,PH);
+      else if(im.width/im.height>=1.5)drawCover(im,x0,py,PHOTO_W,PH);
+      else drawContain(im,x0,py,PHOTO_W,PH);
+    }
+    // number badge
+    ctx.font=FN(16,true);
+    const bw=Math.max(30,ctx.measureText(badge).width+20);
+    roundRectPath(ctx,x0+6,py+6,bw,26,13);
+    ctx.fillStyle=inGroup?"#7B6DB0":"rgba(20,22,26,0.82)";ctx.fill();
+    ctx.fillStyle="#FFFFFF";ctx.fillText(badge,x0+6+(bw-ctx.measureText(badge).width)/2,py+25);
+
+    // text block, vertically centred next to the photos
+    const tx=PAD+PHOTO_W+18+(inGroup?6:0);
+    let ty=y+(it.height-textH)/2;
+    if(typeBadge){
+      ctx.font=FN(14,true);
+      const tw=ctx.measureText(typeBadge).width+16;
+      roundRectPath(ctx,tx,ty,tw,22,5);
+      ctx.fillStyle=ex.customType==="Cardio"?"#3B82F6":"#F59E0B";ctx.fill();
+      ctx.fillStyle="#FFFFFF";ctx.fillText(typeBadge,tx+8,ty+16);
+      ty+=28;
+    }
+    for(const l of lines){
+      const base=ty+l.h-8;
+      if(l.parts){
+        let lx=tx;
+        for(const pt of l.parts){ctx.font=pt.font;ctx.fillStyle=pt.color;ctx.fillText(pt.text,lx,base);lx+=ctx.measureText(pt.text).width;}
+      }else{
+        ctx.font=l.font;ctx.fillStyle=l.color;ctx.fillText(l.text,tx,base);
+      }
+      ty+=l.h;
+    }
+    if(inGroup){ctx.fillStyle="#7B6DB0";ctx.fillRect(0,y,8,it.height);}
+    ctx.fillStyle="#EEEBE4";ctx.fillRect(0,y+it.height-1,W,1);
+    y+=it.height;
+  }
+
+  if(!items.length){
+    ctx.fillStyle="#B8B2A6";ctx.font=FN(18);ctx.fillText("Pratimų nėra",PAD,y+38);
+    y+=60;
+  }
+
+  ctx.fillStyle="#F5F2EC";ctx.fillRect(0,y,W,FOOTER_H);
+  ctx.fillStyle="#B8B2A6";ctx.font=FN(14);
+  const ftext="DNA Trainer · Coach Platform";
+  ctx.fillText(ftext,(W-ctx.measureText(ftext).width)/2,y+32);
+
+  const blob:Blob=await new Promise((res,rej)=>canvas.toBlob(b=>b?res(b):rej(new Error("toBlob failed")),"image/jpeg",0.86));
+  canvas.width=0;canvas.height=0;
+  const link=document.createElement("a");
+  link.href=URL.createObjectURL(blob);
+  const clean=(t:string)=>t.replace(/[^\p{L}\p{N}\s-]/gu,"").trim();
+  link.download=`${clean(c.program_name||"programa")}-${clean(c.name||"")}-telefonui.jpg`;
+  link.click();
+  setTimeout(()=>URL.revokeObjectURL(link.href),4000);
+}
+
 export async function generateMealJpg(c:any):Promise<void>{
   const W=880,PAD=32,SCALE=3;
   const mp=c.meal_plan||{};
