@@ -1003,176 +1003,238 @@ export async function generateTrainingJpg(c:any):Promise<void>{
   });
 
   const headerH=150,footerH=50;
-  let totalH=headerH+footerH+rows.reduce((a,r)=>a+r.height,0);
-  if(rows.length===0)totalH+=60;
 
-  // Mobile browsers silently downscale (or fail to render) canvases above
-  // roughly 16 million pixels — long programs with many exercises would
-  // otherwise hit that ceiling and come out blurrier than intended, with
-  // no warning. Scale down just enough to stay safely under it.
-  const MAX_CANVAS_PIXELS=8_000_000;
-  let SCALE_EFF=SCALE;
-  if(W*totalH*SCALE*SCALE>MAX_CANVAS_PIXELS){
-    SCALE_EFF=Math.max(1.5,Math.sqrt(MAX_CANVAS_PIXELS/(W*totalH)));
-  }
+  // ── Size limits ─────────────────────────────────────────
+  // WebP can't be taller than 16383px (anything beyond is silently cut off),
+  // and iPhone Safari refuses canvases above ~16.7M pixels. Long programs are
+  // therefore split into several images by day instead of one giant image
+  // that gets truncated (or comes out blurry after messengers shrink it).
+  const MIN_SCALE=1.5,MAX_SIDE=16000,MAX_PIXELS=16_000_000;
+  const maxPartH=Math.floor(Math.min(MAX_SIDE/MIN_SCALE,MAX_PIXELS/(W*MIN_SCALE*MIN_SCALE)));
+  const bodyMax=maxPartH-headerH-footerH;
 
-  const canvas=document.createElement("canvas");
-  canvas.width=Math.round(W*SCALE_EFF);canvas.height=Math.round(totalH*SCALE_EFF);
-  const ctx=canvas.getContext("2d")!;
-  ctx.scale(SCALE_EFF,SCALE_EFF);
-  ctx.fillStyle="#FFFFFF";ctx.fillRect(0,0,W,totalH);
+  // Group rows into days, and each day into "units" (a single exercise or a
+  // whole superset) — a page break never lands inside a superset.
+  type DayBlock={head:Row,units:Row[][]};
+  const dayBlocks:DayBlock[]=[];
+  rows.forEach(r=>{
+    if(r.kind==="dayhead"){dayBlocks.push({head:r,units:[]});return;}
+    const b=dayBlocks[dayBlocks.length-1];
+    const startsUnit=!r.ex.supersetGroup||r.groupFirst||!b.units.length;
+    if(startsUnit)b.units.push([r]);else b.units[b.units.length-1].push(r);
+  });
+  const hOf=(rs:Row[])=>rs.reduce((a,r)=>a+r.height,0);
 
-  // header
-  ctx.fillStyle="#0B0D12";ctx.fillRect(0,0,W,headerH);
-  ctx.fillStyle="#D4A853";ctx.font="700 11px Arial";ctx.textBaseline="alphabetic";
-  ctx.fillText("DNA TRAINER",PAD,36);
-  ctx.fillStyle="#606878";ctx.font="10px Arial";
-  ctx.fillText(today2,W-PAD-ctx.measureText(today2).width,36);
-  ctx.fillStyle="#FFFFFF";ctx.font="700 30px Arial";
-  ctx.fillText(c.program_name||"Treniruočių programa",PAD,80);
-  ctx.fillStyle="#D4A853";ctx.font="600 13px Arial";
-  ctx.fillText(c.name||"",PAD,106);
-  const metaBits=[c.goal,c.level].filter(Boolean).join("  ·  ");
-  if(metaBits){ctx.fillStyle="#8A93A0";ctx.font="11px Arial";ctx.fillText(metaBits,PAD,126);}
-
-  let y=headerH;
-  for(const r of rows){
-    if(r.kind==="dayhead"){
-      ctx.fillStyle="#FFFFFF";ctx.fillRect(0,y,W,r.height);
-      ctx.fillStyle="#0B0D12";ctx.font="700 17px Arial";
-      ctx.fillText(r.day!.toUpperCase(),PAD,y+29);
-      const dtxt=`— ${r.count} pratimas(-ai)`;
-      ctx.fillStyle="#8A93A0";ctx.font="12px Arial";
-      ctx.fillText(dtxt,PAD+ctx.measureText(r.day!.toUpperCase()).width+90,y+29);
-      y+=r.height;
-      continue;
-    }
-
-    const {ex,imgs,descLines,commentLines,badge,groupFirst,groupLast}=r;
-    const inGroup=!!ex.supersetGroup;
-    const rowTop=y;
-    const contentX=inGroup?10:0;
-    const contentW=W-(inGroup?10:0);
-
-    if(groupFirst){
-      ctx.fillStyle="#F5F2EC";ctx.fillRect(0,rowTop,W,26);
-      ctx.fillStyle="#5A4A90";ctx.font="700 11px Arial";
-      ctx.fillText("🔗 SUPERSETAS — atlikite iš eilės, be poilsio tarp pratimų",PAD,rowTop+18);
-    }
-    const groupBarTop=rowTop+(groupFirst?26:0);
-
-    // ── image row: all photos side by side, equal width ──
-    const n=Math.max(1,imgs.length);
-    const cellW=contentW/n;
-    const imgTop=groupBarTop;
-    if(imgs.length===0){
-      ctx.fillStyle="#F0EDE6";ctx.fillRect(contentX,imgTop,contentW,IMG_ROW_H);
-      ctx.fillStyle="#B8B2A6";ctx.font="34px Arial";
-      ctx.fillText("📷",contentX+contentW/2-17,imgTop+IMG_ROW_H/2+12);
-    }else{
-      for(let i=0;i<imgs.length;i++){
-        const img=await loadImageViaProxy(imgs[i]);
-        const cx=contentX+i*cellW;
-        if(img){
-          ctx.fillStyle="#12141A";ctx.fillRect(cx,imgTop,cellW,IMG_ROW_H);
-          ctx.save();
-          ctx.beginPath();ctx.rect(cx,imgTop,cellW,IMG_ROW_H);ctx.clip();
-          const scale=Math.min(cellW/img.width,IMG_ROW_H/img.height);
-          const dw=img.width*scale,dh=img.height*scale;
-          ctx.drawImage(img,cx+(cellW-dw)/2,imgTop+(IMG_ROW_H-dh)/2,dw,dh);
-          ctx.restore();
-        }else{
-          ctx.fillStyle="#F0EDE6";ctx.fillRect(cx,imgTop,cellW,IMG_ROW_H);
-          ctx.fillStyle="#B8B2A6";ctx.font="26px Arial";
-          ctx.fillText("📷",cx+cellW/2-13,imgTop+IMG_ROW_H/2+9);
-        }
-        if(i>0){ctx.fillStyle="#FFFFFF";ctx.fillRect(cx-1,imgTop,2,IMG_ROW_H);}
+  const parts:Row[][]=[];
+  let cur:Row[]=[],curH=0;
+  const flush=()=>{if(cur.length){parts.push(cur);cur=[];curH=0;}};
+  for(const b of dayBlocks){
+    const blockRows=[b.head,...b.units.flat()];
+    const blockH=hOf(blockRows);
+    if(curH+blockH<=bodyMax){cur.push(...blockRows);curH+=blockH;continue;}
+    flush();
+    if(blockH<=bodyMax){cur.push(...blockRows);curH=blockH;continue;}
+    // A single day is longer than one image — continue it on the next one.
+    cur.push(b.head);curH=b.head.height;
+    for(const u of b.units){
+      const uh=hOf(u);
+      if(curH+uh>bodyMax&&cur.length>1){
+        flush();
+        const cont:Row={kind:"dayhead",day:b.head.kind==="dayhead"?b.head.day:"",count:-1,height:44};
+        cur.push(cont);curH=cont.height;
       }
+      cur.push(...u);curH+=uh;
     }
-    // badge (number or "1A"/"1B")
-    ctx.fillStyle=inGroup?"#7B6DB0":"rgba(0,0,0,0.55)";
-    const badgeW=Math.max(24,10+badge.length*9);
-    ctx.beginPath();ctx.roundRect?ctx.roundRect(contentX+8,imgTop+8,badgeW,22,11):ctx.rect(contentX+8,imgTop+8,badgeW,22);ctx.fill();
-    ctx.fillStyle="#FFFFFF";ctx.font="700 11px Arial";
-    ctx.fillText(badge,contentX+8+badgeW/2-(badge.length*3.5),imgTop+23);
-    // type badge (Apšilimas / Cardio) — top-right corner
-    if(ex.customType==="Cardio"||ex.customType==="Apšilimas"){
-      const typeColor=ex.customType==="Cardio"?"#3b82f6":"#f59e0b";
-      ctx.font="700 10px Arial";
-      const tw=ctx.measureText(ex.customType).width;
-      const tBadgeW=tw+18;
-      ctx.fillStyle=typeColor;
-      ctx.beginPath();ctx.roundRect?ctx.roundRect(contentX+contentW-tBadgeW-8,imgTop+8,tBadgeW,22,6):ctx.rect(contentX+contentW-tBadgeW-8,imgTop+8,tBadgeW,22);ctx.fill();
-      ctx.fillStyle="#FFFFFF";
-      ctx.fillText(ex.customType.toUpperCase(),contentX+contentW-tBadgeW-8+9,imgTop+23);
-    }
-    // dark bottom gradient + name overlay (matches on-screen card style)
-    const grad=ctx.createLinearGradient(0,imgTop+IMG_ROW_H-90,0,imgTop+IMG_ROW_H);
-    grad.addColorStop(0,"rgba(0,0,0,0)");grad.addColorStop(1,"rgba(0,0,0,0.72)");
-    ctx.fillStyle=grad;ctx.fillRect(contentX,imgTop+IMG_ROW_H-90,contentW,90);
-    ctx.fillStyle="#FFFFFF";ctx.font="700 19px Arial";
-    ctx.fillText(ex.name||"",PAD+contentX,imgTop+IMG_ROW_H-32);
-    ctx.fillStyle="rgba(255,255,255,0.8)";ctx.font="12px Arial";
-    ctx.fillText(ex.muscle||"",PAD+contentX,imgTop+IMG_ROW_H-14);
-
-    // ── stats row (Serijos / Kartojimai / Svoris / Poilsis) ──
-    const statsTop=imgTop+IMG_ROW_H;
-    ctx.fillStyle="#FFFFFF";ctx.fillRect(contentX,statsTop,contentW,STATS_H);
-    const stats=[
-      {label:"SERIJOS",val:ex.customSets},
-      {label:"KARTOJIMAI",val:ex.customReps},
-      {label:"SVORIS",val:ex.customWeight?ex.customWeight+" kg":""},
-      {label:"POILSIS",val:inGroup?"":ex.customRest},
-    ].filter(s=>s.val);
-    const colW=contentW/Math.max(1,stats.length);
-    stats.forEach((s,i)=>{
-      const cx=contentX+i*colW+PAD;
-      ctx.fillStyle="#8A93A0";ctx.font="700 10px Arial";
-      ctx.fillText(s.label,cx,statsTop+24);
-      ctx.fillStyle="#0B0D12";ctx.font="700 22px Arial";
-      ctx.fillText(String(s.val),cx,statsTop+50);
-    });
-
-    let dy=statsTop+STATS_H+16;
-    if(descLines.length){
-      ctx.fillStyle="#8A93A0";ctx.font="italic 12px Arial";
-      descLines.forEach((line:string,i:number)=>ctx.fillText(line,PAD+contentX,dy+i*17));
-      dy+=descLines.length*17+10;
-    }
-    if(commentLines.length){
-      ctx.fillStyle="#9C5B27";ctx.font="700 12px Arial";
-      commentLines.forEach((line:string,i:number)=>ctx.fillText(line,PAD+contentX,dy+i*17));
-      dy+=commentLines.length*17+10;
-    }
-    if(groupLast&&ex.customRest){
-      ctx.fillStyle="#5A4A90";ctx.font="700 12px Arial";
-      ctx.fillText(`Poilsis po viso superseto: ${ex.customRest}`,PAD+contentX,dy);
-    }
-    if(inGroup){
-      ctx.fillStyle="#7B6DB0";ctx.fillRect(0,groupBarTop,6,rowTop+r.height-groupBarTop);
-    }
-
-    ctx.strokeStyle="#EEEBE4";ctx.beginPath();ctx.moveTo(0,rowTop+r.height);ctx.lineTo(W,rowTop+r.height);ctx.stroke();
-    y+=r.height;
   }
+  flush();
+  if(!parts.length)parts.push([]);
 
-  if(rows.length===0){
-    ctx.fillStyle="#B8B2A6";ctx.font="13px Arial";
-    ctx.fillText("Pratimų nėra",PAD,y+34);
-    y+=60;
+  const baseName=`${(c.program_name||"programa").replace(/[^\w\s-]/g,"")}-${(c.name||"").replace(/[^\w\s-]/g,"")}`;
+
+  const renderPart=async(partRows:Row[],pi:number,pn:number)=>{
+    let totalH=headerH+footerH+hOf(partRows);
+    if(partRows.length===0)totalH+=60;
+
+    const SCALE_EFF=Math.min(SCALE,Math.sqrt(MAX_PIXELS/(W*totalH)),MAX_SIDE/totalH);
+
+    const canvas=document.createElement("canvas");
+    canvas.width=Math.round(W*SCALE_EFF);canvas.height=Math.round(totalH*SCALE_EFF);
+    const ctx=canvas.getContext("2d")!;
+    ctx.scale(SCALE_EFF,SCALE_EFF);
+    ctx.fillStyle="#FFFFFF";ctx.fillRect(0,0,W,totalH);
+
+    // header
+    ctx.fillStyle="#0B0D12";ctx.fillRect(0,0,W,headerH);
+    ctx.fillStyle="#D4A853";ctx.font="700 11px Arial";ctx.textBaseline="alphabetic";
+    ctx.fillText("DNA TRAINER",PAD,36);
+    ctx.fillStyle="#606878";ctx.font="10px Arial";
+    ctx.fillText(today2,W-PAD-ctx.measureText(today2).width,36);
+    ctx.fillStyle="#FFFFFF";ctx.font="700 30px Arial";
+    ctx.fillText(c.program_name||"Treniruočių programa",PAD,80);
+    ctx.fillStyle="#D4A853";ctx.font="600 13px Arial";
+    ctx.fillText(c.name||"",PAD,106);
+    if(pn>1){
+      const ptxt=`${pi+1} DALIS IŠ ${pn}`;
+      ctx.font="700 12px Arial";
+      const pw=ctx.measureText(ptxt).width;
+      ctx.fillStyle="rgba(212,168,83,0.15)";
+      ctx.fillRect(W-PAD-pw-20,88,pw+20,26);
+      ctx.fillStyle="#D4A853";
+      ctx.fillText(ptxt,W-PAD-pw-10,106);
+    }
+    const metaBits=[c.goal,c.level].filter(Boolean).join("  ·  ");
+    if(metaBits){ctx.fillStyle="#8A93A0";ctx.font="11px Arial";ctx.fillText(metaBits,PAD,126);}
+
+    let y=headerH;
+    for(const r of partRows){
+      if(r.kind==="dayhead"){
+        ctx.fillStyle="#FFFFFF";ctx.fillRect(0,y,W,r.height);
+        ctx.fillStyle="#0B0D12";ctx.font="700 17px Arial";
+        const dname=r.day!.toUpperCase();
+        ctx.fillText(dname,PAD,y+29);
+        const dtxt=r.count===-1?"— tęsinys":`— ${r.count} pratimas(-ai)`;
+        const dw=ctx.measureText(dname).width;
+        ctx.fillStyle="#8A93A0";ctx.font="12px Arial";
+        ctx.fillText(dtxt,PAD+dw+14,y+29);
+        y+=r.height;
+        continue;
+      }
+
+      const {ex,imgs,descLines,commentLines,badge,groupFirst,groupLast}=r;
+      const inGroup=!!ex.supersetGroup;
+      const rowTop=y;
+      const contentX=inGroup?10:0;
+      const contentW=W-(inGroup?10:0);
+
+      if(groupFirst){
+        ctx.fillStyle="#F5F2EC";ctx.fillRect(0,rowTop,W,26);
+        ctx.fillStyle="#5A4A90";ctx.font="700 11px Arial";
+        ctx.fillText("🔗 SUPERSETAS — atlikite iš eilės, be poilsio tarp pratimų",PAD,rowTop+18);
+      }
+      const groupBarTop=rowTop+(groupFirst?26:0);
+
+      // ── image row: all photos side by side, equal width ──
+      const n=Math.max(1,imgs.length);
+      const cellW=contentW/n;
+      const imgTop=groupBarTop;
+      if(imgs.length===0){
+        ctx.fillStyle="#F0EDE6";ctx.fillRect(contentX,imgTop,contentW,IMG_ROW_H);
+        ctx.fillStyle="#B8B2A6";ctx.font="34px Arial";
+        ctx.fillText("📷",contentX+contentW/2-17,imgTop+IMG_ROW_H/2+12);
+      }else{
+        for(let i=0;i<imgs.length;i++){
+          const img=await loadImageViaProxy(imgs[i]);
+          const cx=contentX+i*cellW;
+          if(img){
+            ctx.fillStyle="#12141A";ctx.fillRect(cx,imgTop,cellW,IMG_ROW_H);
+            ctx.save();
+            ctx.beginPath();ctx.rect(cx,imgTop,cellW,IMG_ROW_H);ctx.clip();
+            const scale=Math.min(cellW/img.width,IMG_ROW_H/img.height);
+            const dw=img.width*scale,dh=img.height*scale;
+            ctx.drawImage(img,cx+(cellW-dw)/2,imgTop+(IMG_ROW_H-dh)/2,dw,dh);
+            ctx.restore();
+          }else{
+            ctx.fillStyle="#F0EDE6";ctx.fillRect(cx,imgTop,cellW,IMG_ROW_H);
+            ctx.fillStyle="#B8B2A6";ctx.font="26px Arial";
+            ctx.fillText("📷",cx+cellW/2-13,imgTop+IMG_ROW_H/2+9);
+          }
+          if(i>0){ctx.fillStyle="#FFFFFF";ctx.fillRect(cx-1,imgTop,2,IMG_ROW_H);}
+        }
+      }
+      // badge (number or "1A"/"1B")
+      ctx.fillStyle=inGroup?"#7B6DB0":"rgba(0,0,0,0.55)";
+      const badgeW=Math.max(24,10+badge.length*9);
+      ctx.beginPath();ctx.roundRect?ctx.roundRect(contentX+8,imgTop+8,badgeW,22,11):ctx.rect(contentX+8,imgTop+8,badgeW,22);ctx.fill();
+      ctx.fillStyle="#FFFFFF";ctx.font="700 11px Arial";
+      ctx.fillText(badge,contentX+8+badgeW/2-(badge.length*3.5),imgTop+23);
+      // type badge (Apšilimas / Cardio) — top-right corner
+      if(ex.customType==="Cardio"||ex.customType==="Apšilimas"){
+        const typeColor=ex.customType==="Cardio"?"#3b82f6":"#f59e0b";
+        ctx.font="700 10px Arial";
+        const tw=ctx.measureText(ex.customType).width;
+        const tBadgeW=tw+18;
+        ctx.fillStyle=typeColor;
+        ctx.beginPath();ctx.roundRect?ctx.roundRect(contentX+contentW-tBadgeW-8,imgTop+8,tBadgeW,22,6):ctx.rect(contentX+contentW-tBadgeW-8,imgTop+8,tBadgeW,22);ctx.fill();
+        ctx.fillStyle="#FFFFFF";
+        ctx.fillText(ex.customType.toUpperCase(),contentX+contentW-tBadgeW-8+9,imgTop+23);
+      }
+      // dark bottom gradient + name overlay (matches on-screen card style)
+      const grad=ctx.createLinearGradient(0,imgTop+IMG_ROW_H-90,0,imgTop+IMG_ROW_H);
+      grad.addColorStop(0,"rgba(0,0,0,0)");grad.addColorStop(1,"rgba(0,0,0,0.72)");
+      ctx.fillStyle=grad;ctx.fillRect(contentX,imgTop+IMG_ROW_H-90,contentW,90);
+      ctx.fillStyle="#FFFFFF";ctx.font="700 19px Arial";
+      ctx.fillText(ex.name||"",PAD+contentX,imgTop+IMG_ROW_H-32);
+      ctx.fillStyle="rgba(255,255,255,0.8)";ctx.font="12px Arial";
+      ctx.fillText(ex.muscle||"",PAD+contentX,imgTop+IMG_ROW_H-14);
+
+      // ── stats row (Serijos / Kartojimai / Svoris / Poilsis) ──
+      const statsTop=imgTop+IMG_ROW_H;
+      ctx.fillStyle="#FFFFFF";ctx.fillRect(contentX,statsTop,contentW,STATS_H);
+      const stats=[
+        {label:"SERIJOS",val:ex.customSets},
+        {label:"KARTOJIMAI",val:ex.customReps},
+        {label:"SVORIS",val:ex.customWeight?ex.customWeight+" kg":""},
+        {label:"POILSIS",val:inGroup?"":ex.customRest},
+      ].filter(s=>s.val);
+      const colW=contentW/Math.max(1,stats.length);
+      stats.forEach((s,i)=>{
+        const cx=contentX+i*colW+PAD;
+        ctx.fillStyle="#8A93A0";ctx.font="700 10px Arial";
+        ctx.fillText(s.label,cx,statsTop+24);
+        ctx.fillStyle="#0B0D12";ctx.font="700 22px Arial";
+        ctx.fillText(String(s.val),cx,statsTop+50);
+      });
+
+      let dy=statsTop+STATS_H+16;
+      if(descLines.length){
+        ctx.fillStyle="#8A93A0";ctx.font="italic 12px Arial";
+        descLines.forEach((line:string,i:number)=>ctx.fillText(line,PAD+contentX,dy+i*17));
+        dy+=descLines.length*17+10;
+      }
+      if(commentLines.length){
+        ctx.fillStyle="#9C5B27";ctx.font="700 12px Arial";
+        commentLines.forEach((line:string,i:number)=>ctx.fillText(line,PAD+contentX,dy+i*17));
+        dy+=commentLines.length*17+10;
+      }
+      if(groupLast&&ex.customRest){
+        ctx.fillStyle="#5A4A90";ctx.font="700 12px Arial";
+        ctx.fillText(`Poilsis po viso superseto: ${ex.customRest}`,PAD+contentX,dy);
+      }
+      if(inGroup){
+        ctx.fillStyle="#7B6DB0";ctx.fillRect(0,groupBarTop,6,rowTop+r.height-groupBarTop);
+      }
+
+      ctx.strokeStyle="#EEEBE4";ctx.beginPath();ctx.moveTo(0,rowTop+r.height);ctx.lineTo(W,rowTop+r.height);ctx.stroke();
+      y+=r.height;
+    }
+
+    if(partRows.length===0){
+      ctx.fillStyle="#B8B2A6";ctx.font="13px Arial";
+      ctx.fillText("Pratimų nėra",PAD,y+34);
+      y+=60;
+    }
+
+    ctx.fillStyle="#F5F2EC";ctx.fillRect(0,y,W,footerH);
+    ctx.fillStyle="#B8B2A6";ctx.font="10px Arial";
+    const ftext=pn>1?`DNA Trainer · Coach Platform · ${pi+1}/${pn}`:"DNA Trainer · Coach Platform";
+    ctx.fillText(ftext,(W-ctx.measureText(ftext).width)/2,y+29);
+
+    const out=await encodeCanvasSmall(canvas,0.85);
+    // free the canvas memory right away (matters on phones with several parts)
+    canvas.width=0;canvas.height=0;
+    return out;
+  };
+
+  for(let pi=0;pi<parts.length;pi++){
+    const {blob,ext}=await renderPart(parts[pi],pi,parts.length);
+    const link=document.createElement("a");
+    link.href=URL.createObjectURL(blob);
+    link.download=parts.length>1?`${baseName}-${pi+1}dalis.${ext}`:`${baseName}.${ext}`;
+    link.click();
+    setTimeout(()=>URL.revokeObjectURL(link.href),4000);
+    // small pause so the browser doesn't swallow back-to-back downloads
+    if(pi<parts.length-1)await new Promise(r=>setTimeout(r,700));
   }
-
-  ctx.fillStyle="#F5F2EC";ctx.fillRect(0,y,W,footerH);
-  ctx.fillStyle="#B8B2A6";ctx.font="10px Arial";
-  const ftext="DNA Trainer · Coach Platform";
-  ctx.fillText(ftext,(W-ctx.measureText(ftext).width)/2,y+29);
-
-  const {blob,ext}=await encodeCanvasSmall(canvas,0.85);
-  const link=document.createElement("a");
-  link.href=URL.createObjectURL(blob);
-  link.download=`${(c.program_name||"programa").replace(/[^\w\s-]/g,"")}-${(c.name||"").replace(/[^\w\s-]/g,"")}.${ext}`;
-  link.click();
-  setTimeout(()=>URL.revokeObjectURL(link.href),4000);
 }
 
 export async function generateMealJpg(c:any):Promise<void>{
