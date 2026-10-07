@@ -990,6 +990,41 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
   const addToDay=()=>{if(!pickedEx)return;const exData={id:pickedEx.id,name:pickedEx.name,muscle:pickedEx.muscle,equipment:pickedEx.equipment,sets:pickedEx.sets,reps:pickedEx.reps,description:pickedEx.description,imgs:pickedEx.imgs&&pickedEx.imgs.length?pickedEx.imgs:pickedEx.cover_img?[pickedEx.cover_img]:[],cover_img:pickedEx.cover_img||"",customSets:pickSets||pickedEx.sets,customReps:pickReps||pickedEx.reps,customWeight:pickWeight||"",customRest:pickRest||"",customComment:pickComment||"",customType:pickType||"",supersetGroup:null};setProgram((p:any)=>({...p,[pickDay]:[...(p[pickDay]||[]),exData]}));setPickDay(null);};
   const removeFromDay=(day:string,idx:number)=>setProgram((p:any)=>({...p,[day]:p[day].filter((_:any,i:number)=>i!==idx)}));
   const [editEx,setEditEx]=useState<{day:string,idx:number}|null>(null);
+  // ── REORDER ────────────────────────────────────────────
+  // Moves a whole block (single exercise or an entire superset) up/down past
+  // the neighbouring block, so supersets always stay together.
+  const moveBlock=(day:string,bi:number,dir:-1|1)=>{
+    setEditEx(null);
+    setProgram((p:any)=>{
+      const blocks=groupDayExercises(p[day]||[]);
+      const j=bi+dir;
+      if(j<0||j>=blocks.length)return p;
+      const order=blocks.map(b=>b.items.map(it=>it.ex));
+      [order[bi],order[j]]=[order[j],order[bi]];
+      return{...p,[day]:order.flat()};
+    });
+  };
+  // Swaps two exercises inside the same superset (1A ↔ 1B).
+  const moveInGroup=(day:string,idx:number,dir:-1|1)=>{
+    setEditEx(null);
+    setProgram((p:any)=>{
+      const arr=[...(p[day]||[])];
+      const j=idx+dir;
+      if(j<0||j>=arr.length||!arr[idx]?.supersetGroup||arr[j]?.supersetGroup!==arr[idx].supersetGroup)return p;
+      [arr[idx],arr[j]]=[arr[j],arr[idx]];
+      return{...p,[day]:arr};
+    });
+  };
+  const moveBtns=(onUp:()=>void,onDown:()=>void,canUp:boolean,canDown:boolean,accent:string)=>{
+    const b=(on:()=>void,ok:boolean,label:string,title:string)=>(
+      <button type="button" onClick={on} disabled={!ok} title={title} aria-label={title}
+        style={{width:26,height:18,padding:0,display:"flex",alignItems:"center",justifyContent:"center",background:"transparent",border:`1px solid ${ok?accent:C.border}`,borderRadius:5,color:ok?accent:C.border,fontSize:9,lineHeight:1,cursor:ok?"pointer":"default",opacity:ok?1:0.5}}>{label}</button>
+    );
+    return(<div style={{display:"flex",flexDirection:"column",gap:3,flexShrink:0}}>
+      {b(onUp,canUp,"▲","Perkelti aukštyn")}
+      {b(onDown,canDown,"▼","Perkelti žemyn")}
+    </div>);
+  };
   const [editSets,setEditSets]=useState("");
   const [editReps,setEditReps]=useState("");
   const [editWeight,setEditWeight]=useState("");
@@ -1564,9 +1599,10 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
                       return(
                         <div key={bi} style={{background:C.faint,borderRadius:8,padding:"7px 10px"}}>
                           <div style={{display:"flex",alignItems:"center",gap:8}}>
+                            {moveBtns(()=>moveBlock(day,bi,-1),()=>moveBlock(day,bi,1),bi>0,bi<blocks.length-1,C.teal)}
                             <div style={{width:22,height:22,borderRadius:"50%",background:C.border,color:C.muted,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,flexShrink:0}}>{num}</div>
                             <div style={{width:34,height:34,borderRadius:6,overflow:"hidden",background:C.border,flexShrink:0}}>{(ex.imgs||[]).filter(Boolean)[0]?<img src={(ex.imgs||[])[0]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>📷</div>}</div>
-                            <div style={{flex:1}}><div style={{display:"flex",alignItems:"center",gap:6}}><div style={{fontSize:12,fontWeight:600,color:C.text}}>{ex.name}</div>{ex.customType&&<span style={{fontSize:8,fontWeight:800,padding:"1px 6px",borderRadius:4,background:ex.customType==="Cardio"?"#3b82f6":"#f59e0b",color:"#fff",textTransform:"uppercase" as const,letterSpacing:"0.04em"}}>{ex.customType}</span>}</div><div style={{fontSize:10,color:C.teal}}>{ex.muscle} · {ex.customSets}s · {ex.customReps}r</div>{ex.customComment&&<div style={{fontSize:10,color:C.muted,fontStyle:"italic" as const,marginTop:2}}>💬 {ex.customComment}</div>}</div>
+                            <div style={{flex:1}}><div style={{display:"flex",alignItems:"center",gap:6}}><div style={{fontSize:12,fontWeight:600,color:C.text}}>{ex.name}</div>{ex.customType&&<span style={{fontSize:8,fontWeight:800,padding:"1px 6px",borderRadius:4,background:ex.customType==="Cardio"?"#3b82f6":"#f59e0b",color:"#fff",textTransform:"uppercase" as const,letterSpacing:"0.04em"}}>{ex.customType}</span>}</div><div style={{fontSize:10,color:C.teal}}>{[ex.muscle,ex.customSets?`${ex.customSets}s`:"",ex.customReps?`${ex.customReps}r`:""].filter(Boolean).join(" · ")}</div>{ex.customComment&&<div style={{fontSize:10,color:C.muted,fontStyle:"italic" as const,marginTop:2}}>💬 {ex.customComment}</div>}</div>
                             <button onClick={()=>isEditing?setEditEx(null):openEditEx(day,idx)} style={{...css.btnTeal,padding:"6px 10px",fontSize:12}}>{isEditing?"✕":"✏️"}</button>
                             <button onClick={()=>removeFromDay(day,idx)} style={css.btnRed}>🗑️</button>
                           </div>
@@ -1592,6 +1628,7 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
                     return(
                       <div key={bi} style={{border:`3px solid ${C.purple}`,borderRadius:12,padding:10,background:C.purpleSoft,boxShadow:`0 0 0 4px ${C.purpleSoft}`}}>
                         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                          {moveBtns(()=>moveBlock(day,bi,-1),()=>moveBlock(day,bi,1),bi>0,bi<blocks.length-1,C.purple)}
                           <span style={{display:"flex",alignItems:"center",gap:5,background:C.purple,color:"#fff",borderRadius:20,padding:"4px 12px",fontSize:11,fontWeight:800,letterSpacing:"0.04em"}}>🔗 SUPERSETAS {num}</span>
                           <button onClick={()=>ungroupSet(day,groupId)} style={{marginLeft:"auto",background:"none",border:"none",color:C.purple,cursor:"pointer",fontSize:11,textDecoration:"underline",fontWeight:600}}>Išskirti</button>
                         </div>
@@ -1601,9 +1638,10 @@ function ClientsTab({exercises,foods,autoOpen=false}:{exercises:any[],foods:any[
                             return(
                               <div key={idx} style={{background:C.surface,border:`1px solid ${C.purpleBorder}`,borderRadius:8,padding:"7px 10px"}}>
                                 <div style={{display:"flex",alignItems:"center",gap:8}}>
+                                  {moveBtns(()=>moveInGroup(day,idx,-1),()=>moveInGroup(day,idx,1),gi>0,gi<block.items.length-1,C.purple)}
                                   <div style={{width:22,height:22,borderRadius:"50%",background:C.purple,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,flexShrink:0}}>{num}{letters[gi]}</div>
                                   <div style={{width:34,height:34,borderRadius:6,overflow:"hidden",background:C.border,flexShrink:0}}>{(ex.imgs||[]).filter(Boolean)[0]?<img src={(ex.imgs||[])[0]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>📷</div>}</div>
-                                  <div style={{flex:1}}><div style={{display:"flex",alignItems:"center",gap:6}}><div style={{fontSize:12,fontWeight:600,color:C.text}}>{ex.name}</div>{ex.customType&&<span style={{fontSize:8,fontWeight:800,padding:"1px 6px",borderRadius:4,background:ex.customType==="Cardio"?"#3b82f6":"#f59e0b",color:"#fff",textTransform:"uppercase" as const,letterSpacing:"0.04em"}}>{ex.customType}</span>}</div><div style={{fontSize:10,color:C.teal}}>{ex.muscle} · {ex.customSets}s · {ex.customReps}r</div>{ex.customComment&&<div style={{fontSize:10,color:C.muted,fontStyle:"italic" as const,marginTop:2}}>💬 {ex.customComment}</div>}</div>
+                                  <div style={{flex:1}}><div style={{display:"flex",alignItems:"center",gap:6}}><div style={{fontSize:12,fontWeight:600,color:C.text}}>{ex.name}</div>{ex.customType&&<span style={{fontSize:8,fontWeight:800,padding:"1px 6px",borderRadius:4,background:ex.customType==="Cardio"?"#3b82f6":"#f59e0b",color:"#fff",textTransform:"uppercase" as const,letterSpacing:"0.04em"}}>{ex.customType}</span>}</div><div style={{fontSize:10,color:C.teal}}>{[ex.muscle,ex.customSets?`${ex.customSets}s`:"",ex.customReps?`${ex.customReps}r`:""].filter(Boolean).join(" · ")}</div>{ex.customComment&&<div style={{fontSize:10,color:C.muted,fontStyle:"italic" as const,marginTop:2}}>💬 {ex.customComment}</div>}</div>
                                   <button onClick={()=>isEditing?setEditEx(null):openEditEx(day,idx)} style={{...css.btnTeal,padding:"6px 10px",fontSize:12}}>{isEditing?"✕":"✏️"}</button>
                                   <button onClick={()=>removeFromDay(day,idx)} style={css.btnRed}>🗑️</button>
                                 </div>
